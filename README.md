@@ -48,7 +48,7 @@ After completing these steps, the extension should be ready to use.
 <details>
 <summary><b>Building from source (not applicable for VSCode marketplace version)</b></summary>
 
-To build the extension from source, clone the repository and run `npm install` to install the dependencies. You have to change some code in `chatgpt` module because VSCode runtime does not support `fetch`. Open `node_modules/chatgpt/dist/index.js` and add the following code at the top of the file:
+To build the extension from source, clone the repository and run `npm install` to install the dependencies. You have to change some code in `chatgpt` module because VSCode runtime does not support `fetch`. Open `node_modules/chatgpt/build/index.js` and add the following code at the top of the file:
 
 ```js
 import fetch from 'node-fetch'

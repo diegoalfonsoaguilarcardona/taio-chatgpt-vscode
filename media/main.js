@@ -53,7 +53,10 @@
         });
         response = fixCodeBlocks(response);
         html = converter.makeHtml(response);
-        document.getElementById("response").innerHTML = html;
+        let responseDiv = document.getElementById("response");
+        responseDiv.innerHTML = html;
+        //responseDiv.scrollTop = responseDiv.scrollHeight;
+        responseDiv.scrollIntoView({ block: "end" });
 
         var preCodeBlocks = document.querySelectorAll("pre code");
         for (var i = 0; i < preCodeBlocks.length; i++) {

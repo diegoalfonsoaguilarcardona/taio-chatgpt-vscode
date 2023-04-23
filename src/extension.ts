@@ -103,6 +103,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	private _conversation?: any;
 
 	private _response?: string;
+	private _totalNumberOfTokens?: number;
 	private _prompt?: string;
 	private _fullPrompt?: string;
 	private _currentMessageNumber = 0;
@@ -211,6 +212,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._prompt = '';
 		this._response = '';
 		this._fullPrompt = '';
+		this._totalNumberOfTokens = 0;
 		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '' });
 	}
@@ -235,7 +237,13 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		}
 		
 		let response = '';
-		this._response = '';
+		if (!this._response) {
+			this._response = '';
+		}
+		if (!this._totalNumberOfTokens) {
+			this._totalNumberOfTokens = 0;
+		}
+		//this._response = '';
 		// Get the selected text of the active editor
 		const selection = vscode.window.activeTextEditor?.selection;
 		const selectedText = vscode.window.activeTextEditor?.document.getText(selection);
@@ -284,7 +292,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 						console.log("onProgress");
 						if (this._view && this._view.visible) {
 							response = partialResponse.text;
-							this._response = response;
+							//this._response = response;
 							this._view.webview.postMessage({ type: 'addResponse', value: response });
 						}
 					},
@@ -296,12 +304,14 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 					return;
 				}
 
+				console.log("Res:",res);
 
-				console.log(res);
-
-				response = res.text;
+				response = this._response;
+				response += "\nYou:\n" + this._fullPrompt + "\n";
+				response += "\nChatGPT:\n" + res.text;
 				if (res.detail?.usage?.total_tokens) {
-					response += `\n\n---\n*<sub>Tokens used: ${res.detail.usage.total_tokens} (${res.detail.usage.prompt_tokens}+${res.detail.usage.completion_tokens})</sub>*`;
+					this._totalNumberOfTokens += res.detail.usage.total_tokens;
+					response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${res.detail.usage.total_tokens} (${res.detail.usage.prompt_tokens}+${res.detail.usage.completion_tokens})</sub>* \n\n---\n`;
 				}
 
 				if (this._settings.keepConversation){
@@ -367,11 +377,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				</style>
 			</head>
 			<body>
-				<input class="h-10 w-full text-white bg-stone-700 p-4 text-sm" placeholder="Ask ChatGPT something" id="prompt-input" />
-				
 				<div id="response" class="pt-4 text-sm">
 				</div>
-
+				<input class="h-10 w-full text-white bg-stone-700 p-4 text-sm" placeholder="Ask ChatGPT something" id="prompt-input" />
 				<script src="${scriptUri}"></script>
 			</body>
 			</html>`;
