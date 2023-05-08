@@ -217,6 +217,23 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'addResponse', value: '' });
 	}
 
+	public fixCodeBlocks(response:string) {
+		// Use a regular expression to find all occurrences of the substring in the string
+		const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');
+		const matches = response.match(REGEX_CODEBLOCK);
+	  
+		// Return the number of occurrences of the substring in the response, check if even
+		const count = matches ? matches.length : 0;
+		if (count % 2 === 0) {
+		  return response;
+		} else {
+		  // else append ``` to the end to make the last code block complete
+		  console.log("Warning - code block not complete");
+		  return response.concat('\n\`\`\`');
+		}
+	  
+	}
+
 
 	public async search(prompt?:string) {
 		this._prompt = prompt;
@@ -308,7 +325,8 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 				response = this._response;
 				response += "\nYou:\n" + this._fullPrompt + "\n";
-				response += "\nChatGPT:\n" + res.text;
+				const text_fixed = this.fixCodeBlocks(res.text);
+				response += "\nChatGPT:\n" + text_fixed;
 				if (res.detail?.usage?.total_tokens) {
 					this._totalNumberOfTokens += res.detail.usage.total_tokens;
 					response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${res.detail.usage.total_tokens} (${res.detail.usage.prompt_tokens}+${res.detail.usage.completion_tokens})</sub>* \n\n---\n`;
