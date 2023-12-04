@@ -3,7 +3,17 @@ import { ChatGPTAPI } from 'chatgpt';
 
 
 type AuthInfo = {apiKey?: string};
-type Settings = {selectedInsideCodeblock?: boolean, codeblockWithLanguageId?: false, pasteOnClick?: boolean, keepConversation?: boolean, timeoutLength?: number, model?: string, apiUrl?: string};
+type Settings = {
+	selectedInsideCodeblock?: boolean, 
+	codeblockWithLanguageId?: false, 
+	pasteOnClick?: boolean, 
+	keepConversation?: boolean, 
+	timeoutLength?: number, 
+	model?: string,
+	maxModelTokens?: number,
+	maxResponseTokens?: number,
+	apiUrl?: string
+};
 
 
 const BASE_URL = 'https://api.openai.com/v1';
@@ -28,7 +38,9 @@ export function activate(context: vscode.ExtensionContext) {
 		keepConversation: config.get('keepConversation') || false,
 		timeoutLength: config.get('timeoutLength') || 60,
 		apiUrl: config.get('apiUrl') || BASE_URL,
-		model: config.get('model') || 'gpt-3.5-turbo'
+		model: config.get('model') || 'gpt-3.5-turbo',
+		maxModelTokens: config.get('maxModelTokens') || 4000,
+		maxResponseTokens: config.get('maxResponseTokens') || 1000
 	});
 
 	// Register the provider with the extension's context
@@ -72,6 +84,12 @@ export function activate(context: vscode.ExtensionContext) {
 		} else if (event.affectsConfiguration('chatgpt.model')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
 			provider.setSettings({ model: config.get('model') || 'gpt-3.5-turbo' }); 
+		} else if (event.affectsConfiguration('chatgpt.maxModelTokens')) {
+			const config = vscode.workspace.getConfiguration('chatgpt');
+			provider.setSettings({ maxModelTokens: config.get('maxModelTokens') || 4000 }); 
+		} else if (event.affectsConfiguration('chatgpt.maxResponseTokens')) {
+			const config = vscode.workspace.getConfiguration('chatgpt');
+			provider.setSettings({ maxModelTokens: config.get('maxResponseTokens') || 4000 }); 
 		} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
 			provider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });
@@ -115,7 +133,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		keepConversation: true,
 		timeoutLength: 60,
 		apiUrl: BASE_URL,
-		model: 'gpt-3.5-turbo'
+		model: 'gpt-3.5-turbo',
+		maxModelTokens: 4000,
+		maxResponseTokens: 1000
 	};
 	private _authInfo?: AuthInfo;
 
@@ -132,7 +152,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 	public setSettings(settings: Settings) {
 		let changeModel = false;
-		if (settings.apiUrl || settings.model) {
+		if (settings.apiUrl || settings.model || settings.maxModelTokens || settings.maxResponseTokens) {
 			changeModel = true;
 		}
 		this._settings = {...this._settings, ...settings};
@@ -156,6 +176,8 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				apiKey: this._authInfo.apiKey || "xx",
 				apiBaseUrl: this._settings.apiUrl,
 				completionParams: { model:this._settings.model || "gpt-3.5-turbo" },
+				maxModelTokens: this._settings.maxModelTokens,
+				maxResponseTokens: this._settings.maxResponseTokens
 			});
 			// console.log( this._chatGPTAPI );
 		}
@@ -329,8 +351,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				response += "\nChatGPT:\n" + text_fixed;
 				if (res.detail?.usage?.total_tokens) {
 					this._totalNumberOfTokens += res.detail.usage.total_tokens;
-					response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${res.detail.usage.total_tokens} (${res.detail.usage.prompt_tokens}+${res.detail.usage.completion_tokens})</sub>* \n\n---\n`;
+					response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${res.detail.usage.total_tokens} (${res.detail.usage.prompt_tokens}+${res.detail.usage.completion_tokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
 				}
+
 
 				if (this._settings.keepConversation){
 					this._conversation = {
