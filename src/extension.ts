@@ -89,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
 			provider.setSettings({ maxModelTokens: config.get('maxModelTokens') || 4000 }); 
 		} else if (event.affectsConfiguration('chatgpt.maxResponseTokens')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
-			provider.setSettings({ maxModelTokens: config.get('maxResponseTokens') || 4000 }); 
+			provider.setSettings({ maxResponseTokens: config.get('maxResponseTokens') || 4000 }); 
 		} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
 			provider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });
