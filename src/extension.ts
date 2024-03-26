@@ -268,6 +268,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '' });
 		this._messages = [];
+		this._messages?.push({ role: "system", content: "You are a helpful assistant." });
 	}
 
 	public fixCodeBlocks(response: string) {
