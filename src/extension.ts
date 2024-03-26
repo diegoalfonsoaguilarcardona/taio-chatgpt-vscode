@@ -31,6 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
 	provider.setAuthenticationInfo({
 		apiKey: config.get('apiKey')
 	});
+	/*
 	provider.setSettings({
 		selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
 		codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
@@ -42,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
 		maxModelTokens: config.get('maxModelTokens') || 4000,
 		maxResponseTokens: config.get('maxResponseTokens') || 1000
 	});
-
+	*/
 	// Register the provider with the extension's context
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider,  {
