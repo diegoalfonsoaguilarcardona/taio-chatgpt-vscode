@@ -99,10 +99,17 @@
 
     // Listen for keyup events on the prompt input element
     document.getElementById('prompt-input').addEventListener('keyup', function (e) {
-        // If the key that was pressed was the Enter key
-        if (e.keyCode === 13) {
+        // If the Enter key was pressed without the Ctrl key
+        if (e.key === "Enter" && !e.ctrlKey) {
             vscode.postMessage({
                 type: 'prompt',
+                value: this.value
+            });
+        }
+        // If the Enter key was pressed with the Ctrl key
+        else if (e.key === "Enter" && e.ctrlKey) {
+            vscode.postMessage({
+                type: 'promptNoQuery',
                 value: this.value
             });
         }

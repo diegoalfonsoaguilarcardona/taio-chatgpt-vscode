@@ -117,27 +117,6 @@ interface Message {
   selected: boolean;
 }
 
-interface ChatGPTResponse {
-  choices: Array<{
-	finish_reason: string;
-	index: number;
-
-	message: {
-	  content: string;
-	  role: string;
-	};
-  }>;
-  created: number;
-  id: string;
-  model: string;
-  object: string;
-  usage: {
-    completion_tokens: number;
-    prompt_tokens: number;
-    total_tokens: number;
-  }
-}
-
 class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	public static readonly viewType = 'chatgpt.chatView';
 	private _view?: vscode.WebviewView;
@@ -208,15 +187,6 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 					apiKey: this._authInfo?.apiKey
 				}
 			);
-	
-	//		this._chatGPTAPI = new ChatGPTAPI({
-	//			apiKey: this._authInfo.apiKey || "xx",
-	//			apiBaseUrl: this._settings.apiUrl,
-	//			completionParams: { model: this._settings.model || "gpt-3.5-turbo" },
-	//			maxModelTokens: this._settings.maxModelTokens,
-	//			maxResponseTokens: this._settings.maxResponseTokens
-	//		});
-	//		// console.log( this._chatGPTAPI );
 		}
 	}
 
@@ -239,7 +209,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
 		// add an event listener for messages received by the webview
-		webviewView.webview.onDidReceiveMessage(data => {
+		webviewView.webview.onDidReceiveMessage(async data =>  {
 			switch (data.type) {
 				case 'codeSelected':
 					{
@@ -256,7 +226,24 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 					}
 				case 'prompt':
 					{
+						console.log("prompt");
 						this.search(data.value);
+						break;
+					}
+				case 'promptNoQuery':
+					{
+						console.log("promptNoQuery");
+
+						let searchPrompt = await this._generate_search_prompt(data.value);
+						
+						this._messages?.push({ role: "user", content: searchPrompt, selected:true })
+						let chat_response = this._updateChatMessages(
+							this._getMessagesNumberOfTokens(),
+							0
+						);
+						this._response = chat_response;
+						this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+						break;
 					}
 				case 'checkboxChanged':
 					{
@@ -277,6 +264,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 							// Handle cases where data.id does not follow the expected format
 							console.error('data.id is not in the expected format.');
 						}
+						break;
 					}
 			}
 		});
@@ -320,7 +308,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		let full_promt = "";
 		if (this._messages) {
 			for (const message of this._messages) {
-				full_promt += "\n# <u>" + message.role.toUpperCase() + "</u>:\n" + message.content;
+				if (message.selected) {
+					full_promt += "\n# <u>" + message.role.toUpperCase() + "</u>:\n" + message.content;
+				}
 			}
 		}
 
@@ -336,21 +326,27 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	  })) || [];
 	  return ret;
 	}
-	
 
-	public async search(prompt?: string) {
+	private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {
+		let chat_response = "";
+		if (this._messages) {
+			this._messages.forEach((message, index) => {
+				const selected = message.selected;
+				const checked_string = selected ? "checked" : "";
+				chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
+			});
+		}
+		if (this._totalNumberOfTokens !== undefined) {
+			this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
+			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
+		}
+		return chat_response;
+	}
+	
+	private async _generate_search_prompt(prompt:string) {
 		this._prompt = prompt;
 		if (!prompt) {
 			prompt = '';
-		}
-
-		// Check if the API key and URL are set
-		if (!this._authInfo || !this._settings?.apiUrl) {
-			this._view?.webview.postMessage({
-				type: 'addResponse',
-				value: '[ERROR] "API key or API URL not set, please go to extension settings (read README.md for more info)"',
-			});
-			return;
 		}
 
 		// Focus the ChatGPT view
@@ -361,7 +357,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		}
 
 		// Initialize response and token count
-		let chat_response = '';
+		
 		if (!this._response) {
 			this._response = '';
 		}
@@ -392,8 +388,25 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 		// Increment message number and store for tracking
 		this._currentMessageNumber++;
-		const currentMessageNumber = this._currentMessageNumber;
+		return searchPrompt;
 
+	}
+
+	public async search(prompt?: string) {
+		// Check if the API key and URL are set
+		if (!this._authInfo || !this._settings?.apiUrl) {
+			this._view?.webview.postMessage({
+				type: 'addResponse',
+				value: '[ERROR] "API key or API URL not set, please go to extension settings (read README.md for more info)"',
+			});
+			return;
+		}
+		
+		let chat_response = '';
+		let searchPrompt = "";
+		if (prompt!=undefined) {
+			searchPrompt = await this._generate_search_prompt(prompt);
+		} 
 		// Show loading indicator
 		this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '...' });
@@ -449,20 +462,10 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			console.log("Full Number of tokens:", completionTokens);
 			const tokenList = this._enc.encode(full_message);
 			console.log("Full Number of tokens tiktoken:", tokenList.length);
-
-			if (this._messages) {
-				this._messages.forEach((message, index) => {
-					const selected = message.selected;
-					const checked_string = selected ? "checked" : "";
-					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
-				});
-			}
-		
-			this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
-			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
+			chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)
 		} catch (e: any) {
 			console.error(e);
-			if (this._currentMessageNumber === currentMessageNumber) {
+			if (this._response!=undefined) {
 				chat_response = this._response;
 				chat_response += `\n\n---\n[ERROR] ${e}`;
 			}
