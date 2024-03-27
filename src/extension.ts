@@ -114,6 +114,7 @@ export function activate(context: vscode.ExtensionContext) {
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  selected: boolean;
 }
 
 interface ChatGPTResponse {
@@ -169,7 +170,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	// In the constructor, we store the URI of the extension
 	constructor(private readonly _extensionUri: vscode.Uri) {
 		this._messages = [];
-		this._messages?.push({ role: "system", content: "You are a helpful assistant." });
+		this._messages?.push({ role: "system", content: "You are a helpful assistant.", selected:true });
 		console.log("constructor....");
 		console.log("messages:", this._messages);
 	}
@@ -257,6 +258,26 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 					{
 						this.search(data.value);
 					}
+				case 'checkboxChanged':
+					{
+						console.log("checkboxChanged:", data);
+						const idParts = data.id.split('-'); // Split the id into parts
+						if(idParts.length === 3) {
+							const indexStr = idParts[2]; // Grab the last part, which should contain the index
+							const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary
+						
+							if(this._messages && index >= 0 && index < this._messages.length) {
+								// If the index is within the bounds of the array, update the checked status
+								this._messages[index].selected = data.checked;
+							} else {
+								// Handle cases where index is out of bounds or _messages is not an array
+								console.error('Index is out of bounds or _messages is not properly defined.');
+							}
+						} else {
+							// Handle cases where data.id does not follow the expected format
+							console.error('data.id is not in the expected format.');
+						}
+					}
 			}
 		});
 	}
@@ -274,7 +295,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '' });
 		this._messages = [];
-		this._messages?.push({ role: "system", content: "You are a helpful assistant." });
+		this._messages?.push({ role: "system", content: "You are a helpful assistant.", selected:true });
 	}
 
 	public fixCodeBlocks(response: string) {
@@ -307,6 +328,15 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		return tokenList.length;
 	}
 
+
+	
+	public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {
+	  let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({
+		role, content
+	  })) || [];
+	  return ret;
+	}
+	
 
 	public async search(prompt?: string) {
 		this._prompt = prompt;
@@ -368,7 +398,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '...' });
 
-		this._messages?.push({ role: "user", content: searchPrompt })
+		this._messages?.push({ role: "user", content: searchPrompt, selected:true })
 
 		if (!this._openai) {
 		  throw new Error('OpenAI instance is not initialized.');
@@ -394,7 +424,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			console.log("Creating message sender...");
 			const stream = await this._openai.chat.completions.create({
 				model: this._settings.model,
-				messages: this._messages,
+				messages: this.getSelectedMessagesWithoutSelectedProperty(),
 				stream: true,
 				max_tokens: this._settings.maxResponseTokens,
 			});
@@ -414,20 +444,20 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
 
 			}
-			this._messages?.push({ role: "assistant", content: full_message })
+			this._messages?.push({ role: "assistant", content: full_message, selected:true })
 			console.log("Full message:", full_message);
 			console.log("Full Number of tokens:", completionTokens);
 			const tokenList = this._enc.encode(full_message);
 			console.log("Full Number of tokens tiktoken:", tokenList.length);
 
 			if (this._messages) {
-				for (const message of this._messages) {
-					chat_response += "\n# <u>" + message.role.toUpperCase() + "</u>:\n" + message.content;
-				}
+				this._messages.forEach((message, index) => {
+					const selected = message.selected;
+					const checked_string = selected ? "checked" : "";
+					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
+				});
 			}
-
-
-			
+		
 			this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
 			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
 		} catch (e: any) {

@@ -107,4 +107,26 @@
             });
         }
     });
+
+
+    window.myFunction = function(checkboxElem) {
+        if (checkboxElem.checked) {
+            console.log(checkboxElem.id + " is checked");
+            // Add your postMessage or other logic here
+            vscode.postMessage({
+                type: 'checkboxChanged',
+                id: checkboxElem.id,
+                checked: true
+            });
+        } else {
+            console.log(checkboxElem.id + " is unchecked");
+            // Add your postMessage or other logic here
+            vscode.postMessage({
+                type: 'checkboxChanged',
+                id: checkboxElem.id,
+                checked: false
+            });
+        }
+    }
+
 })();
