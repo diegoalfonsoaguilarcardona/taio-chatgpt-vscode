@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import fetch from 'node-fetch'; // add this line
-import { MessageChannel } from 'worker_threads';
+import OpenAI from "openai";
+import { encodingForModel } from "js-tiktoken";
 
 
 type AuthInfo = { apiKey?: string };
@@ -111,11 +111,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 
-
-
 interface Message {
-	role: string;
-	content: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
 }
 
 interface ChatGPTResponse {
@@ -146,12 +144,14 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	//private _chatGPTAPI?: ChatGPTAPI;
 	private _conversation?: any;
 	private _messages?: Message[];
+	private _openai?: OpenAI;
 
 	private _response?: string;
 	private _totalNumberOfTokens?: number;
 	private _prompt?: string;
 	private _fullPrompt?: string;
 	private _currentMessageNumber = 0;
+	private _enc = encodingForModel("gpt-4"); //Hardcoded for now
 
 	private _settings: Settings = {
 		selectedInsideCodeblock: false,
@@ -177,7 +177,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	// Set the API key and create a new API instance based on this key
 	public setAuthenticationInfo(authInfo: AuthInfo) {
 		this._authInfo = authInfo;
-		//this._newAPI();
+		this._newAPI();
 	}
 
 	public setSettings(settings: Settings) {
@@ -197,11 +197,17 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	// This private method initializes a new ChatGPTAPI instance
-	//private _newAPI() {
-	//	console.log("New API");
-	//	if (!this._authInfo || !this._settings?.apiUrl) {
-	//		console.warn("API key or API URL not set, please go to extension settings (read README.md for more info)");
-	//	} else {
+	private _newAPI() {
+		console.log("New API");
+		if (!this._authInfo || !this._settings?.apiUrl) {
+			console.warn("API key or API URL not set, please go to extension settings (read README.md for more info)");
+		} else {
+			this._openai = new OpenAI(
+				{
+					apiKey: this._authInfo?.apiKey
+				}
+			);
+	
 	//		this._chatGPTAPI = new ChatGPTAPI({
 	//			apiKey: this._authInfo.apiKey || "xx",
 	//			apiBaseUrl: this._settings.apiUrl,
@@ -210,8 +216,8 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	//			maxResponseTokens: this._settings.maxResponseTokens
 	//		});
 	//		// console.log( this._chatGPTAPI );
-	//	}
-	//}
+		}
+	}
 
 	public resolveWebviewView(
 		webviewView: vscode.WebviewView,
@@ -288,6 +294,19 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 	}
 
+	private _getMessagesNumberOfTokens() {
+		
+		let full_promt = "";
+		if (this._messages) {
+			for (const message of this._messages) {
+				full_promt += "\n# <u>" + message.role.toUpperCase() + "</u>:\n" + message.content;
+			}
+		}
+
+		const tokenList = this._enc.encode(full_promt);
+		return tokenList.length;
+	}
+
 
 	public async search(prompt?: string) {
 		this._prompt = prompt;
@@ -349,42 +368,58 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '...' });
 
+		this._messages?.push({ role: "user", content: searchPrompt })
+
+		if (!this._openai) {
+		  throw new Error('OpenAI instance is not initialized.');
+		}
+		
+		if (typeof this._settings.model !== 'string') {
+		  throw new Error('Model identifier is not valid or not defined.');
+		}
+
+		// Only if you can't change the Message interface
+		const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {
+		  return ['user', 'assistant', 'system'].includes(role);
+		};
+		
+		// Validate and type narrow `this._messages` before sending
+		if (!this._messages || !Array.isArray(this._messages) ||
+			(!this._messages.every(msg => isValidRole(msg.role)))) {
+		  throw new Error('Messages have invalid roles.');
+		}
+
+		const promtNumberOfTokens = this._getMessagesNumberOfTokens();
 		try {
-			// Make POST request to OpenAI Chat API
-			const url = `${this._settings.apiUrl}/chat/completions`;
-			this._messages?.push({ role: "user", content: searchPrompt })
-			const body = JSON.stringify({
+			console.log("Creating message sender...");
+			const stream = await this._openai.chat.completions.create({
 				model: this._settings.model,
 				messages: this._messages,
+				stream: true,
+				max_tokens: this._settings.maxResponseTokens,
 			});
+			console.log("Message sender created");
+			
+			let completionTokens = 0;
+			let full_message = "";
+			for await (const chunk of stream) {
+				const content = chunk.choices[0]?.delta?.content || "";
+				console.log("chunk:",chunk);
+				console.log("content:", content);
+				const tokenList = this._enc.encode(content);
+				completionTokens += tokenList.length;
+				console.log("tokens:", completionTokens);
+				full_message += content;
+				//this._response = chat_response;
+				this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
 
-			console.log("url:", url);
-			console.log("body:", body);
-			console.log("key:", this._authInfo.apiKey);
-			console.log("messages:", this._messages);
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this._authInfo.apiKey}`,
-				},
-				body,
-			});
-
-			// Check for errors
-			if (!response.ok) {
-				throw new Error(`OpenAI API request failed with status: ${response.status}`);
 			}
+			this._messages?.push({ role: "assistant", content: full_message })
+			console.log("Full message:", full_message);
+			console.log("Full Number of tokens:", completionTokens);
+			const tokenList = this._enc.encode(full_message);
+			console.log("Full Number of tokens tiktoken:", tokenList.length);
 
-			const data = await response.json() as ChatGPTResponse;
-
-			// Update response and token count
-			//chat_response = this._response;
-			//chat_response += "\nYou:\n" + this._fullPrompt + "\n";
-			//chat_response += "\nChatGPT:\n" + data.choices[0].message.content;
-			
-			this._messages?.push({ role: data.choices[0].message.role, content: data.choices[0].message.content })
-			
 			if (this._messages) {
 				for (const message of this._messages) {
 					chat_response += "\n# <u>" + message.role.toUpperCase() + "</u>:\n" + message.content;
@@ -392,17 +427,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			}
 
 
-			if (data.usage?.total_tokens) {
-				this._totalNumberOfTokens += data.usage.total_tokens;
-				chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${data.usage.total_tokens} (${data.usage.prompt_tokens}+${data.usage.completion_tokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
-			}
-
-			// Update conversation context if enabled
-			if (this._settings.keepConversation) {
-				this._conversation = {
-					parentMessageId: data.id,
-				};
-			}
+			
+			this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
+			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
 		} catch (e: any) {
 			console.error(e);
 			if (this._currentMessageNumber === currentMessageNumber) {
@@ -410,12 +437,8 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				chat_response += `\n\n---\n[ERROR] ${e}`;
 			}
 		}
-
-		// Update the response in the view
-		if (this._currentMessageNumber === currentMessageNumber && this._view) {
-			this._response = chat_response;
-			this._view.webview.postMessage({ type: 'addResponse', value: chat_response });
-		}
+		this._response = chat_response;
+		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {

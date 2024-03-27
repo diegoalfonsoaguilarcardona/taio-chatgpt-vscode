@@ -278,7 +278,8 @@
   },
   "dependencies": {
     "@types/node-fetch": "^2.6.11",
-    "gpt3-tokenizer": "^1.1.5",
-    "node-fetch": "^3.3.2"
+    "js-tiktoken": "^1.0.10",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.29.2"
   }
 }
