@@ -481,41 +481,81 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
 		const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
 
+		const styles = `
+		<style>
+			.code {
+				white-space: pre;
+			}
+			p {
+                padding-top: 0.3rem;
+                padding-bottom: 0.3rem;
+            }
+            ul, ol {
+                list-style: initial !important;
+                margin-left: 10px !important;
+            }
+            h1, h2, h3, h4, h5, h6 {
+                font-weight: bold !important;
+            }
+            #response {
+                overflow-y: auto;
+                max-height: calc(100vh - 50px); /* height of the input wrapper */
+                padding-bottom: 50px; /* same as height of the input wrapper to avoid overlap */
+            }
+		
+			/* ... other styles ... */
+			#input-wrapper {
+				background-color: var(--vscode-editor-background);
+				border-top: 1px solid var(--vscode-editorGroup-border);
+				position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 50px; /* adjust the height of the input field + padding */
+			}
+			#prompt-input {
+				color: var(--vscode-editor-foreground);
+				background-color: var(--vscode-editor-background);
+				border: none;
+				outline: none;
+				padding: 10px;
+				width: calc(100% - 20px); /* Adjust for padding */
+				box-sizing: border-box;
+				
+			}
+			/* Fallback Styles if VSCode variables aren't available */
+			:root {
+				--vscode-editor-background: #1E1E1E;
+				--vscode-editor-foreground: #D4D4D4;
+				--vscode-editorGroup-border: #3C3C3C;
+			}
+		</style>
+		`;
+		
+
 		return `<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<script src="${tailwindUri}"></script>
-				<script src="${showdownUri}"></script>
-				<script src="${microlightUri}"></script>
-				<style>
-				.code {
-					white-space: pre;
-				}
-				p {
-					padding-top: 0.3rem;
-					padding-bottom: 0.3rem;
-				}
-				/* overrides vscodes style reset, displays as if inside web browser */
-				ul, ol {
-					list-style: initial !important;
-					margin-left: 10px !important;
-				}
-				h1, h2, h3, h4, h5, h6 {
-					font-weight: bold !important;
-				}
-				</style>
-			</head>
-			<body>
-				<div id="response" class="pt-4 text-sm">
-				</div>
-				<input class="h-10 w-full text-white bg-stone-700 p-4 text-sm" placeholder="Ask ChatGPT something" id="prompt-input" />
-				<script src="${scriptUri}"></script>
-			</body>
-			</html>`;
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<script src="${tailwindUri}"></script>
+			<script src="${showdownUri}"></script>
+			<script src="${microlightUri}"></script>
+			${styles}
+		</head>
+		<body>
+			<div id="response" class="text-sm">
+				<!-- response content goes here -->
+			</div>
+			<div id="input-wrapper">
+				<input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
+			</div>
+			<script src="${scriptUri}"></script>
+		</body>
+		</html>`;
 	}
 }
+
 
 // This method is called when your extension is deactivated
 export function deactivate() { }
