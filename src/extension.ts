@@ -502,26 +502,35 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 max-height: calc(100vh - 50px); /* height of the input wrapper */
                 padding-bottom: 50px; /* same as height of the input wrapper to avoid overlap */
             }
-		
-			/* ... other styles ... */
 			#input-wrapper {
+				display: grid;
+				grid-template-columns: auto 1fr;
+				grid-template-rows: auto auto; /* Two rows: one for the combobox/slider and one for the input */
+				grid-gap: 10px;
+				align-items: center;
 				background-color: var(--vscode-editor-background);
 				border-top: 1px solid var(--vscode-editorGroup-border);
 				position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                height: 50px; /* adjust the height of the input field + padding */
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				padding: 10px;
+				box-sizing: border-box;
 			}
 			#prompt-input {
+				grid-column: 1 / -1; /* Span across all columns */
 				color: var(--vscode-editor-foreground);
 				background-color: var(--vscode-editor-background);
-				border: none;
+				border: 1px solid var(--vscode-editorGroup-border); /* Added border */
 				outline: none;
 				padding: 10px;
-				width: calc(100% - 20px); /* Adjust for padding */
-				box-sizing: border-box;
-				
+				width: calc(100% - 22px); /* Adjusting width taking padding and border into account */
+			}
+			/* Add styles for the model selector combobox and temperature slider */
+			#model-selector,
+			#temperature-slider,
+			label[for="temperature-slider"] {
+				margin-bottom: 10px; /* Add some spacing between controls and the text input */
 			}
 			/* Fallback Styles if VSCode variables aren't available */
 			:root {
@@ -548,10 +557,22 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				<!-- response content goes here -->
 			</div>
 			<div id="input-wrapper">
+				<!-- Model selector combobox -->
+				<select id="model-selector">
+					<option value="base-model">Base Model</option>
+					<option value="advanced-model">Advanced Model</option>
+					<!-- Add more models as necessary -->
+				</select>
+				<!-- Temperature slider and label -->
+				<div>
+					<label for="temperature-slider">Temperature:</label>
+					<input type="range" id="temperature-slider" min="0" max="100" value="50" />
+				</div>
+				<!-- Text input for the prompt -->
 				<input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
 			</div>
-			<script src="${scriptUri}"></script>
-		</body>
+        <script src="${scriptUri}"></script>
+    	</body>
 		</html>`;
 	}
 }
