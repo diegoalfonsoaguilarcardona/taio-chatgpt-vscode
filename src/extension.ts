@@ -497,11 +497,13 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             h1, h2, h3, h4, h5, h6 {
                 font-weight: bold !important;
             }
-            #response {
+
+			#response {
                 overflow-y: auto;
                 max-height: calc(100vh - 50px); /* height of the input wrapper */
                 padding-bottom: 50px; /* same as height of the input wrapper to avoid overlap */
             }
+
 			#input-wrapper {
 				display: grid;
 				grid-template-columns: auto 1fr;
@@ -517,6 +519,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				padding: 10px;
 				box-sizing: border-box;
 			}
+
 			#prompt-input {
 				grid-column: 1 / -1; /* Span across all columns */
 				color: var(--vscode-editor-foreground);
@@ -526,17 +529,70 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				padding: 10px;
 				width: calc(100% - 22px); /* Adjusting width taking padding and border into account */
 			}
+
 			/* Add styles for the model selector combobox and temperature slider */
 			#model-selector,
 			#temperature-slider,
 			label[for="temperature-slider"] {
 				margin-bottom: 10px; /* Add some spacing between controls and the text input */
 			}
-			/* Fallback Styles if VSCode variables aren't available */
+
+			/* Combobox (select element) styling */
+			select {
+				color: var(--vscode-dropdown-foreground);
+				background-color: var(--vscode-dropdown-background);
+				border: 1px solid var(--vscode-dropdown-border);
+				padding: 5px;
+				font-size: inherit; /* Adjust size to match VS Code's default text size */
+				cursor: pointer;
+			}
+
+  			/* Style the option elements */
+			select option {
+				background: var(--vscode-dropdown-listBackground);
+			}
+
+			/* Slider (input range element) styling */
+			input[type="range"] {
+				-webkit-appearance: none;
+				appearance: none;
+				background-color: var(--vscode-slider-background);
+				height: 2px;
+				outline: none;
+				cursor: pointer;
+			}
+
+			input[type="range"]::-webkit-slider-thumb {
+				-webkit-appearance: none;
+				background: var(--vscode-slider-activeBackground);
+				border-radius: 50%;
+				height: 16px;
+				width: 16px;
+				margin-top: -7px; /* Align thumb with the center of the track */
+			}
+
+			input[type="range"]::-moz-range-thumb {
+				background: var(--vscode-slider-activeBackground);
+				border-radius: 50%;
+				height: 16px;
+				width: 16px;
+			}
+
+			input[type="range"]::-ms-thumb {
+				background: var(--vscode-slider-activeBackground);
+				border-radius: 50%;
+				height: 16px;
+				width: 16px;
+			}
+
+			/* Fallback styles if VSCode variables aren't available */
 			:root {
-				--vscode-editor-background: #1E1E1E;
-				--vscode-editor-foreground: #D4D4D4;
-				--vscode-editorGroup-border: #3C3C3C;
+				--vscode-dropdown-foreground: #C5C5C5;
+				--vscode-dropdown-background: #3C3C3C;
+				--vscode-dropdown-border: #303030;
+				--vscode-dropdown-listBackground: #252526;
+				--vscode-slider-background: #C5C5C5;
+				--vscode-slider-activeBackground: #007ACC; /* Default blue accent color */
 			}
 		</style>
 		`;
