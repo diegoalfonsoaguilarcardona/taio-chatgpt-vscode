@@ -460,7 +460,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });
 		this._view?.webview.postMessage({ type: 'addResponse', value: '...' });
 
-		this._messages?.push({ role: "user", content: searchPrompt, selected:true })
+		if (searchPrompt != "") {
+			this._messages?.push({ role: "user", content: searchPrompt, selected:true })
+		}
 
 		if (!this._openai) {
 		  throw new Error('OpenAI instance is not initialized.');
@@ -521,6 +523,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		}
 		this._response = chat_response;
 		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
