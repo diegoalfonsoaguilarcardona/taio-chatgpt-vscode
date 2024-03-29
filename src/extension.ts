@@ -498,14 +498,37 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 font-weight: bold !important;
             }
 
+			body, html {
+				height: 100%;
+				margin: 0;
+			}
+			#container {
+				display: flex;
+				flex-direction: column;
+				height: 100vh;
+			}
+			#top-wrapper {
+				flex-shrink: 0; /* Don't allow the header to grow or shrink */
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				background-color: var(--vscode-editor-background);
+				border-bottom: 1px solid var(--vscode-editorGroup-border);
+				padding: 10px;
+				box-sizing: border-box;
+				z-index: 1; /* Keep on top of other content */
+				/* Add a fixed height if not already present */
+				height: 50px;
+			}
 			#response {
-                overflow-y: auto;
-                max-height: calc(100vh - 100px); /* height of the input wrapper */
-                padding-bottom: 100px; /* same as height of the input wrapper to avoid overlap */
-				margin-top: 60px; /* Adjust this value to match the height of the top-wrapper */
-            }
-
+				flex-grow: 1; /* This will take up all available space */
+				overflow-y: auto;
+            	padding: 10px;
+				padding-top: 60px; 
+            	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+			}
 			#input-wrapper {
+				flex-shrink: 0; /* Don't allow the footer to grow or shrink */
 				display: grid;
 				grid-template-columns: auto 1fr;
 				grid-template-rows: auto auto; /* Two rows: one for the combobox/slider and one for the input */
@@ -513,24 +536,19 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				align-items: center;
 				background-color: var(--vscode-editor-background);
 				border-top: 1px solid var(--vscode-editorGroup-border);
-				position: fixed;
-				bottom: 0;
-				left: 0;
-				width: 100%;
 				padding: 10px;
 				box-sizing: border-box;
-				height: 100px;
 			}
-
 			#prompt-input {
 				grid-column: 1 / -1; /* Span across all columns */
 				color: var(--vscode-editor-foreground);
 				background-color: var(--vscode-editor-background);
-				border: 1px solid var(--vscode-editorGroup-border); /* Added border */
+				border: 1px solid var(--vscode-editorGroup-border);
 				outline: none;
 				padding: 10px;
 				width: calc(100% - 22px); /* Adjusting width taking padding and border into account */
 			}
+		
 
 			/* Add styles for the model selector combobox and temperature slider */
 			#model-selector,
@@ -642,32 +660,34 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			${styles}
 		</head>
 		<body>
-			<div id="top-wrapper">
-				<input type="text" placeholder="Enter text" />
-				<select>
-					<option value="option1">Option 1</option>
-					<option value="option2">Option 2</option>
-					<!-- Additional options here -->
-				</select>
-				<button>Add</button>
-			</div>
-			<div id="response" class="text-sm">
-				<!-- response content goes here -->
-			</div>
-			<div id="input-wrapper">
-				<!-- Model selector combobox -->
-				<select id="model-selector">
-					<option value="base-model">Base Model</option>
-					<option value="advanced-model">Advanced Model</option>
-					<!-- Add more models as necessary -->
-				</select>
-				<!-- Temperature slider and label -->
-				<div>
-					<label for="temperature-slider">Temperature:</label>
-					<input type="range" id="temperature-slider" min="0" max="100" value="50" />
+			<div id="container">
+				<div id="top-wrapper">
+					<input type="text" placeholder="Enter text" />
+					<select>
+						<option value="option1">Option 1</option>
+						<option value="option2">Option 2</option>
+						<!-- Additional options here -->
+					</select>
+					<button>Add</button>
 				</div>
-				<!-- Text input for the prompt -->
-				<input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
+				<div id="response" class="text-sm">
+					<!-- response content goes here -->
+				</div>
+				<div id="input-wrapper">
+					<!-- Model selector combobox -->
+					<select id="model-selector">
+						<option value="base-model">Base Model</option>
+						<option value="advanced-model">Advanced Model</option>
+						<!-- Add more models as necessary -->
+					</select>
+					<!-- Temperature slider and label -->
+					<div>
+						<label for="temperature-slider">Temperature:</label>
+						<input type="range" id="temperature-slider" min="0" max="100" value="50" />
+					</div>
+					<!-- Text input for the prompt -->
+					<input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
+				</div>
 			</div>
         <script src="${scriptUri}"></script>
     	</body>
