@@ -361,14 +361,15 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	  return ret;
 	}
 
-	private _containsCodeBlock(content: string): boolean {
+	private _containsCodeBlockOrListItems(content: string): boolean {
 		// Regex pattern to match code blocks.
-		// It looks for three backticks optionally followed by any characters (language) and then any characters until closing three backticks.
-		// The pattern now uses [\s\S]* to match any character including newlines.
 		const codeBlockPattern = /```[\s\S]*?```/;
-	  
-		// Test if the content contains a code block according to the regex pattern.
-		return codeBlockPattern.test(content);
+	
+		// Regex pattern to match bullet points or numbered list items.
+		const listItemPattern = /^(?:\s*(?:[-*+]|\d+\.)\s+.+)$/m;
+	
+		// Test if the content contains a code block or list items.
+		return codeBlockPattern.test(content) || listItemPattern.test(content);
 	}
 	  
 
@@ -378,7 +379,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			this._messages.forEach((message, index) => {
 				const selected = message.selected;
 				const checked_string = selected ? "checked" : "";
-				if (this._containsCodeBlock(message.content)){
+				if (this._containsCodeBlockOrListItems(message.content)){
 					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
 				} else {
 					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>"+ message.content + "</div>";
@@ -548,13 +549,13 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		<body>
 			<div id="container">
 				<div id="top-wrapper">
-					<input type="text" placeholder="Enter text" />
+					<input type="text" placeholder="Agent 1 Developer" />
 					<select>
-						<option value="option1">Option 1</option>
-						<option value="option2">Option 2</option>
+						<option value="option1">Agent 1 Developer</option>
+						<option value="option2">Agent 2 Project Manajer</option>
 						<!-- Additional options here -->
 					</select>
-					<button>Add</button>
+					<button>+Add</button>
 				</div>
 				<div id="response" class="text-sm">
 					<!-- response content goes here -->
