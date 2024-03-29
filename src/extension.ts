@@ -552,38 +552,43 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				background: var(--vscode-dropdown-listBackground);
 			}
 
-			/* Slider (input range element) styling */
+			/* Slider (input[type="range"] element) styling */
 			input[type="range"] {
 				-webkit-appearance: none;
 				appearance: none;
-				background-color: var(--vscode-slider-background);
-				height: 2px;
+				background-color: var(--vscode-slider-background); /* Background of slider track */
+				height: 2px; /* Height of the track */
+				border-radius: 0; /* VS Code track has no border radius */
 				outline: none;
 				cursor: pointer;
 			}
 
 			input[type="range"]::-webkit-slider-thumb {
 				-webkit-appearance: none;
-				background: var(--vscode-slider-activeBackground);
-				border-radius: 50%;
+				background: var(--vscode-slider-knob);
 				height: 16px;
 				width: 16px;
+				border: none; /* Remove border */
+				border-radius: 50%;
 				margin-top: -7px; /* Align thumb with the center of the track */
 			}
 
 			input[type="range"]::-moz-range-thumb {
-				background: var(--vscode-slider-activeBackground);
-				border-radius: 50%;
+				background: var(--vscode-slider-knob);
 				height: 16px;
 				width: 16px;
+				border: none; /* Remove border */
+				border-radius: 50%;
 			}
 
 			input[type="range"]::-ms-thumb {
-				background: var(--vscode-slider-activeBackground);
-				border-radius: 50%;
+				background: var(--vscode-slider-knob);
 				height: 16px;
 				width: 16px;
+				border: none; /* Remove border */
+				border-radius: 50%;
 			}
+
 
 			/* Fallback styles if VSCode variables aren't available */
 			:root {
@@ -593,6 +598,8 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				--vscode-dropdown-listBackground: #252526;
 				--vscode-slider-background: #C5C5C5;
 				--vscode-slider-activeBackground: #007ACC; /* Default blue accent color */
+				--vscode-slider-knob: #CCCCCC; /* Fallback - VS Code default knob is lighter */
+			
 			}
 		</style>
 		`;
