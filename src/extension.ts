@@ -338,7 +338,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		}
 		if (this._totalNumberOfTokens !== undefined) {
 			this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
-			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n`;
+			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n\n\n\n\n\n\n`;
 		}
 		return chat_response;
 	}
@@ -500,8 +500,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 			#response {
                 overflow-y: auto;
-                max-height: calc(100vh - 50px); /* height of the input wrapper */
-                padding-bottom: 50px; /* same as height of the input wrapper to avoid overlap */
+                max-height: calc(100vh - 100px); /* height of the input wrapper */
+                padding-bottom: 100px; /* same as height of the input wrapper to avoid overlap */
+				margin-top: 60px; /* Adjust this value to match the height of the top-wrapper */
             }
 
 			#input-wrapper {
@@ -518,6 +519,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				width: 100%;
 				padding: 10px;
 				box-sizing: border-box;
+				height: 100px;
 			}
 
 			#prompt-input {
@@ -589,7 +591,31 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				border-radius: 50%;
 			}
 
-
+			#top-wrapper {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				background-color: var(--vscode-editor-background);
+				border-bottom: 1px solid var(--vscode-editorGroup-border);
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				padding: 10px;
+				box-sizing: border-box;
+				z-index: 1; /* Ensure it's above other content */
+			}
+	
+			#top-wrapper input[type="text"],
+			#top-wrapper select,
+			#top-wrapper button {
+				margin: 0 5px;
+			}
+	
+			#top-wrapper button {
+				padding: 5px 15px;
+			}
+	
 			/* Fallback styles if VSCode variables aren't available */
 			:root {
 				--vscode-dropdown-foreground: #C5C5C5;
@@ -616,6 +642,15 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			${styles}
 		</head>
 		<body>
+			<div id="top-wrapper">
+				<input type="text" placeholder="Enter text" />
+				<select>
+					<option value="option1">Option 1</option>
+					<option value="option2">Option 2</option>
+					<!-- Additional options here -->
+				</select>
+				<button>Add</button>
+			</div>
 			<div id="response" class="text-sm">
 				<!-- response content goes here -->
 			</div>

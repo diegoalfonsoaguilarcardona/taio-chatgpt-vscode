@@ -56,7 +56,7 @@
         let responseDiv = document.getElementById("response");
         responseDiv.innerHTML = html;
         //responseDiv.scrollTop = responseDiv.scrollHeight;
-        responseDiv.scrollIntoView({ block: "end" });
+        //responseDiv.scrollIntoView({ block: "end" });
 
         var preCodeBlocks = document.querySelectorAll("pre code");
         for (var i = 0; i < preCodeBlocks.length; i++) {
@@ -93,7 +93,8 @@
         }
 
         microlight.reset('code');
-
+        //responseDiv.scrollIntoView({ block: "end" });
+        responseDiv.scrollTop = responseDiv.scrollHeight;
         //document.getElementById("response").innerHTML = document.getElementById("response").innerHTML.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     }
 
