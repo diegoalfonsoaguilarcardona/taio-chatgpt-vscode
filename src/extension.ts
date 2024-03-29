@@ -274,6 +274,28 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 						}
 						break;
 					}
+				case 'messageContentChanged':
+					{
+						console.log("messageContentChanged:", data);
+						const idParts = data.id.split('-'); // Split the id into parts
+						if(idParts.length === 3) {
+							const indexStr = idParts[2]; // Grab the last part, which should contain the index
+							const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary
+						
+							if(this._messages && index >= 0 && index < this._messages.length) {
+								// If the index is within the bounds of the array, update the checked status
+								this._messages[index].content = data.value;
+							} else {
+								// Handle cases where index is out of bounds or _messages is not an array
+								console.error('Index is out of bounds or _messages is not properly defined.');
+							}
+						} else {
+							// Handle cases where data.id does not follow the expected format
+							console.error('data.id is not in the expected format.');
+						}
+						console.log("messages:", this._messages);
+						break;
+					}
 			}
 		});
 	}
@@ -339,13 +361,28 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	  return ret;
 	}
 
+	private _containsCodeBlock(content: string): boolean {
+		// Regex pattern to match code blocks.
+		// It looks for three backticks optionally followed by any characters (language) and then any characters until closing three backticks.
+		// The pattern now uses [\s\S]* to match any character including newlines.
+		const codeBlockPattern = /```[\s\S]*?```/;
+	  
+		// Test if the content contains a code block according to the regex pattern.
+		return codeBlockPattern.test(content);
+	}
+	  
+
 	private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {
 		let chat_response = "";
 		if (this._messages) {
 			this._messages.forEach((message, index) => {
 				const selected = message.selected;
 				const checked_string = selected ? "checked" : "";
-				chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
+				if (this._containsCodeBlock(message.content)){
+					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
+				} else {
+					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>"+ message.content + "</div>";
+				}
 			});
 		}
 		if (this._totalNumberOfTokens !== undefined) {

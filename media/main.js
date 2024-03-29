@@ -137,4 +137,21 @@
         }
     }
 
+    window.makeEditable = function (element) {
+        element.contentEditable = 'true';
+        element.focus();
+    }
+
+    window.saveContent = function (element) {
+        element.contentEditable = 'false';
+        const updatedContent = element.innerText;
+        vscode.postMessage({
+            type: 'messageContentChanged',
+            id: element.id,
+            value: updatedContent,
+        });
+
+
+    }
+
 })();
