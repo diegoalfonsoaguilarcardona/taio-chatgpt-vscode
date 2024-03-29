@@ -179,6 +179,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	// This private method initializes a new ChatGPTAPI instance
 	private _newAPI() {
 		console.log("New API");
+		console.log("Messages:", this._messages);
 		if (!this._authInfo || !this._settings?.apiUrl) {
 			console.warn("API key or API URL not set, please go to extension settings (read README.md for more info)");
 		} else {
@@ -188,6 +189,13 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 				}
 			);
 		}
+		setTimeout(() => {
+			const chat_response = this._updateChatMessages(
+				this._getMessagesNumberOfTokens(),
+				0
+			);
+			this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+		}, 2000);
 	}
 
 	public resolveWebviewView(
@@ -281,9 +289,13 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._fullPrompt = '';
 		this._totalNumberOfTokens = 0;
 		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
-		this._view?.webview.postMessage({ type: 'addResponse', value: '' });
 		this._messages = [];
 		this._messages?.push({ role: "system", content: "You are a helpful assistant.", selected:true });
+		const chat_response = this._updateChatMessages(
+			this._getMessagesNumberOfTokens(),
+			0
+		);
+		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
 	}
 
 	public fixCodeBlocks(response: string) {
@@ -477,178 +489,12 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	private _getHtmlForWebview(webview: vscode.Webview) {
 
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
+		const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));
 		const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
 		const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
 		const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
 
-		const styles = `
-		<style>
-			.code {
-				white-space: pre;
-			}
-			p {
-                padding-top: 0.3rem;
-                padding-bottom: 0.3rem;
-            }
-            ul, ol {
-                list-style: initial !important;
-                margin-left: 10px !important;
-            }
-            h1, h2, h3, h4, h5, h6 {
-                font-weight: bold !important;
-            }
-
-			body, html {
-				height: 100%;
-				margin: 0;
-			}
-			#container {
-				display: flex;
-				flex-direction: column;
-				height: 100vh;
-			}
-			#top-wrapper {
-				flex-shrink: 0; /* Don't allow the header to grow or shrink */
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				background-color: var(--vscode-editor-background);
-				border-bottom: 1px solid var(--vscode-editorGroup-border);
-				padding: 10px;
-				box-sizing: border-box;
-				z-index: 1; /* Keep on top of other content */
-				/* Add a fixed height if not already present */
-				height: 50px;
-			}
-			#response {
-				flex-grow: 1; /* This will take up all available space */
-				overflow-y: auto;
-            	padding: 10px;
-				padding-top: 60px; 
-            	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-			}
-			#input-wrapper {
-				flex-shrink: 0; /* Don't allow the footer to grow or shrink */
-				display: grid;
-				grid-template-columns: auto 1fr;
-				grid-template-rows: auto auto; /* Two rows: one for the combobox/slider and one for the input */
-				grid-gap: 10px;
-				align-items: center;
-				background-color: var(--vscode-editor-background);
-				border-top: 1px solid var(--vscode-editorGroup-border);
-				padding: 10px;
-				box-sizing: border-box;
-			}
-			#prompt-input {
-				grid-column: 1 / -1; /* Span across all columns */
-				color: var(--vscode-editor-foreground);
-				background-color: var(--vscode-editor-background);
-				border: 1px solid var(--vscode-editorGroup-border);
-				outline: none;
-				padding: 10px;
-				width: calc(100% - 22px); /* Adjusting width taking padding and border into account */
-			}
 		
-
-			/* Add styles for the model selector combobox and temperature slider */
-			#model-selector,
-			#temperature-slider,
-			label[for="temperature-slider"] {
-				margin-bottom: 10px; /* Add some spacing between controls and the text input */
-			}
-
-			/* Combobox (select element) styling */
-			select {
-				color: var(--vscode-dropdown-foreground);
-				background-color: var(--vscode-dropdown-background);
-				border: 1px solid var(--vscode-dropdown-border);
-				padding: 5px;
-				font-size: inherit; /* Adjust size to match VS Code's default text size */
-				cursor: pointer;
-			}
-
-  			/* Style the option elements */
-			select option {
-				background: var(--vscode-dropdown-listBackground);
-			}
-
-			/* Slider (input[type="range"] element) styling */
-			input[type="range"] {
-				-webkit-appearance: none;
-				appearance: none;
-				background-color: var(--vscode-slider-background); /* Background of slider track */
-				height: 2px; /* Height of the track */
-				border-radius: 0; /* VS Code track has no border radius */
-				outline: none;
-				cursor: pointer;
-			}
-
-			input[type="range"]::-webkit-slider-thumb {
-				-webkit-appearance: none;
-				background: var(--vscode-slider-knob);
-				height: 16px;
-				width: 16px;
-				border: none; /* Remove border */
-				border-radius: 50%;
-				margin-top: -7px; /* Align thumb with the center of the track */
-			}
-
-			input[type="range"]::-moz-range-thumb {
-				background: var(--vscode-slider-knob);
-				height: 16px;
-				width: 16px;
-				border: none; /* Remove border */
-				border-radius: 50%;
-			}
-
-			input[type="range"]::-ms-thumb {
-				background: var(--vscode-slider-knob);
-				height: 16px;
-				width: 16px;
-				border: none; /* Remove border */
-				border-radius: 50%;
-			}
-
-			#top-wrapper {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				background-color: var(--vscode-editor-background);
-				border-bottom: 1px solid var(--vscode-editorGroup-border);
-				position: fixed;
-				top: 0;
-				left: 0;
-				right: 0;
-				padding: 10px;
-				box-sizing: border-box;
-				z-index: 1; /* Ensure it's above other content */
-			}
-	
-			#top-wrapper input[type="text"],
-			#top-wrapper select,
-			#top-wrapper button {
-				margin: 0 5px;
-			}
-	
-			#top-wrapper button {
-				padding: 5px 15px;
-			}
-	
-			/* Fallback styles if VSCode variables aren't available */
-			:root {
-				--vscode-dropdown-foreground: #C5C5C5;
-				--vscode-dropdown-background: #3C3C3C;
-				--vscode-dropdown-border: #303030;
-				--vscode-dropdown-listBackground: #252526;
-				--vscode-slider-background: #C5C5C5;
-				--vscode-slider-activeBackground: #007ACC; /* Default blue accent color */
-				--vscode-slider-knob: #CCCCCC; /* Fallback - VS Code default knob is lighter */
-			
-			}
-		</style>
-		`;
-		
-
 		return `<!DOCTYPE html>
 		<html lang="en">
 		<head>
@@ -657,7 +503,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			<script src="${tailwindUri}"></script>
 			<script src="${showdownUri}"></script>
 			<script src="${microlightUri}"></script>
-			${styles}
+			<link rel="stylesheet" href="${stylesUri}">
 		</head>
 		<body>
 			<div id="container">
