@@ -322,38 +322,39 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
 	}
 
-
-
-
-public async pasteChat() {
-	console.log("pasteChat");
-
-	// Ensure there is an active text editor where we can paste the YAML
-	if (!vscode.window.activeTextEditor) {
-		vscode.window.showErrorMessage('No active text editor!');
-		return;
+	public async pasteChat() {
+		console.log("pasteChat");
+	
+		// Ensure there is an active text editor where we can paste the YAML
+		if (!vscode.window.activeTextEditor) {
+			vscode.window.showErrorMessage('No active text editor!');
+			return;
+		}
+	
+		try {
+			// Get the original _messages object
+			// If you want to exclude any other properties from the YAML, you can map and remove them here
+			const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({
+				role, content, selected
+			}));
+	
+			// Convert messages to a YAML string
+			const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });
+	
+			// Create a new snippet and append the YAML string
+			const snippet = new vscode.SnippetString();
+			snippet.appendText(messagesYaml);
+	
+			// Insert the snippet into the active text editor
+			await vscode.window.activeTextEditor.insertSnippet(snippet);
+	
+			console.log("Chat pasted as YAML successfully.");
+		} catch (error) {
+			console.error("Failed to paste chat as YAML:", error);
+			vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);
+		}
 	}
-
-	try {
-		// Get the messages filtered and mapped without the 'selected' property
-		const messagesForYaml = this.getSelectedMessagesWithoutSelectedProperty();
-
-		// Convert filtered messages to a YAML string
-		const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true });
-
-		// Create a new snippet and append the YAML string
-		const snippet = new vscode.SnippetString();
-		snippet.appendText(messagesYaml);
-
-		// Insert the snippet into the active text editor
-		await vscode.window.activeTextEditor.insertSnippet(snippet);
-
-		console.log("Chat pasted as YAML successfully.");
-	} catch (error) {
-		console.error("Failed to paste chat as YAML:", error);
-		vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);
-	}
-}	
+	
 	public fixCodeBlocks(response: string) {
 		// Use a regular expression to find all occurrences of the substring in the string
 		const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');

@@ -72,6 +72,10 @@
         "title": "Paste ChatGPT chat"
       },
       {
+        "command": "chatgpt.useSelectionAsChat",
+        "title": "Use selection as ChatGPT conversation"
+      },
+      {
         "command": "chatgpt.tryAgain",
         "title": "Retry ChatGPT request"
       }
@@ -138,6 +142,10 @@
         },
         {
           "command": "chatgpt.pasteChat"
+        },
+        {
+          "command": "chatgpt.useSelectionAsChat",
+          "when": "editorHasSelection"
         }
       ]
     },
