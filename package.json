@@ -34,7 +34,8 @@
     "onCommand:chatgpt.refactor",
     "onCommand:chatgpt.optimize",
     "onCommand:chatgpt.findProblems",
-    "onCommand:chatgpt.documentation"
+    "onCommand:chatgpt.documentation",
+    "onCommand:chatgpt.useSelectionAsChat"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -111,6 +112,11 @@
           "command": "chatgpt.documentation",
           "when": "editorHasSelection",
           "group": "chatgpt-menu-group@6"
+        },
+        {
+          "command": "chatgpt.useSelectionAsChat",
+          "when": "editorHasSelection",
+          "group": "chatgpt-menu-group@7"
         }
       ],
       "commandPalette": [
