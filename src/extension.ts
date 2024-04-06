@@ -69,7 +69,8 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('chatgpt.optimize', () => commandHandler('promptPrefix.optimize')),
 		vscode.commands.registerCommand('chatgpt.findProblems', () => commandHandler('promptPrefix.findProblems')),
 		vscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),
-		vscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation())
+		vscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),
+		vscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat())
 	);
 
 
@@ -320,6 +321,33 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
 	}
 
+	public async pasteChat() {
+		console.log("pasteChat");
+	
+		// Ensure there is an active text editor where we can paste the JSON
+		if (!vscode.window.activeTextEditor) {
+			vscode.window.showErrorMessage('No active text editor!');
+			return;
+		}
+	
+		try {
+			// Get the messages filtered and mapped without the 'selected' property
+			const messagesJson = JSON.stringify(this.getSelectedMessagesWithoutSelectedProperty(), null, 2);
+	
+			// Create a new snippet and append the JSON string
+			const snippet = new vscode.SnippetString();
+			snippet.appendText(messagesJson);
+	
+			// Insert the snippet into the active text editor
+			await vscode.window.activeTextEditor.insertSnippet(snippet);
+	
+			console.log("Chat pasted successfully.");
+		} catch (error) {
+			console.error("Failed to paste chat:", error);
+			vscode.window.showErrorMessage('Failed to paste chat: ' + error);
+		}
+	}
+	
 	public fixCodeBlocks(response: string) {
 		// Use a regular expression to find all occurrences of the substring in the string
 		const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');

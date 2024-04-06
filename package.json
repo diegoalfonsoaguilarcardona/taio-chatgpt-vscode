@@ -68,6 +68,10 @@
         "title": "Reset ChatGPT conversation"
       },
       {
+        "command": "chatgpt.pasteChat",
+        "title": "Paste ChatGPT chat"
+      },
+      {
         "command": "chatgpt.tryAgain",
         "title": "Retry ChatGPT request"
       }
@@ -131,6 +135,9 @@
         },
         {
           "command": "chatgpt.resetConversation"
+        },
+        {
+          "command": "chatgpt.pasteChat"
         }
       ]
     },
