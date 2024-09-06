@@ -98,6 +98,24 @@
         //document.getElementById("response").innerHTML = document.getElementById("response").innerHTML.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     }
 
+    document.getElementById('prompt-input').addEventListener('paste', async function (e) {
+        const clipboardItems = e.clipboardData.items;
+        for (const item of clipboardItems) {
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const base64Data = event.target.result;
+                    vscode.postMessage({
+                        type: 'pasteImage',
+                        value: base64Data
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    });
+
     // Listen for keyup events on the prompt input element
     document.getElementById('prompt-input').addEventListener('keyup', function (e) {
         // If the Enter key was pressed without the Ctrl key

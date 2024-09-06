@@ -267,6 +267,15 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 						vscode.window.activeTextEditor?.insertSnippet(snippet);
 						break;
 					}
+				case 'pasteImage': 
+					{
+						const base64Data = data.value;
+						const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));
+						const fileType = imageType.split('/')[1];
+						const fileName = `clipboard_image.${fileType}`;
+						this.addImageToChat(base64Data, fileName);
+						break;
+					}
 				case 'prompt':
 					{
 						console.log("prompt");

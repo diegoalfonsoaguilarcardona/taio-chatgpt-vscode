@@ -1,0 +1,1286 @@
+- role: system
+  content: "You are a expirenced developer that only answer what its beeing asked.\_ Your answers are concise, you only provide the parts of code that must be modified and never provide the full code if you are not asked for.\n\n\nYour users can specify the level of detail they would like in your response with the following notation: V=<level>, where <level> can be 0-5. Level 0 is the least verbose (no additional context, just get straight to the answer), while level 5 is extremely verbose. Your default level is 3. This could be on a separate line like so: V=4 <question> Or it could be on the same line as a question (often used for short questions), for example: V=0 What is the opposite word of 'good'?\_"
+  selected: true
+- role: user
+  content: |-
+    I am writing a visual studio code extension that works with openai api.  This is my package.json file
+    ```json
+    {
+      "name": "diegoaacchatgpt",
+      "displayName": "ChatGPT for Visual Studio Code: write and improve code using AI",
+      "description": "Use ChatGPT and GPT4 right inside the IDE to enhance and automate your coding with AI-powered assistance (unofficial)",
+      "version": "1.1.0",
+      "publisher": "diegoaac",
+      "icon": "resources/extensionIcon.png",
+      "license": "MIT",
+      "repository": {
+        "url": "https://github.com/timkmecl/chatgpt-vscode"
+      },
+      "engines": {
+        "vscode": "^1.73.0"
+      },
+      "categories": [
+        "Other"
+      ],
+      "keywords": [
+        "chatgpt",
+        "openai",
+        "gpt3",
+        "gpt4",
+        "copilot",
+        "ai",
+        "explain",
+        "find bugs",
+        "explain ",
+        "refactor"
+      ],
+      "activationEvents": [
+        "onView:chatgpt.chatView",
+        "onCommand:chatgpt.ask",
+        "onCommand:chatgpt.explain",
+        "onCommand:chatgpt.refactor",
+        "onCommand:chatgpt.optimize",
+        "onCommand:chatgpt.findProblems",
+        "onCommand:chatgpt.documentation",
+        "onCommand:chatgpt.useSelectionAsChat"
+      ],
+      "main": "./dist/extension.js",
+      "contributes": {
+        "commands": [
+          {
+            "command": "chatgpt.ask",
+            "title": "Ask ChatGPT"
+          },
+          {
+            "command": "chatgpt.explain",
+            "title": "ChatGPT: Explain selection"
+          },
+          {
+            "command": "chatgpt.refactor",
+            "title": "ChatGPT: Refactor selection"
+          },
+          {
+            "command": "chatgpt.findProblems",
+            "title": "ChatGPT: Find problems"
+          },
+          {
+            "command": "chatgpt.optimize",
+            "title": "ChatGPT: Optimize selection"
+          },
+          {
+            "command": "chatgpt.documentation",
+            "title": "ChatGPT: Write documentation"
+          },
+          {
+            "command": "chatgpt.resetConversation",
+            "title": "Reset ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.pasteChat",
+            "title": "Paste ChatGPT chat"
+          },
+          {
+            "command": "chatgpt.useSelectionAsChat",
+            "title": "Use selection as ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.tryAgain",
+            "title": "Retry ChatGPT request"
+          },
+          {
+            "command": "chatgpt.addImageToChat",
+            "title": "Add Image to ChatGPT"
+          }
+        ],
+        "menus": {
+          "editor/context": [
+            {
+              "command": "chatgpt.ask",
+              "when": "editorTextFocus",
+              "group": "chatgpt-menu-group@1"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@2"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@3"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@4"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@5"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@6"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@7"
+            }
+          ],
+          "commandPalette": [
+            {
+              "command": "chatgpt.ask"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.resetConversation"
+            },
+            {
+              "command": "chatgpt.pasteChat"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection"
+            }
+          ],
+          "explorer/context": [
+            {
+              "command": "chatgpt.addImageToChat",
+              "when": "resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif",
+              "group": "navigation"
+            }
+          ]
+        },
+        "viewsContainers": {
+          "activitybar": [
+            {
+              "id": "chatgpt",
+              "title": "ChatGPT",
+              "icon": "resources/icon.png"
+            }
+          ]
+        },
+        "views": {
+          "chatgpt": [
+            {
+              "type": "webview",
+              "id": "chatgpt.chatView",
+              "name": "ChatGPT"
+            }
+          ]
+        },
+        "configuration": {
+          "title": "chatGPT",
+          "type": "object",
+          "properties": {
+            "chatgpt.apiKey": {
+              "markdownDescription": "OpenAI API key from [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)",
+              "type": "string",
+              "order": 0
+            },
+            "chatgpt.apiUrl": {
+              "markdownDescription": "OpenAI API URL or other custom API URL. Defaults to [https://api.openai.com/v1](https://api.openai.com/v1)",
+              "type": "string",
+              "default": "https://api.openai.com/v1",
+              "order": 1
+            },
+            "chatgpt.model": {
+              "type": "string",
+              "default": "gpt-3.5-turbo-16k",
+              "description": "Which GPT model to use",
+              "order": 2
+            },
+            "chatgpt.maxModelTokens": {
+              "type": "number",
+              "default": 4000,
+              "description": "Maximum number of tokens allowed by the model's context",
+              "order": 3
+            },
+            "chatgpt.maxResponseTokens": {
+              "type": "number",
+              "default": 1000,
+              "description": "Maximum number of tokens allowed for the model's response",
+              "order": 4
+            },
+            "chatgpt.pasteOnClick": {
+              "type": "boolean",
+              "default": true,
+              "description": "Paste the code from a codeblock inside the response into the editor when you click on it",
+              "order": 5
+            },
+            "chatgpt.promptPrefix.explain": {
+              "type": "string",
+              "default": "Explain what this code does: ",
+              "description": "The prompt prefix used for explaining the selected code",
+              "order": 6
+            },
+            "chatgpt.promptPrefix.refactor": {
+              "type": "string",
+              "default": "Refactor this code and explain what's changed: ",
+              "description": "The prompt prefix used for refactoring the selected code",
+              "order": 7
+            },
+            "chatgpt.promptPrefix.findProblems": {
+              "type": "string",
+              "default": "Find problems with the following code, fix them and explain what was wrong (Do not change anything else, if there are no problems say so): ",
+              "description": "The prompt prefix used for finding problems in the selected code",
+              "order": 8
+            },
+            "chatgpt.promptPrefix.documentation": {
+              "type": "string",
+              "default": "Write documentation for the following code: ",
+              "description": "The prompt prefix used for writing documentation for the selected code",
+              "order": 9
+            },
+            "chatgpt.promptPrefix.optimize": {
+              "type": "string",
+              "default": "Optimize the following code if there is anything to improve, if not say so: ",
+              "description": "The prompt prefix used for optimizing the selected code",
+              "order": 10
+            },
+            "chatgpt.keepConversation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep the conversation going by using the same conversation ID for all requests (allows follow-up questions)",
+              "order": 11
+            },
+            "chatgpt.timeoutLength": {
+              "type": "number",
+              "default": "120",
+              "description": "How long should the request wait for a response before timing out (in seconds)",
+              "order": 12
+            },
+            "chatgpt.selectedInsideCodeblock": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append selected code as a codeblock (```...code...```) instead of plain text",
+              "order": 13
+            },
+            "chatgpt.codeblockWithLanguageId": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append language id of the selected code to the codeblock (```language...code...```)",
+              "order": 14
+            }
+          }
+        }
+      },
+      "scripts": {
+        "vscode:prepublish": "yarn run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "update-package-lock": "npm install --package-lock-only"
+      },
+      "devDependencies": {
+        "@types/glob": "^8.0.0",
+        "@types/js-yaml": "^4.0.9",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/vscode": "^1.73.0",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "@vscode/test-electron": "^2.2.0",
+        "eslint": "^8.28.0",
+        "glob": "^8.0.3",
+        "mocha": "^10.1.0",
+        "ts-loader": "^9.4.1",
+        "typescript": "^4.9.3",
+        "webpack": "^5.75.0",
+        "webpack-cli": "^5.0.0"
+      },
+      "dependencies": {
+        "@types/node-fetch": "^2.6.11",
+        "js-tiktoken": "^1.0.10",
+        "js-yaml": "^4.1.0",
+        "node-fetch": "^3.3.2",
+        "openai": "^4.29.2"
+      }
+    }
+
+    ```
+  selected: true
+- role: user
+  content: "And this is my extensions.ts file:\n```typescript\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml'; \nimport OpenAI from \"openai\";\nimport { encodingForModel } from \"js-tiktoken\";\nimport { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';\n\n\ntype AuthInfo = { apiKey?: string };\ntype Settings = {\n\tselectedInsideCodeblock?: boolean,\n\tcodeblockWithLanguageId?: false,\n\tpasteOnClick?: boolean,\n\tkeepConversation?: boolean,\n\ttimeoutLength?: number,\n\tmodel?: string,\n\tmaxModelTokens?: number,\n\tmaxResponseTokens?: number,\n\tapiUrl?: string\n};\n\n\nconst BASE_URL = 'https://api.openai.com/v1';\n\nexport function activate(context: vscode.ExtensionContext) {\n\n\tconsole.log('activating extension \"chatgpt\"');\n\t// Get the settings from the extension's configuration\n\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\n\t// Create a new ChatGPTViewProvider instance and register it with the extension's context\n\tconst provider = new ChatGPTViewProvider(context.extensionUri);\n\n\t// Put configuration settings into the provider\n\tprovider.setAuthenticationInfo({\n\t\tapiKey: config.get('apiKey')\n\t});\n\t\n\tprovider.setSettings({\n\t\tselectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,\n\t\tcodeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,\n\t\tpasteOnClick: config.get('pasteOnClick') || false,\n\t\tkeepConversation: config.get('keepConversation') || false,\n\t\ttimeoutLength: config.get('timeoutLength') || 60,\n\t\tapiUrl: config.get('apiUrl') || BASE_URL,\n\t\tmodel: config.get('model') || 'gpt-3.5-turbo',\n\t\tmaxModelTokens: config.get('maxModelTokens') || 4000,\n\t\tmaxResponseTokens: config.get('maxResponseTokens') || 1000\n\t});\n\t// Register the provider with the extension's context\n\tcontext.subscriptions.push(\n\t\tvscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {\n\t\t\twebviewOptions: { retainContextWhenHidden: true }\n\t\t})\n\t\n\t);\n\n\tconst commandHandler = (command: string) => {\n\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\tconst prompt = config.get(command) as string;\n\t\tprovider.search(prompt);\n\t};\n\n\t// Register the commands that can be called from the extension's package.json\n\tcontext.subscriptions.push(\n\t\tvscode.commands.registerCommand('chatgpt.ask', () =>\n\t\t\tvscode.window.showInputBox({ prompt: 'What do you want to do?' })\n\t\t\t\t.then((value) => provider.search(value))\n\t\t),\n\t\tvscode.commands.registerCommand('chatgpt.explain', () => commandHandler('promptPrefix.explain')),\n\t\tvscode.commands.registerCommand('chatgpt.refactor', () => commandHandler('promptPrefix.refactor')),\n\t\tvscode.commands.registerCommand('chatgpt.optimize', () => commandHandler('promptPrefix.optimize')),\n\t\tvscode.commands.registerCommand('chatgpt.findProblems', () => commandHandler('promptPrefix.findProblems')),\n\t\tvscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),\n\t\tvscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),\n\t\tvscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),\n\t\tvscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())\n\n\t\t\n\t);\n\n\n\t// Change the extension's session token or settings when configuration is changed\n\tvscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {\n\t\tif (event.affectsConfiguration('chatgpt.apiKey')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setAuthenticationInfo({ apiKey: config.get('apiKey') });\n\t\t} else if (event.affectsConfiguration('chatgpt.apiUrl')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tlet url = config.get('apiUrl') as string || BASE_URL;\n\t\t\tprovider.setSettings({ apiUrl: url });\n\t\t} else if (event.affectsConfiguration('chatgpt.model')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ model: config.get('model') || 'gpt-3.5-turbo' });\n\t\t} else if (event.affectsConfiguration('chatgpt.maxModelTokens')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ maxModelTokens: config.get('maxModelTokens') || 4000 });\n\t\t} else if (event.affectsConfiguration('chatgpt.maxResponseTokens')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ maxResponseTokens: config.get('maxResponseTokens') || 4000 });\n\t\t} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.codeblockWithLanguageId')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.pasteOnClick')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ pasteOnClick: config.get('pasteOnClick') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.keepConversation')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ keepConversation: config.get('keepConversation') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.timeoutLength')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ timeoutLength: config.get('timeoutLength') || 60 });\n\t\t}\n\t});\n\n\n\tcontext.subscriptions.push(\n\t\tvscode.commands.registerCommand('chatgpt.addImageToChat', async (uri: vscode.Uri) => {\n\t\t  if (uri && uri.fsPath) {\n\t\t\tconst filePath = uri.fsPath;\n\t\t\tconst fileName = path.basename(filePath);\n\t\t\tconst fileData = await fs.promises.readFile(filePath, { encoding: 'base64' });\n\t\t\tconst fileType = path.extname(filePath).substring(1); // get file extension without dot\n\t\t\tconst imageDataUrl = `data:image/${fileType};base64,${fileData}`;\n\t\n\t\t\t// Post a message to the webview to add the image\n\t\t\tprovider.addImageToChat(imageDataUrl, fileName);\n\t\t  }\n\t\t})\n\t  );\n}\n\ninterface SystemMessage extends ChatCompletionSystemMessageParam {\n\tselected: boolean;  // Additional property specific to Message\n}\n\ninterface UserMessage extends ChatCompletionUserMessageParam {\n  selected: boolean;  // Additional property specific to Message\n}\n\ninterface AssistantMessage extends ChatCompletionAssistantMessageParam {\n\tselected: boolean;  // Additional property specific to Message\n}\n\ntype Message =\n  | SystemMessage\n  | UserMessage\n  | AssistantMessage\n\n\nclass ChatGPTViewProvider implements vscode.WebviewViewProvider {\n\tpublic static readonly viewType = 'chatgpt.chatView';\n\tprivate _view?: vscode.WebviewView;\n\n\t//private _chatGPTAPI?: ChatGPTAPI;\n\tprivate _conversation?: any;\n\tprivate _messages?: Message[];\n\tprivate _openai?: OpenAI;\n\n\tprivate _response?: string;\n\tprivate _totalNumberOfTokens?: number;\n\tprivate _prompt?: string;\n\tprivate _fullPrompt?: string;\n\tprivate _currentMessageNumber = 0;\n\tprivate _enc = encodingForModel(\"gpt-4\"); //Hardcoded for now\n\n\tprivate _settings: Settings = {\n\t\tselectedInsideCodeblock: false,\n\t\tcodeblockWithLanguageId: false,\n\t\tpasteOnClick: true,\n\t\tkeepConversation: true,\n\t\ttimeoutLength: 60,\n\t\tapiUrl: BASE_URL,\n\t\tmodel: 'gpt-3.5-turbo',\n\t\tmaxModelTokens: 4000,\n\t\tmaxResponseTokens: 1000\n\t};\n\tprivate _authInfo?: AuthInfo;\n\n\t// In the constructor, we store the URI of the extension\n\tconstructor(private readonly _extensionUri: vscode.Uri) {\n\t\tthis._messages = [];\n\t\tthis._messages?.push({ role: \"system\", content: \"You are a helpful assistant.\", selected:true });\n\t\tconsole.log(\"constructor....\");\n\t\tconsole.log(\"messages:\", this._messages);\n\t}\n\n\t// Set the API key and create a new API instance based on this key\n\tpublic setAuthenticationInfo(authInfo: AuthInfo) {\n\t\tthis._authInfo = authInfo;\n\t\tthis._newAPI();\n\t}\n\n\tpublic setSettings(settings: Settings) {\n\t\tlet changeModel = false;\n\t\tif (settings.apiUrl || settings.model || settings.maxModelTokens || settings.maxResponseTokens) {\n\t\t\tchangeModel = true;\n\t\t}\n\t\tthis._settings = { ...this._settings, ...settings };\n\n\t\tif (changeModel) {\n\t\t\t//this._newAPI();\n\t\t}\n\t}\n\n\tpublic getSettings() {\n\t\treturn this._settings;\n\t}\n\n\t// This private method initializes a new ChatGPTAPI instance\n\tprivate _newAPI() {\n\t\tconsole.log(\"New API\");\n\t\tconsole.log(\"Messages:\", this._messages);\n\t\tif (!this._authInfo || !this._settings?.apiUrl) {\n\t\t\tconsole.warn(\"API key or API URL not set, please go to extension settings (read README.md for more info)\");\n\t\t} else {\n\t\t\tthis._openai = new OpenAI(\n\t\t\t\t{\n\t\t\t\t\tapiKey: this._authInfo?.apiKey\n\t\t\t\t}\n\t\t\t);\n\t\t}\n\t\tsetTimeout(() => {\n\t\t\tconst chat_response = this._updateChatMessages(\n\t\t\t\tthis._getMessagesNumberOfTokens(),\n\t\t\t\t0\n\t\t\t);\n\t\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\t\t}, 2000);\n\t}\n\n\tpublic resolveWebviewView(\n\t\twebviewView: vscode.WebviewView,\n\t\tcontext: vscode.WebviewViewResolveContext,\n\t\t_token: vscode.CancellationToken,\n\t) {\n\t\tthis._view = webviewView;\n\n\t\t// set options for the webview, allow scripts\n\t\twebviewView.webview.options = {\n\t\t\tenableScripts: true,\n\t\t\tlocalResourceRoots: [\n\t\t\t\tthis._extensionUri\n\t\t\t]\n\t\t};\n\n\t\t// set the HTML for the webview\n\t\twebviewView.webview.html = this._getHtmlForWebview(webviewView.webview);\n\n\t\t// add an event listener for messages received by the webview\n\t\twebviewView.webview.onDidReceiveMessage(async data =>  {\n\t\t\tswitch (data.type) {\n\t\t\t\tcase 'codeSelected':\n\t\t\t\t\t{\n\t\t\t\t\t\t// do nothing if the pasteOnClick option is disabled\n\t\t\t\t\t\tif (!this._settings.pasteOnClick) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlet code = data.value;\n\t\t\t\t\t\tconst snippet = new vscode.SnippetString();\n\t\t\t\t\t\tsnippet.appendText(code);\n\t\t\t\t\t\t// insert the code as a snippet into the active text editor\n\t\t\t\t\t\tvscode.window.activeTextEditor?.insertSnippet(snippet);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\tcase 'prompt':\n\t\t\t\t\t{\n\t\t\t\t\t\tconsole.log(\"prompt\");\n\t\t\t\t\t\tthis.search(data.value);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\tcase 'promptNoQuery':\n\t\t\t\t\t{\n\t\t\t\t\t\tconsole.log(\"promptNoQuery\");\n\n\t\t\t\t\t\tlet searchPrompt = await this._generate_search_prompt(data.value);\n\t\t\t\t\t\t\n\t\t\t\t\t\tthis._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n\t\t\t\t\t\tlet chat_response = this._updateChatMessages(\n\t\t\t\t\t\t\tthis._getMessagesNumberOfTokens(),\n\t\t\t\t\t\t\t0\n\t\t\t\t\t\t);\n\t\t\t\t\t\tthis._response = chat_response;\n\t\t\t\t\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\tcase 'checkboxChanged':\n\t\t\t\t\t{\n\t\t\t\t\t\tconsole.log(\"checkboxChanged:\", data);\n\t\t\t\t\t\tconst idParts = data.id.split('-'); // Split the id into parts\n\t\t\t\t\t\tif(idParts.length === 3) {\n\t\t\t\t\t\t\tconst indexStr = idParts[2]; // Grab the last part, which should contain the index\n\t\t\t\t\t\t\tconst index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tif(this._messages && index >= 0 && index < this._messages.length) {\n\t\t\t\t\t\t\t\t// If the index is within the bounds of the array, update the checked status\n\t\t\t\t\t\t\t\tthis._messages[index].selected = data.checked;\n\t\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\t\t// Handle cases where index is out of bounds or _messages is not an array\n\t\t\t\t\t\t\t\tconsole.error('Index is out of bounds or _messages is not properly defined.');\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\t// Handle cases where data.id does not follow the expected format\n\t\t\t\t\t\t\tconsole.error('data.id is not in the expected format.');\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\tcase 'messageContentChanged':\n\t\t\t\t\t{\n\t\t\t\t\t\tconsole.log(\"messageContentChanged:\", data);\n\t\t\t\t\t\tconst idParts = data.id.split('-'); // Split the id into parts\n\t\t\t\t\t\tif(idParts.length === 3) {\n\t\t\t\t\t\t\tconst indexStr = idParts[2]; // Grab the last part, which should contain the index\n\t\t\t\t\t\t\tconst index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tif(this._messages && index >= 0 && index < this._messages.length) {\n\t\t\t\t\t\t\t\t// If the index is within the bounds of the array, update the checked status\n\t\t\t\t\t\t\t\tthis._messages[index].content = data.value;\n\t\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\t\t// Handle cases where index is out of bounds or _messages is not an array\n\t\t\t\t\t\t\t\tconsole.error('Index is out of bounds or _messages is not properly defined.');\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\t// Handle cases where data.id does not follow the expected format\n\t\t\t\t\t\t\tconsole.error('data.id is not in the expected format.');\n\t\t\t\t\t\t}\n\t\t\t\t\t\tconsole.log(\"messages:\", this._messages);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t}\n\t\t});\n\t}\n\n\n\tpublic async resetConversation() {\n\t\tconsole.log(this, this._conversation);\n\t\tif (this._conversation) {\n\t\t\tthis._conversation = null;\n\t\t}\n\t\tthis._prompt = '';\n\t\tthis._response = '';\n\t\tthis._fullPrompt = '';\n\t\tthis._totalNumberOfTokens = 0;\n\t\tthis._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n\t\tthis._messages = [];\n\t\tthis._messages?.push({ role: \"system\", content: \"You are a helpful assistant.\", selected:true });\n\t\tconst chat_response = this._updateChatMessages(\n\t\t\tthis._getMessagesNumberOfTokens(),\n\t\t\t0\n\t\t);\n\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\t}\n\n\tpublic async pasteChat() {\n\t\tconsole.log(\"pasteChat\");\n\t\n\t\t// Ensure there is an active text editor where we can paste the YAML\n\t\tif (!vscode.window.activeTextEditor) {\n\t\t\tvscode.window.showErrorMessage('No active text editor!');\n\t\t\treturn;\n\t\t}\n\t\n\t\ttry {\n\t\t\t// Get the original _messages object\n\t\t\t// If you want to exclude any other properties from the YAML, you can map and remove them here\n\t\t\tconst messagesForYaml = this._messages?.map(({ role, content, selected }) => ({\n\t\t\t\trole, content, selected\n\t\t\t}));\n\t\n\t\t\t// Convert messages to a YAML string\n\t\t\tconst messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n\t\n\t\t\t// Create a new snippet and append the YAML string\n\t\t\tconst snippet = new vscode.SnippetString();\n\t\t\tsnippet.appendText(messagesYaml);\n\t\n\t\t\t// Insert the snippet into the active text editor\n\t\t\tawait vscode.window.activeTextEditor.insertSnippet(snippet);\n\t\n\t\t\tconsole.log(\"Chat pasted as YAML successfully.\");\n\t\t} catch (error) {\n\t\t\tconsole.error(\"Failed to paste chat as YAML:\", error);\n\t\t\tvscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);\n\t\t}\n\t}\n\t\n\tpublic async useSelectionAsChat() {\n\t\tconsole.log(\"use selection as chat\");\n\n\t\t// Ensure there is an active text editor with a selection\n\t\tconst activeEditor = vscode.window.activeTextEditor;\n\t\tif (!activeEditor) {\n\t\t\tvscode.window.showErrorMessage('No active text editor with a selection!');\n\t\t\treturn;\n\t\t}\n\n\t\tconst selection = activeEditor.selection;\n\t\tif (selection.isEmpty) {\n\t\t\tvscode.window.showErrorMessage('No text selected!');\n\t\t\treturn;\n\t\t}\n\n\t\t// Get the selected text\n\t\tconst selectedText = activeEditor.document.getText(selection);\n\n\t\ttry {\n\t\t\t// Parse the selected text as YAML\n\t\t\tconst parsedMessages = yaml.load(selectedText);\n\n\t\t\t// Validate the parsed YAML structure\n\t\t\tif (!Array.isArray(parsedMessages)) {\n\t\t\t\tthrow new Error('Selected text is not an array of messages.');\n\t\t\t}\n\n\t\t\t// Validation of each message in the array\n\t\t\tfor (const msg of parsedMessages) {\n\t\t\t\tif (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {\n\t\t\t\t\tthrow new Error('Invalid message format. Each message must have role, content, and selected properties.');\n\t\t\t\t}\n\t\t\t}\n\n\t\t\t// If valid, update the _messages array with new data\n\t\t\tthis._messages = parsedMessages;\n\n\t\t\t// Update the webview visualization\n\t\t\tconst chat_response = this._updateChatMessages(\n\t\t\t\tthis._getMessagesNumberOfTokens(),\n\t\t\t\t0\n\t\t\t);\n\t\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\n\t\t\tconsole.log(\"Updated messages from selection successfully.\");\n\t\t} catch (error) {\n\t\t\tconsole.error(\"Failed to use selection as chat:\", error);\n\t\t\tvscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n\t\t}\n\t}\n\n\tpublic fixCodeBlocks(response: string) {\n\t\t// Use a regular expression to find all occurrences of the substring in the string\n\t\tconst REGEX_CODEBLOCK = new RegExp('\\`\\`\\`', 'g');\n\t\tconst matches = response.match(REGEX_CODEBLOCK);\n\n\t\t// Return the number of occurrences of the substring in the response, check if even\n\t\tconst count = matches ? matches.length : 0;\n\t\tif (count % 2 === 0) {\n\t\t\treturn response;\n\t\t} else {\n\t\t\t// else append ``` to the end to make the last code block complete\n\t\t\tconsole.log(\"Warning - code block not complete\");\n\t\t\treturn response.concat('\\n\\`\\`\\`');\n\t\t}\n\n\t}\n\n\tprivate _getMessagesNumberOfTokens() {\n\t\t\n\t\tlet full_promt = \"\";\n\t\tif (this._messages) {\n\t\t\tfor (const message of this._messages) {\n\t\t\t\tif (message.selected) {\n\t\t\t\t\tfull_promt += \"\\n# <u>\" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\tconst tokenList = this._enc.encode(full_promt);\n\t\treturn tokenList.length;\n\t}\n\n\n\t\n\tpublic getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {\n\t  let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({\n\t\trole, content\n\t  })) || [];\n\t  return ret;\n\t}\n\n\tprivate _containsCodeBlockOrListItems(content: string): boolean {\n\t\t// Regex pattern to match code blocks.\n\t\tconst codeBlockPattern = /```[\\s\\S]*?```/;\n\t\n\t\t// Regex pattern to match bullet points or numbered list items.\n\t\tconst listItemPattern = /^(?:\\s*(?:[-*+]|\\d+\\.)\\s+.+)$/m;\n\t\n\t\t// Test if the content contains a code block or list items.\n\t\treturn codeBlockPattern.test(content) || listItemPattern.test(content);\n\t}\n\n\n\tprivate isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {\n\t\treturn this.isChatCompletionContentPartImage(value);\n\t}\n\t\n\t  \n\tprivate isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {\n\t\treturn typeof value === 'object'\n\t\t\t&& value != null\n\t\t\t&& typeof value.text === 'string'\n\t\t\t&& value.type === 'text';\n\t}\n\tprivate isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {\n\t\treturn typeof value === 'object'\n\t\t\t&& value !== null\n\t\t\t&& typeof value.image_url === 'object'\n\t\t\t&& typeof value.image_url.url === 'string'\n\t\t\t&& value.type === 'image_url';\n\t}\n\t  \n\tprivate _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {\n\t\tlet chat_response = \"\";\n\t\tif (this._messages) {\n\t\t\tthis._messages.forEach((message, index) => {\n\t\t\t\tconst selected = message.selected;\n\t\t\t\tconst checked_string = selected ? \"checked\" : \"\";\n\t\t\t\tif (typeof message.content === 'string') {\n\t\t\t\t\tif (this._containsCodeBlockOrListItems(message.content)) {\n\t\t\t\t\t\tchat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tchat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>\"+ message.content + \"</div>\";\n\t\t\t\t\t}\n\t\t\t\t} else if (Array.isArray(message.content)) {\n\t\t\t\t\t// Handle the case where message.content is an array of ChatCompletionContentPartImage\n\t\t\t\t\tchat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false'>\";\n\t\t\t\t\tmessage.content.forEach(part => {\n\t\t\t\t\t\tconsole.log(\"processing an object...\")\n\t\t\t\t\t\tif (this.isChatCompletionContentPartImage(part)) {\n\t\t\t\t\t\t\tconsole.log(\"Is an image!!!\")\n\t\t\t\t\t\t\t// Process each ChatCompletionContentPartImage item\n\t\t\t\t\t\t\tchat_response += \"<img src='\"+ part.image_url.url + \"' alt='Base64 Image'/>\";\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (this.isChatCompletionContentPartText(part)) {\n\t\t\t\t\t\t\tconsole.log(\"Is a text!!!\")\n\t\t\t\t\t\t\tchat_response += part.text;\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t\tchat_response += \"</div>\"\n\t\t\t\t}\n\t\t\t});\n\t\t}\n\t\tif (this._totalNumberOfTokens !== undefined) {\n\t\t\tthis._totalNumberOfTokens += promtNumberOfTokens + completionTokens;\n\t\t\tchat_response += `\\n\\n---\\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \\n\\n---\\n\\n\\n\\n\\n\\n\\n`;\n\t\t}\n\t\treturn chat_response;\n\t}\n\t\n\tprivate async _generate_search_prompt(prompt:string) {\n\t\tthis._prompt = prompt;\n\t\tif (!prompt) {\n\t\t\tprompt = '';\n\t\t}\n\n\t\t// Focus the ChatGPT view\n\t\tif (!this._view) {\n\t\t\tawait vscode.commands.executeCommand('chatgpt.chatView.focus');\n\t\t} else {\n\t\t\tthis._view?.show?.(true);\n\t\t}\n\n\t\t// Initialize response and token count\n\t\t\n\t\tif (!this._response) {\n\t\t\tthis._response = '';\n\t\t}\n\t\tif (!this._totalNumberOfTokens) {\n\t\t\tthis._totalNumberOfTokens = 0;\n\t\t}\n\n\t\t// Get selected text and language ID (if applicable)\n\t\tconst selection = vscode.window.activeTextEditor?.selection;\n\t\tconst selectedText = vscode.window.activeTextEditor?.document.getText(selection);\n\t\tconst languageId =\n\t\t\t(this._settings.codeblockWithLanguageId\n\t\t\t\t? vscode.window.activeTextEditor?.document?.languageId\n\t\t\t\t: undefined) || '';\n\n\t\t// Build the search prompt\n\t\tlet searchPrompt = '';\n\t\tif (selection && selectedText) {\n\t\t\tif (this._settings.selectedInsideCodeblock) {\n\t\t\t\tsearchPrompt = `${prompt}\\n\\`\\`\\`${languageId}\\n${selectedText}\\n\\`\\`\\``;\n\t\t\t} else {\n\t\t\t\tsearchPrompt = `${prompt}\\n${selectedText}\\n`;\n\t\t\t}\n\t\t} else {\n\t\t\tsearchPrompt = prompt;\n\t\t}\n\t\tthis._fullPrompt = searchPrompt;\n\n\t\t// Increment message number and store for tracking\n\t\tthis._currentMessageNumber++;\n\t\treturn searchPrompt;\n\n\t}\n\n\tpublic async search(prompt?: string) {\n\t\t// Check if the API key and URL are set\n\t\tif (!this._authInfo || !this._settings?.apiUrl) {\n\t\t\tthis._view?.webview.postMessage({\n\t\t\t\ttype: 'addResponse',\n\t\t\t\tvalue: '[ERROR] \"API key or API URL not set, please go to extension settings (read README.md for more info)\"',\n\t\t\t});\n\t\t\treturn;\n\t\t}\n\t\t\n\t\tlet chat_response = '';\n\t\tlet searchPrompt = \"\";\n\t\tif (prompt!=undefined) {\n\t\t\tsearchPrompt = await this._generate_search_prompt(prompt);\n\t\t} \n\t\t// Show loading indicator\n\t\tthis._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });\n\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: '...' });\n\n\t\tif (searchPrompt != \"\") {\n\t\t\tthis._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n\t\t}\n\n\t\tif (!this._openai) {\n\t\t  throw new Error('OpenAI instance is not initialized.');\n\t\t}\n\t\t\n\t\tif (typeof this._settings.model !== 'string') {\n\t\t  throw new Error('Model identifier is not valid or not defined.');\n\t\t}\n\n\t\t// Only if you can't change the Message interface\n\t\tconst isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {\n\t\t  return ['user', 'assistant', 'system'].includes(role);\n\t\t};\n\t\t\n\t\t// Validate and type narrow `this._messages` before sending\n\t\tif (!this._messages || !Array.isArray(this._messages) ||\n\t\t\t(!this._messages.every(msg => isValidRole(msg.role)))) {\n\t\t  throw new Error('Messages have invalid roles.');\n\t\t}\n\n\t\tconst promtNumberOfTokens = this._getMessagesNumberOfTokens();\n\t\ttry {\n\t\t\tconsole.log(\"Creating message sender...\");\n\t\t\tlet messagesToSend: Array<Message> = [];\n\t\t\t\n\t\t\t// Assuming this._messages is defined and is an array\n\t\t\tfor (const message of this._messages) {\n\t\t\t\tif (message.selected == true) {\n\t\t\t\t\tmessagesToSend.push(message);\n\t\t\t\t}\n\t\t\t}\t\t\t\n\t\t\tconst stream = await this._openai.chat.completions.create({\n\t\t\t\tmodel: this._settings.model,\n\t\t\t\tmessages: messagesToSend,\n\t\t\t\tstream: true,\n\t\t\t\tmax_tokens: this._settings.maxResponseTokens,\n\t\t\t});\n\t\t\tconsole.log(\"Message sender created\");\n\t\t\t\n\t\t\tlet completionTokens = 0;\n\t\t\tlet full_message = \"\";\n\t\t\tfor await (const chunk of stream) {\n\t\t\t\tconst content = chunk.choices[0]?.delta?.content || \"\";\n\t\t\t\tconsole.log(\"chunk:\",chunk);\n\t\t\t\tconsole.log(\"content:\", content);\n\t\t\t\tconst tokenList = this._enc.encode(content);\n\t\t\t\tcompletionTokens += tokenList.length;\n\t\t\t\tconsole.log(\"tokens:\", completionTokens);\n\t\t\t\tfull_message += content;\n\t\t\t\t//this._response = chat_response;\n\t\t\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: full_message });\n\n\t\t\t}\n\t\t\tthis._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n\t\t\tconsole.log(\"Full message:\", full_message);\n\t\t\tconsole.log(\"Full Number of tokens:\", completionTokens);\n\t\t\tconst tokenList = this._enc.encode(full_message);\n\t\t\tconsole.log(\"Full Number of tokens tiktoken:\", tokenList.length);\n\t\t\tchat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)\n\t\t} catch (e: any) {\n\t\t\tconsole.error(e);\n\t\t\tif (this._response!=undefined) {\n\t\t\t\tchat_response = this._response;\n\t\t\t\tchat_response += `\\n\\n---\\n[ERROR] ${e}`;\n\t\t\t}\n\t\t}\n\t\tthis._response = chat_response;\n\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\t\tthis._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n\t}\n\n\tprivate _getHtmlForWebview(webview: vscode.Webview) {\n\n\t\tconst scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));\n\t\tconst stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));\n\t\tconst microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));\n\t\tconst tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));\n\t\tconst showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));\n\n\t\t\n\t\treturn `<!DOCTYPE html>\n\t\t<html lang=\"en\">\n\t\t<head>\n\t\t\t<meta charset=\"UTF-8\">\n\t\t\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\t\t\t<script src=\"${tailwindUri}\"></script>\n\t\t\t<script src=\"${showdownUri}\"></script>\n\t\t\t<script src=\"${microlightUri}\"></script>\n\t\t\t<link rel=\"stylesheet\" href=\"${stylesUri}\">\n\t\t</head>\n\t\t<body>\n\t\t\t<div id=\"container\">\n\t\t\t\t<div id=\"top-wrapper\">\n\t\t\t\t\t<input type=\"text\" placeholder=\"Agent 1 Developer\" />\n\t\t\t\t\t<select>\n\t\t\t\t\t\t<option value=\"option1\">Agent 1 Developer</option>\n\t\t\t\t\t\t<option value=\"option2\">Agent 2 Project Manajer</option>\n\t\t\t\t\t\t<!-- Additional options here -->\n\t\t\t\t\t</select>\n\t\t\t\t\t<button>+Add</button>\n\t\t\t\t</div>\n\t\t\t\t<div id=\"response\" class=\"text-sm\">\n\t\t\t\t\t<!-- response content goes here -->\n\t\t\t\t</div>\n\t\t\t\t<div id=\"input-wrapper\">\n\t\t\t\t\t<!-- Model selector combobox -->\n\t\t\t\t\t<select id=\"model-selector\">\n\t\t\t\t\t\t<option value=\"base-model\">Base Model</option>\n\t\t\t\t\t\t<option value=\"advanced-model\">Advanced Model</option>\n\t\t\t\t\t\t<!-- Add more models as necessary -->\n\t\t\t\t\t</select>\n\t\t\t\t\t<!-- Temperature slider and label -->\n\t\t\t\t\t<div>\n\t\t\t\t\t\t<label for=\"temperature-slider\">Temperature:</label>\n\t\t\t\t\t\t<input type=\"range\" id=\"temperature-slider\" min=\"0\" max=\"100\" value=\"50\" />\n\t\t\t\t\t</div>\n\t\t\t\t\t<!-- Text input for the prompt -->\n\t\t\t\t\t<input type=\"text\" id=\"prompt-input\" placeholder=\"Ask ChatGPT something\">\n\t\t\t\t</div>\n\t\t\t</div>\n        <script src=\"${scriptUri}\"></script>\n    \t</body>\n\t\t</html>`;\n\t}\n\n\tpublic addImageToChat(imageDataUrl: string, fileName: string) {\n\t\tconst imageMarkdown = `![${fileName}](${imageDataUrl})`;\n\t\tlet newMessage: UserMessage = { \n\t\t\trole: \"user\", \n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\t\"type\": \"text\",\n\t\t\t\t\t\"text\": fileName + \":\"\n\t\t\t\t},\n\t\t\t\t{\n\t\t\t\t\t\"type\": \"image_url\",\n\t\t\t\t\t\"image_url\": {\n\t\t\t\t\t  \"url\": imageDataUrl\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t], \n\t\t\tselected: true\n\t\t};\n\n\t\t\n\t\tthis._messages?.push(newMessage);\n\t\n\t\tconst chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n\t\tthis._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\t}\n}\n\n\n// This method is called when your extension is deactivated\nexport function deactivate() { }\n```"
+  selected: true
+- role: user
+  content: |-
+    the extnsion.ts file uses this media/main.js file
+    ```javascript
+    // @ts-ignore 
+
+    // This script will be run within the webview itself
+    // It cannot access the main VS Code APIs directly.
+    (function () {
+        const vscode = acquireVsCodeApi();
+
+        let response = '';
+
+        // Handle messages sent from the extension to the webview
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                case "addResponse": {
+                    response = message.value;
+                    setResponse();
+                    break;
+                }
+                case "clearResponse": {
+                    response = '';
+                    break;
+                }
+                case "setPrompt": {
+                    document.getElementById("prompt-input").value = message.value;
+                    break;
+                }
+            }
+        });
+
+        function fixCodeBlocks(response) {
+            // Use a regular expression to find all occurrences of the substring in the string
+            const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');
+            const matches = response.match(REGEX_CODEBLOCK);
+
+            // Return the number of occurrences of the substring in the response, check if even
+            const count = matches ? matches.length : 0;
+            if (count % 2 === 0) {
+                return response;
+            } else {
+                // else append ``` to the end to make the last code block complete
+                return response.concat('\n\`\`\`');
+            }
+
+        }
+
+        function setResponse() {
+            var converter = new showdown.Converter({
+                omitExtraWLInCodeBlocks: true,
+                simplifiedAutoLink: true,
+                excludeTrailingPunctuationFromURLs: true,
+                literalMidWordUnderscores: true,
+                simpleLineBreaks: true
+            });
+            response = fixCodeBlocks(response);
+            html = converter.makeHtml(response);
+            let responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = html;
+            //responseDiv.scrollTop = responseDiv.scrollHeight;
+            //responseDiv.scrollIntoView({ block: "end" });
+
+            var preCodeBlocks = document.querySelectorAll("pre code");
+            for (var i = 0; i < preCodeBlocks.length; i++) {
+                preCodeBlocks[i].classList.add(
+                    "p-2",
+                    "my-2",
+                    "block",
+                    "overflow-x-scroll"
+                );
+            }
+
+            var codeBlocks = document.querySelectorAll('code');
+            for (var i = 0; i < codeBlocks.length; i++) {
+                // Check if innertext starts with "Copy code"
+                if (codeBlocks[i].innerText.startsWith("Copy code")) {
+                    codeBlocks[i].innerText = codeBlocks[i].innerText.replace("Copy code", "");
+                }
+
+                codeBlocks[i].classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
+
+                codeBlocks[i].addEventListener('click', function (e) {
+                    e.preventDefault();
+                    vscode.postMessage({
+                        type: 'codeSelected',
+                        value: this.innerText
+                    });
+                });
+
+                const d = document.createElement('div');
+                d.innerHTML = codeBlocks[i].innerHTML;
+                codeBlocks[i].innerHTML = null;
+                codeBlocks[i].appendChild(d);
+                d.classList.add("code");
+            }
+
+            microlight.reset('code');
+            //responseDiv.scrollIntoView({ block: "end" });
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+            //document.getElementById("response").innerHTML = document.getElementById("response").innerHTML.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+        }
+
+        // Listen for keyup events on the prompt input element
+        document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+            // If the Enter key was pressed without the Ctrl key
+            if (e.key === "Enter" && !e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'prompt',
+                    value: this.value
+                });
+            }
+            // If the Enter key was pressed with the Ctrl key
+            else if (e.key === "Enter" && e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'promptNoQuery',
+                    value: this.value
+                });
+            }
+        });
+
+
+        window.myFunction = function(checkboxElem) {
+            if (checkboxElem.checked) {
+                console.log(checkboxElem.id + " is checked");
+                // Add your postMessage or other logic here
+                vscode.postMessage({
+                    type: 'checkboxChanged',
+                    id: checkboxElem.id,
+                    checked: true
+                });
+            } else {
+                console.log(checkboxElem.id + " is unchecked");
+                // Add your postMessage or other logic here
+                vscode.postMessage({
+                    type: 'checkboxChanged',
+                    id: checkboxElem.id,
+                    checked: false
+                });
+            }
+        }
+
+        window.makeEditable = function (element) {
+            element.contentEditable = 'true';
+            element.focus();
+        }
+
+        window.saveContent = function (element) {
+            element.contentEditable = 'false';
+            const updatedContent = element.innerText;
+            vscode.postMessage({
+                type: 'messageContentChanged',
+                id: element.id,
+                value: updatedContent,
+            });
+
+
+        }
+
+    })();
+
+    ```
+  selected: true
+- role: user
+  content: |-
+    and this media/styles.css file:
+    ```css
+    .code {
+        white-space: pre;
+    }
+    p {
+        padding-top: 0.3rem;
+        padding-bottom: 0.3rem;
+    }
+    ul, ol {
+        list-style: initial !important;
+        margin-left: 10px !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        font-weight: bold !important;
+    }
+
+    body, html {
+        height: 100%;
+        margin: 0;
+    }
+    #container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    #top-wrapper {
+        flex-shrink: 0; /* Don't allow the header to grow or shrink */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1; /* Keep on top of other content */
+        /* Add a fixed height if not already present */
+        height: 50px;
+    }
+    #response {
+        flex-grow: 1; /* This will take up all available space */
+        overflow-y: auto;
+        padding: 10px;
+        padding-top: 60px; 
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    #input-wrapper {
+        flex-shrink: 0; /* Don't allow the footer to grow or shrink */
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto; /* Two rows: one for the combobox/slider and one for the input */
+        grid-gap: 10px;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-top: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+    }
+    #prompt-input {
+        grid-column: 1 / -1; /* Span across all columns */
+        color: var(--vscode-editor-foreground);
+        background-color: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-editorGroup-border);
+        outline: none;
+        padding: 10px;
+        width: calc(100% - 22px); /* Adjusting width taking padding and border into account */
+    }
+
+
+    /* Add styles for the model selector combobox and temperature slider */
+    #model-selector,
+    #temperature-slider,
+    label[for="temperature-slider"] {
+        margin-bottom: 10px; /* Add some spacing between controls and the text input */
+    }
+
+    /* Combobox (select element) styling */
+    select {
+        color: var(--vscode-dropdown-foreground);
+        background-color: var(--vscode-dropdown-background);
+        border: 1px solid var(--vscode-dropdown-border);
+        padding: 5px;
+        font-size: inherit; /* Adjust size to match VS Code's default text size */
+        cursor: pointer;
+    }
+
+      /* Style the option elements */
+    select option {
+        background: var(--vscode-dropdown-listBackground);
+    }
+
+    /* Slider (input[type="range"] element) styling */
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: var(--vscode-slider-background); /* Background of slider track */
+        height: 2px; /* Height of the track */
+        border-radius: 0; /* VS Code track has no border radius */
+        outline: none;
+        cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none; /* Remove border */
+        border-radius: 50%;
+        margin-top: -7px; /* Align thumb with the center of the track */
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none; /* Remove border */
+        border-radius: 50%;
+    }
+
+    input[type="range"]::-ms-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none; /* Remove border */
+        border-radius: 50%;
+    }
+
+    #top-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1; /* Ensure it's above other content */
+    }
+
+    #top-wrapper input[type="text"],
+    #top-wrapper select,
+    #top-wrapper button {
+        margin: 0 5px;
+    }
+
+    #top-wrapper button {
+        padding: 5px 15px;
+    }
+
+    /* Fallback styles if VSCode variables aren't available */
+    :root {
+        --vscode-dropdown-foreground: #C5C5C5;
+        --vscode-dropdown-background: #3C3C3C;
+        --vscode-dropdown-border: #303030;
+        --vscode-dropdown-listBackground: #252526;
+        --vscode-slider-background: #C5C5C5;
+        --vscode-slider-activeBackground: #007ACC; /* Default blue accent color */
+        --vscode-slider-knob: #CCCCCC; /* Fallback - VS Code default knob is lighter */
+
+    }
+    ```
+  selected: true
+- role: user
+  content: I can add images selecting one and right click to select add to chatgpt.  But I want to also be able to copy an image to the clipboard and paste it into the chat.
+  selected: true
+- role: user
+  content: |-
+    ?
+    ```yaml
+    - role: assistant
+      content: |-
+        To add functionality for pasting an image from the clipboard into the ChatGPT chat, you will need to handle clipboard events and check the clipboard data for image content. Unfortunately, you cannot directly access the clipboard from the VSCode webview JavaScript due to security restrictions. Instead, you need to handle the clipboard event inside the VSCode extension context.
+
+        Here are the steps to implement this functionality:
+
+        1. **Add Clipboard Event Handler in `extension.ts`**:
+
+        You need to listen for paste events in the active editor. When the paste event occurs, check if the clipboard contains an image. If it does, send the image data to the webview.
+
+        Add the following code to the `activate` function in your `extension.ts`:
+
+        ```typescript
+        export function activate(context: vscode.ExtensionContext) {
+            console.log('activating extension "chatgpt"');
+            // Get the settings from the extension's configuration
+            const config = vscode.workspace.getConfiguration('chatgpt');
+
+            // Create a new ChatGPTViewProvider instance and register it with the extension's context
+            const provider = new ChatGPTViewProvider(context.extensionUri);
+
+            // Put configuration settings into the provider
+            provider.setAuthenticationInfo({
+                apiKey: config.get('apiKey')
+            });
+
+            provider.setSettings({
+                selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
+                codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
+                pasteOnClick: config.get('pasteOnClick') || false,
+                keepConversation: config.get('keepConversation') || false,
+                timeoutLength: config.get('timeoutLength') || 60,
+                apiUrl: config.get('apiUrl') || BASE_URL,
+                model: config.get('model') || 'gpt-3.5-turbo',
+                maxModelTokens: config.get('maxModelTokens') || 4000,
+                maxResponseTokens: config.get('maxResponseTokens') || 1000
+            });
+
+            // Register the provider with the extension's context
+            context.subscriptions.push(
+                vscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {
+                    webviewOptions: { retainContextWhenHidden: true }
+                })
+
+            );
+
+            const commandHandler = (command: string) => {
+                const config = vscode.workspace.getConfiguration('chatgpt');
+                const prompt = config.get(command) as string;
+                provider.search(prompt);
+            };
+
+            // Register the commands that can be called from the extension's package.json
+            context.subscriptions.push(
+                vscode.commands.registerCommand('chatgpt.ask', () =>
+                    vscode.window.showInputBox({ prompt: 'What do you want to do?' })
+                        .then((value) => provider.search(value))
+                ),
+                vscode.commands.registerCommand('chatgpt.explain', () => commandHandler('promptPrefix.explain')),
+                vscode.commands.registerCommand('chatgpt.refactor', () => commandHandler('promptPrefix.refactor')),
+                vscode.commands.registerCommand('chatgpt.optimize', () => commandHandler('promptPrefix.optimize')),
+                vscode.commands.registerCommand('chatgpt.findProblems', () => commandHandler('promptPrefix.findProblems')),
+                vscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),
+                vscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),
+                vscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),
+                vscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())
+            );
+
+            // Add Clipboard Event Listener
+            vscode.workspace.onDidChangeTextDocument(async (event) => {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && editor.document.uri.toString() === event.document.uri.toString()) {
+                    const clipboardText = await vscode.env.clipboard.readText();
+                    if (clipboardText.startsWith('data:image/')) {
+                        // Detected an image in the clipboard data
+                        const fileType = clipboardText.split(';')[0].split('/')[1];
+                        const fileName = `clipboard_image.${fileType}`;
+                        provider.addImageToChat(clipboardText, fileName);
+                    }
+                }
+            });
+
+            // Change the extension's session token or settings when configuration is changed
+            vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
+                if (event.affectsConfiguration('chatgpt.apiKey')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setAuthenticationInfo({ apiKey: config.get('apiKey') });
+                } else if (event.affectsConfiguration('chatgpt.apiUrl')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    let url = config.get('apiUrl') as string || BASE_URL;
+                    provider.setSettings({ apiUrl: url });
+                } else if (event.affectsConfiguration('chatgpt.model')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ model: config.get('model') || 'gpt-3.5-turbo' });
+                } else if (event.affectsConfiguration('chatgpt.maxModelTokens')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ maxModelTokens: config.get('maxModelTokens') || 4000 });
+                } else if (event.affectsConfiguration('chatgpt.maxResponseTokens')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ maxResponseTokens: config.get('maxResponseTokens') || 4000 });
+                } else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });
+                } else if (event.affectsConfiguration('chatgpt.codeblockWithLanguageId')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false });
+                } else if (event.affectsConfiguration('chatgpt.pasteOnClick')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ pasteOnClick: config.get('pasteOnClick') || false });
+                } else if (event.affectsConfiguration('chatgpt.keepConversation')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ keepConversation: config.get('keepConversation') || false });
+                } else if (event.affectsConfiguration('chatgpt.timeoutLength')) {
+                    const config = vscode.workspace.getConfiguration('chatgpt');
+                    provider.setSettings({ timeoutLength: config.get('timeoutLength') || 60 });
+                }
+            });
+
+            context.subscriptions.push(
+                vscode.commands.registerCommand('chatgpt.addImageToChat', async (uri: vscode.Uri) => {
+                    if (uri && uri.fsPath) {
+                        const filePath = uri.fsPath;
+                        const fileName = path.basename(filePath);
+                        const fileData = await fs.promises.readFile(filePath, { encoding: 'base64' });
+                        const fileType = path.extname(filePath).substring(1); // get file extension without dot
+                        const imageDataUrl = `data:image/${fileType};base64,${fileData}`;
+
+                        // Post a message to the webview to add the image
+                        provider.addImageToChat(imageDataUrl, fileName);
+                    }
+                })
+            );
+        }
+        ```
+
+        2. **Modify `media/main.js` to handle the pasted image**:
+
+        We need to modify the JavaScript to display images when we get a message from the extension.
+
+        Add the following case in the event listener switch statement to handle the new message type and update the `setResponse` function to correctly display the images:
+
+        ```javascript
+        (function () {
+            const vscode = acquireVsCodeApi();
+
+            let response = '';
+
+            // Handle messages sent from the extension to the webview
+            window.addEventListener("message", (event) => {
+                const message = event.data;
+                switch (message.type) {
+                    case "addResponse": {
+                        response = message.value;
+                        setResponse();
+                        break;
+                    }
+                    case "clearResponse": {
+                        response = '';
+                        break;
+                    }
+                    case "setPrompt": {
+                        document.getElementById("prompt-input").value = message.value;
+                        break;
+                    }
+                    case "addImageResponse": { // New case for handling image response
+                        const imageDataUrl = message.value;
+                        const imgElement = document.createElement('img');
+                        imgElement.src = imageDataUrl;
+                        document.getElementById('response').appendChild(imgElement);
+                        break;
+                    }
+                }
+            });
+
+            function fixCodeBlocks(response) {
+                // Use a regular expression to find all occurrences of the substring in the string
+                const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');
+                const matches = response.match(REGEX_CODEBLOCK);
+
+                // Return the number of occurrences of the substring in the response, check if even
+                const count = matches ? matches.length : 0;
+                if (count % 2 === 0) {
+                    return response;
+                } else {
+                    // else append ``` to the end to make the last code block complete
+                    return response.concat('\n\`\`\`');
+                }
+
+            }
+
+            function setResponse() {
+                const converter = new showdown.Converter({
+                    omitExtraWLInCodeBlocks: true,
+                    simplifiedAutoLink: true,
+                    excludeTrailingPunctuationFromURLs: true,
+                    literalMidWordUnderscores: true,
+                    simpleLineBreaks: true
+                });
+                response = fixCodeBlocks(response);
+                const html = converter.makeHtml(response);
+                const responseDiv = document.getElementById("response");
+                responseDiv.innerHTML = html;
+
+                const preCodeBlocks = document.querySelectorAll("pre code");
+                for (const codeBlock of preCodeBlocks) {
+                    codeBlock.classList.add("p-2", "my-2", "block", "overflow-x-scroll");
+                }
+
+                const codeBlocks = document.querySelectorAll('code');
+                for (const codeBlock of codeBlocks) {
+                    if (codeBlock.innerText.startsWith("Copy code")) {
+                        codeBlock.innerText = codeBlock.innerText.replace("Copy code", "");
+                    }
+
+                    codeBlock.classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
+
+                    codeBlock.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        vscode.postMessage({
+                            type: 'codeSelected',
+                            value: this.innerText
+                        });
+                    });
+
+                    const d = document.createElement('div');
+                    d.innerHTML = codeBlock.innerHTML;
+                    codeBlock.innerHTML = null;
+                    codeBlock.appendChild(d);
+                    d.classList.add("code");
+                }
+
+                microlight.reset('code');
+                responseDiv.scrollTop = responseDiv.scrollHeight;
+            }
+
+            document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+                if (e.key === "Enter" && !e.ctrlKey) {
+                    vscode.postMessage({
+                        type: 'prompt',
+                        value: this.value
+                    });
+                } else if (e.key === "Enter" && e.ctrlKey) {
+                    vscode.postMessage({
+                        type: 'promptNoQuery',
+                        value: this.value
+                    });
+                }
+            });
+
+            window.myFunction = function (checkboxElem) {
+                vscode.postMessage({
+                    type: 'checkboxChanged',
+                    id: checkboxElem.id,
+                    checked: checkboxElem.checked
+                });
+            }
+
+            window.makeEditable = function (element) {
+                element.contentEditable = 'true';
+                element.focus();
+            }
+
+            window.saveContent = function (element) {
+                element.contentEditable = 'false';
+                const updatedContent = element.innerText;
+                vscode.postMessage({
+                    type: 'messageContentChanged',
+                    id: element.id,
+                    value: updatedContent,
+                });
+            }
+        })();
+        ```
+
+        3. **Update the `addImageToChat` method in `ChatGPTViewProvider` class**:
+
+        Make sure the `addImageToChat` method sends the image to the webview properly.
+
+        ```typescript
+        public addImageToChat(imageDataUrl: string, fileName: string) {
+            const imageMarkdown = `![${fileName}](${imageDataUrl})`;
+            let newMessage: UserMessage = { 
+                role: "user", 
+                content: [
+                    {
+                        "type": "text",
+                        "text": fileName + ":"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": imageDataUrl
+                        }
+                    }
+                ], 
+                selected: true
+            };
+
+            this._messages?.push(newMessage);
+
+            const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
+            this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+            this._view?.webview.postMessage({ type: 'addImageResponse', value: imageDataUrl }); // Send image data to webview
+        }
+        ```
+
+        With these changes, when you paste an image into the active editor, the extension checks the clipboard content and, if it is an image, it will send that image to the ChatGPT chat. The webview then displays the image properly in the response area.
+      selected: true
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    To add functionality for pasting an image from the clipboard into the ChatGPT chat:
+
+    1. **Add Clipboard Event Listener in `extension.ts`**:
+
+    Update the `activate` function in your `extension.ts` to include a listener for clipboard events.
+
+    ```typescript
+    export function activate(context: vscode.ExtensionContext) {
+        // ... existing code ...
+
+        // Add Clipboard Event Listener
+        vscode.workspace.onDidChangeTextDocument(async (event) => {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.uri.toString() === event.document.uri.toString()) {
+                const clipboardText = await vscode.env.clipboard.readText();
+                if (clipboardText.startsWith('data:image/')) {
+                    // Detected an image in the clipboard data
+                    const fileType = clipboardText.split(';')[0].split('/')[1];
+                    const fileName = `clipboard_image.${fileType}`;
+                    provider.addImageToChat(clipboardText, fileName);
+                }
+            }
+        });
+
+        // ... existing code ...
+    }
+    ```
+
+    2. **Modify `media/main.js` to Handle Pasted Images**:
+
+    Update `media/main.js` to handle the new message type and display the images.
+
+    ```javascript
+    (function () {
+        const vscode = acquireVsCodeApi();
+
+        let response = '';
+
+        // Handle messages sent from the extension to the webview
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                // ... existing cases ...
+                case "addImageResponse": {
+                    const imageDataUrl = message.value;
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageDataUrl;
+                    document.getElementById('response').appendChild(imgElement);
+                    break;
+                }
+            }
+        });
+
+        // ... existing functions ...
+
+        // Add event listener for input keyup to handle prompt submissions
+        document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+            if (e.key === "Enter" && !e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'prompt',
+                    value: this.value
+                });
+            } else if (e.key === "Enter" && e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'promptNoQuery',
+                    value: this.value
+                });
+            }
+        });
+
+        // ... existing functions ...
+
+    })();
+    ```
+
+    3. **Update the `addImageToChat` Method in `ChatGPTViewProvider`**:
+
+    Ensure the `addImageToChat` method sends the image data to the webview.
+
+    ```typescript
+    public addImageToChat(imageDataUrl: string, fileName: string) {
+        const imageMarkdown = `![${fileName}](${imageDataUrl})`;
+        let newMessage: UserMessage = { 
+            role: "user", 
+            content: [
+                {
+                    "type": "text",
+                    "text": fileName + ":"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": imageDataUrl
+                    }
+                }
+            ], 
+            selected: true
+        };
+
+        this._messages?.push(newMessage);
+
+        const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
+        this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+        this._view?.webview.postMessage({ type: 'addImageResponse', value: imageDataUrl });
+    }
+    ```
+
+    These modifications will allow the extension to detect pasted images from the clipboard and display them inside the ChatGPT webview. This should cover both handling the paste event and rendering the pasted image correctly.
+  selected: true
+- role: user
+  content: "Why are you using the workspace? shoudn't be in the chat input?\n```typescript\nvscode.workspace.onDidChangeTextDocument(async (event) => {\n        const editor = vscode.window.activeTextEditor;\n\t\tconsole.log(\"!!!!!!!!!!!!!\")\n        if (editor && editor.document.uri.toString() === event.document.uri.toString()) {\n            const clipboardText = await vscode.env.clipboard.readText();\n            if (clipboardText.startsWith('data:image/')) {\n                // Detected an image in the clipboard data\n                //const fileType = clipboardText.split(';')[0].split('/')[1];\n                //const fileName = `clipboard_image.${fileType}`;\n                //provider.addImageToChat(clipboardText, fileName);\n\t\t\t\tconsole.log(\"NEW IMAGE FROM CLIPBOARD\")\n            }\n        }\n    });\n```"
+  selected: true
+- role: assistant
+  content: |-
+    You're right. Instead of listening for changes in the entire workspace, it makes more sense to listen for paste events specifically in the chat input area. We can achieve this by adding an event listener directly to the chat input field within the webview.
+
+    Here's how you can do it:
+
+    1. **Modify `media/main.js` to handle paste events on the chat input field:**
+
+    ```javascript
+    (function () {
+        const vscode = acquireVsCodeApi();
+
+        let response = '';
+
+        // Handle messages sent from the extension to the webview
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                case "addResponse": {
+                    response = message.value;
+                    setResponse();
+                    break;
+                }
+                case "clearResponse": {
+                    response = '';
+                    break;
+                }
+                case "setPrompt": {
+                    document.getElementById("prompt-input").value = message.value;
+                    break;
+                }
+                case "addImageResponse": {
+                    const imageDataUrl = message.value;
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageDataUrl;
+                    document.getElementById('response').appendChild(imgElement);
+                    break;
+                }
+            }
+        });
+
+        function setResponse() {
+            const converter = new showdown.Converter({
+                omitExtraWLInCodeBlocks: true,
+                simplifiedAutoLink: true,
+                excludeTrailingPunctuationFromURLs: true,
+                literalMidWordUnderscores: true,
+                simpleLineBreaks: true
+            });
+            response = fixCodeBlocks(response);
+            const html = converter.makeHtml(response);
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = html;
+
+            const preCodeBlocks = document.querySelectorAll("pre code");
+            for (const codeBlock of preCodeBlocks) {
+                codeBlock.classList.add("p-2", "my-2", "block", "overflow-x-scroll");
+            }
+
+            const codeBlocks = document.querySelectorAll('code');
+            for (const codeBlock of codeBlocks) {
+                if (codeBlock.innerText.startsWith("Copy code")) {
+                    codeBlock.innerText = codeBlock.innerText.replace("Copy code", "");
+                }
+
+                codeBlock.classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
+
+                codeBlock.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    vscode.postMessage({
+                        type: 'codeSelected',
+                        value: this.innerText
+                    });
+                });
+
+                const d = document.createElement('div');
+                d.innerHTML = codeBlock.innerHTML;
+                codeBlock.innerHTML = null;
+                codeBlock.appendChild(d);
+                d.classList.add("code");
+            }
+
+            microlight.reset('code');
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+        }
+
+        document.getElementById('prompt-input').addEventListener('paste', async function (e) {
+            const clipboardItems = e.clipboardData.items;
+            for (const item of clipboardItems) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const base64Data = event.target.result;
+                        vscode.postMessage({
+                            type: 'pasteImage',
+                            value: base64Data
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+            if (e.key === "Enter" && !e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'prompt',
+                    value: this.value
+                });
+            } else if (e.key === "Enter" && e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'promptNoQuery',
+                    value: this.value
+                });
+            }
+        });
+
+        window.myFunction = function (checkboxElem) {
+            vscode.postMessage({
+                type: 'checkboxChanged',
+                id: checkboxElem.id,
+                checked: checkboxElem.checked
+            });
+        };
+
+        window.makeEditable = function (element) {
+            element.contentEditable = 'true';
+            element.focus();
+        };
+
+        window.saveContent = function (element) {
+            element.contentEditable = 'false';
+            const updatedContent = element.innerText;
+            vscode.postMessage({
+                type: 'messageContentChanged',
+                id: element.id,
+                value: updatedContent,
+            });
+        };
+    })();
+
+    ```
+
+    2. **Receive the image data in `extension.ts` and add it to the chat:**
+
+    Add a new case for handling the `pasteImage` event and use the existing `addImageToChat` method to include the image in the chat.
+
+    ```typescript
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken,
+    ) {
+        this._view = webviewView;
+
+        // set options for the webview, allow scripts
+        webviewView.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [
+                this._extensionUri
+            ]
+        };
+
+        // set the HTML for the webview
+        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+        // add an event listener for messages received by the webview
+        webviewView.webview.onDidReceiveMessage(async data =>  {
+            switch (data.type) {
+                case 'codeSelected':
+                    // ... existing case handling ...
+                    break;
+                    
+                case 'pasteImage': {
+                    const base64Data = data.value;
+                    const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));
+                    const fileType = imageType.split('/')[1];
+                    const fileName = `clipboard_image.${fileType}`;
+                    this.addImageToChat(base64Data, fileName);
+                    break;
+                }
+
+                // ... existing cases ...
+            }
+        });
+    }
+    ```
+
+    By adding the paste event listener directly to the chat input, you're ensuring that images pasted from the clipboard are handled appropriately and added to the chat.
+  selected: true
