@@ -79,6 +79,10 @@
       {
         "command": "chatgpt.tryAgain",
         "title": "Retry ChatGPT request"
+      },
+      {
+        "command": "chatgpt.addImageToChat",
+        "title": "Add Image to ChatGPT"
       }
     ],
     "menus": {
@@ -152,6 +156,13 @@
         {
           "command": "chatgpt.useSelectionAsChat",
           "when": "editorHasSelection"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "chatgpt.addImageToChat",
+          "when": "resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif",
+          "group": "navigation"
         }
       ]
     },

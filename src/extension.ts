@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import * as yaml from 'js-yaml'; 
 import OpenAI from "openai";
 import { encodingForModel } from "js-tiktoken";
+import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';
 
 
 type AuthInfo = { apiKey?: string };
@@ -50,8 +53,8 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {
 			webviewOptions: { retainContextWhenHidden: true }
 		})
+	
 	);
-
 
 	const commandHandler = (command: string) => {
 		const config = vscode.workspace.getConfiguration('chatgpt');
@@ -113,14 +116,41 @@ export function activate(context: vscode.ExtensionContext) {
 			provider.setSettings({ timeoutLength: config.get('timeoutLength') || 60 });
 		}
 	});
-}
 
 
-interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  selected: boolean;
+	context.subscriptions.push(
+		vscode.commands.registerCommand('chatgpt.addImageToChat', async (uri: vscode.Uri) => {
+		  if (uri && uri.fsPath) {
+			const filePath = uri.fsPath;
+			const fileName = path.basename(filePath);
+			const fileData = await fs.promises.readFile(filePath, { encoding: 'base64' });
+			const fileType = path.extname(filePath).substring(1); // get file extension without dot
+			const imageDataUrl = `data:image/${fileType};base64,${fileData}`;
+	
+			// Post a message to the webview to add the image
+			provider.addImageToChat(imageDataUrl, fileName);
+		  }
+		})
+	  );
 }
+
+interface SystemMessage extends ChatCompletionSystemMessageParam {
+	selected: boolean;  // Additional property specific to Message
+}
+
+interface UserMessage extends ChatCompletionUserMessageParam {
+  selected: boolean;  // Additional property specific to Message
+}
+
+interface AssistantMessage extends ChatCompletionAssistantMessageParam {
+	selected: boolean;  // Additional property specific to Message
+}
+
+type Message =
+  | SystemMessage
+  | UserMessage
+  | AssistantMessage
+
 
 class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	public static readonly viewType = 'chatgpt.chatView';
@@ -461,18 +491,55 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		// Test if the content contains a code block or list items.
 		return codeBlockPattern.test(content) || listItemPattern.test(content);
 	}
-	  
 
+
+	private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {
+		return this.isChatCompletionContentPartImage(value);
+	}
+	
+	  
+	private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {
+		return typeof value === 'object'
+			&& value != null
+			&& typeof value.text === 'string'
+			&& value.type === 'text';
+	}
+	private isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {
+		return typeof value === 'object'
+			&& value !== null
+			&& typeof value.image_url === 'object'
+			&& typeof value.image_url.url === 'string'
+			&& value.type === 'image_url';
+	}
+	  
 	private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {
 		let chat_response = "";
 		if (this._messages) {
 			this._messages.forEach((message, index) => {
 				const selected = message.selected;
 				const checked_string = selected ? "checked" : "";
-				if (this._containsCodeBlockOrListItems(message.content)){
-					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
-				} else {
-					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>"+ message.content + "</div>";
+				if (typeof message.content === 'string') {
+					if (this._containsCodeBlockOrListItems(message.content)) {
+						chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
+					} else {
+						chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>"+ message.content + "</div>";
+					}
+				} else if (Array.isArray(message.content)) {
+					// Handle the case where message.content is an array of ChatCompletionContentPartImage
+					chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false'>";
+					message.content.forEach(part => {
+						console.log("processing an object...")
+						if (this.isChatCompletionContentPartImage(part)) {
+							console.log("Is an image!!!")
+							// Process each ChatCompletionContentPartImage item
+							chat_response += "<img src='"+ part.image_url.url + "' alt='Base64 Image'/>";
+						}
+						if (this.isChatCompletionContentPartText(part)) {
+							console.log("Is a text!!!")
+							chat_response += part.text;
+						}
+					});
+					chat_response += "</div>"
 				}
 			});
 		}
@@ -577,9 +644,17 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		const promtNumberOfTokens = this._getMessagesNumberOfTokens();
 		try {
 			console.log("Creating message sender...");
+			let messagesToSend: Array<Message> = [];
+			
+			// Assuming this._messages is defined and is an array
+			for (const message of this._messages) {
+				if (message.selected == true) {
+					messagesToSend.push(message);
+				}
+			}			
 			const stream = await this._openai.chat.completions.create({
 				model: this._settings.model,
-				messages: this.getSelectedMessagesWithoutSelectedProperty(),
+				messages: messagesToSend,
 				stream: true,
 				max_tokens: this._settings.maxResponseTokens,
 			});
@@ -669,6 +744,32 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         <script src="${scriptUri}"></script>
     	</body>
 		</html>`;
+	}
+
+	public addImageToChat(imageDataUrl: string, fileName: string) {
+		const imageMarkdown = `![${fileName}](${imageDataUrl})`;
+		let newMessage: UserMessage = { 
+			role: "user", 
+			content: [
+				{
+					"type": "text",
+					"text": fileName + ":"
+				},
+				{
+					"type": "image_url",
+					"image_url": {
+					  "url": imageDataUrl
+					}
+				}
+			], 
+			selected: true
+		};
+
+		
+		this._messages?.push(newMessage);
+	
+		const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
+		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
 	}
 }
 
