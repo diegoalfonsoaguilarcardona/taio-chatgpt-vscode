@@ -7,7 +7,7 @@ import { encodingForModel } from "js-tiktoken";
 import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';
 
 
-type AuthInfo = { apiKey?: string };
+type AuthInfo = { apiKey?: string, apiUrl?: string };
 type Settings = {
 	selectedInsideCodeblock?: boolean,
 	codeblockWithLanguageId?: false,
@@ -32,11 +32,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// Create a new ChatGPTViewProvider instance and register it with the extension's context
 	const provider = new ChatGPTViewProvider(context.extensionUri);
 
-	// Put configuration settings into the provider
-	provider.setAuthenticationInfo({
-		apiKey: config.get('apiKey')
-	});
-	
+
+
+	console.log("set settings:", config.get('apiUrl'))
 	provider.setSettings({
 		selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
 		codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
@@ -48,6 +46,13 @@ export function activate(context: vscode.ExtensionContext) {
 		maxModelTokens: config.get('maxModelTokens') || 4000,
 		maxResponseTokens: config.get('maxResponseTokens') || 1000
 	});
+
+	// Put configuration settings into the provider
+	provider.setAuthenticationInfo({
+		apiKey: config.get('apiKey'),
+		apiUrl: config.get('apiUrl')
+	});
+	
 	// Register the provider with the extension's context
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {
@@ -218,9 +223,11 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		if (!this._authInfo || !this._settings?.apiUrl) {
 			console.warn("API key or API URL not set, please go to extension settings (read README.md for more info)");
 		} else {
+			console.log("apiUrl:", this._settings?.apiUrl);
 			this._openai = new OpenAI(
 				{
-					apiKey: this._authInfo?.apiKey
+					apiKey: this._authInfo?.apiKey,
+					baseURL: this._authInfo?.apiUrl
 				}
 			);
 		}
