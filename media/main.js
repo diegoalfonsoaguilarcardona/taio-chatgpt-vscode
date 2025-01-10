@@ -1,4 +1,4 @@
-// @ts-ignore 
+// @ts-ignore
 
 // This script will be run within the webview itself
 // It cannot access the main VS Code APIs directly.
@@ -6,6 +6,38 @@
     const vscode = acquireVsCodeApi();
 
     let response = '';
+    let providers = []; // To store providers
+    let models = []; // To store models for the selected provider
+
+    // Function to populate the provider and model selectors
+    function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
+        const providerSelector = document.getElementById('provider-selector');
+        providerSelector.innerHTML = ''; // Clear existing options
+        providers.forEach((provider, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = provider.name;
+            providerSelector.appendChild(option);
+        });
+
+        if (providers.length > 0) {
+            providerSelector.value = selectedProviderIndex; // Set default selection
+            models = providers[selectedProviderIndex].models;
+        }
+
+        const modelSelector = document.getElementById('model-selector');
+        modelSelector.innerHTML = ''; // Clear existing options
+        models.forEach((model, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = model.name;
+            modelSelector.appendChild(option);
+        });
+
+        if (models.length > 0) {
+            modelSelector.value = selectedModelIndex; // Set default selection
+        }
+    }
 
     // Handle messages sent from the extension to the webview
     window.addEventListener("message", (event) => {
@@ -24,23 +56,20 @@
                 document.getElementById("prompt-input").value = message.value;
                 break;
             }
+            case "initialize": { 
+                providers = message.value;
+                populateSelectors(providers);
+                break;
+            }
         }
     });
 
     function fixCodeBlocks(response) {
-        // Use a regular expression to find all occurrences of the substring in the string
-        const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');
+        const REGEX_CODEBLOCK = new RegExp('```', 'g');
         const matches = response.match(REGEX_CODEBLOCK);
 
-        // Return the number of occurrences of the substring in the response, check if even
         const count = matches ? matches.length : 0;
-        if (count % 2 === 0) {
-            return response;
-        } else {
-            // else append ``` to the end to make the last code block complete
-            return response.concat('\n\`\`\`');
-        }
-
+        return count % 2 === 0 ? response : response.concat('\n```');
     }
 
     function setResponse() {
@@ -52,11 +81,9 @@
             simpleLineBreaks: true
         });
         response = fixCodeBlocks(response);
-        html = converter.makeHtml(response);
-        let responseDiv = document.getElementById("response");
+        const html = converter.makeHtml(response);
+        const responseDiv = document.getElementById("response");
         responseDiv.innerHTML = html;
-        //responseDiv.scrollTop = responseDiv.scrollHeight;
-        //responseDiv.scrollIntoView({ block: "end" });
 
         var preCodeBlocks = document.querySelectorAll("pre code");
         for (var i = 0; i < preCodeBlocks.length; i++) {
@@ -69,15 +96,14 @@
         }
 
         var codeBlocks = document.querySelectorAll('code');
-        for (var i = 0; i < codeBlocks.length; i++) {
-            // Check if innertext starts with "Copy code"
-            if (codeBlocks[i].innerText.startsWith("Copy code")) {
-                codeBlocks[i].innerText = codeBlocks[i].innerText.replace("Copy code", "");
+        codeBlocks.forEach(codeBlock => {
+            if (codeBlock.innerText.startsWith("Copy code")) {
+                codeBlock.innerText = codeBlock.innerText.replace("Copy code", "");
             }
 
-            codeBlocks[i].classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
+            codeBlock.classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
 
-            codeBlocks[i].addEventListener('click', function (e) {
+            codeBlock.addEventListener('click', function (e) {
                 e.preventDefault();
                 vscode.postMessage({
                     type: 'codeSelected',
@@ -86,16 +112,14 @@
             });
 
             const d = document.createElement('div');
-            d.innerHTML = codeBlocks[i].innerHTML;
-            codeBlocks[i].innerHTML = null;
-            codeBlocks[i].appendChild(d);
+            d.innerHTML = codeBlock.innerHTML;
+            codeBlock.innerHTML = null;
+            codeBlock.appendChild(d);
             d.classList.add("code");
-        }
+        });
 
         microlight.reset('code');
-        //responseDiv.scrollIntoView({ block: "end" });
         responseDiv.scrollTop = responseDiv.scrollHeight;
-        //document.getElementById("response").innerHTML = document.getElementById("response").innerHTML.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     }
 
     document.getElementById('prompt-input').addEventListener('paste', async function (e) {
@@ -116,16 +140,13 @@
         }
     });
 
-    // Listen for keyup events on the prompt input element
     document.getElementById('prompt-input').addEventListener('keyup', function (e) {
-        // If the Enter key was pressed without the Ctrl key
         if (e.key === "Enter" && !e.ctrlKey) {
             vscode.postMessage({
                 type: 'prompt',
                 value: this.value
             });
         }
-        // If the Enter key was pressed with the Ctrl key
         else if (e.key === "Enter" && e.ctrlKey) {
             vscode.postMessage({
                 type: 'promptNoQuery',
@@ -134,25 +155,38 @@
         }
     });
 
+    document.getElementById('provider-selector').addEventListener('change', function () {
+        const selectedProviderIndex = parseInt(this.value, 10);
+        models = providers[selectedProviderIndex].models;
+        populateSelectors(providers, selectedProviderIndex, 0);
+        vscode.postMessage({
+            type: 'providerChanged',
+            providerIndex: selectedProviderIndex,
+        });
+    });
 
-    window.myFunction = function(checkboxElem) {
-        if (checkboxElem.checked) {
-            console.log(checkboxElem.id + " is checked");
-            // Add your postMessage or other logic here
-            vscode.postMessage({
-                type: 'checkboxChanged',
-                id: checkboxElem.id,
-                checked: true
-            });
-        } else {
-            console.log(checkboxElem.id + " is unchecked");
-            // Add your postMessage or other logic here
-            vscode.postMessage({
-                type: 'checkboxChanged',
-                id: checkboxElem.id,
-                checked: false
-            });
-        }
+    document.getElementById('model-selector').addEventListener('change', function () {
+        const selectedModelIndex = parseInt(this.value, 10);
+        vscode.postMessage({
+            type: 'modelChanged',
+            modelIndex: selectedModelIndex,
+        });
+    });
+
+    document.getElementById('temperature-slider').addEventListener('input', function () {
+        const temperature = parseInt(this.value, 10) / 100;
+        vscode.postMessage({
+            type: 'temperatureChanged',
+            temperature: temperature,
+        });
+    });
+
+    window.myFunction = function (checkboxElem) {
+        vscode.postMessage({
+            type: 'checkboxChanged',
+            id: checkboxElem.id,
+            checked: checkboxElem.checked
+        });
     }
 
     window.makeEditable = function (element) {
@@ -168,8 +202,6 @@
             id: element.id,
             value: updatedContent,
         });
-
-
     }
 
 })();

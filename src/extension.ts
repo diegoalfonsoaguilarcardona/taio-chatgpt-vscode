@@ -23,6 +23,30 @@ type Settings = {
 
 const BASE_URL = 'https://api.openai.com/v1';
 
+interface Model {
+	name: string;
+	maxModelTokens: number;
+	maxResponseTokens: number;
+	temperature: number;
+}
+
+interface Provider {
+	name: string;
+	apiKey: string;
+	apiUrl: string;
+	models: Model[];
+}
+
+interface ProviderSettings {
+	model: string;
+	apiUrl: string;
+	maxModelTokens: number;
+	maxResponseTokens: number;
+	temperature: number;
+	apiKey: string;
+}
+
+
 export function activate(context: vscode.ExtensionContext) {
 
 	console.log('activating extension "chatgpt"');
@@ -32,25 +56,51 @@ export function activate(context: vscode.ExtensionContext) {
 	// Create a new ChatGPTViewProvider instance and register it with the extension's context
 	const provider = new ChatGPTViewProvider(context.extensionUri);
 
-
-
 	console.log("set settings:", config.get('apiUrl'))
+
+	let providers: Provider[] = config.get('providers') || [];
+	console.log("Providers:", providers);
+
+	let activate_provider_settings: ProviderSettings = {
+		model: "none",
+		apiUrl: BASE_URL,
+		maxModelTokens: 1000,
+		maxResponseTokens: 1000,
+		temperature: 1.0,
+		apiKey: "none"
+	};
+
+	if (providers && providers.length > 0) {
+		const firstProvider = providers[0];
+		if (firstProvider.models && firstProvider.models.length > 0) {
+			const firstModel = firstProvider.models[0];
+			activate_provider_settings = {
+				model: firstModel.name,
+				apiUrl: firstProvider.apiUrl,
+				maxModelTokens: firstModel.maxModelTokens,
+				maxResponseTokens: firstModel.maxResponseTokens,
+				temperature: firstModel.temperature,
+				apiKey: firstProvider.apiKey
+			};
+		}
+	}
+	
 	provider.setSettings({
 		selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
 		codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
 		pasteOnClick: config.get('pasteOnClick') || false,
 		keepConversation: config.get('keepConversation') || false,
 		timeoutLength: config.get('timeoutLength') || 60,
-		apiUrl: config.get('apiUrl') || BASE_URL,
-		model: config.get('model') || 'gpt-3.5-turbo',
-		maxModelTokens: config.get('maxModelTokens') || 4000,
-		maxResponseTokens: config.get('maxResponseTokens') || 1000
+		apiUrl: activate_provider_settings.apiUrl,
+		model: activate_provider_settings.model,
+		maxModelTokens: activate_provider_settings.maxModelTokens,
+		maxResponseTokens: activate_provider_settings.maxResponseTokens
 	});
 
 	// Put configuration settings into the provider
 	provider.setAuthenticationInfo({
-		apiKey: config.get('apiKey'),
-		apiUrl: config.get('apiUrl')
+		apiKey: activate_provider_settings.apiKey,
+		apiUrl: activate_provider_settings.apiUrl
 	});
 	
 	// Register the provider with the extension's context
@@ -137,6 +187,10 @@ export function activate(context: vscode.ExtensionContext) {
 		  }
 		})
 	  );
+
+	setTimeout(() => {
+		provider.set_providers(providers);
+	}, 10000);  // 10000 milliseconds = 10 seconds
 }
 
 interface SystemMessage extends ChatCompletionSystemMessageParam {
@@ -615,6 +669,10 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 	}
 
+	public set_providers(providers: Provider[]): void {
+		this._view?.webview.postMessage({ type: 'initialize', value: providers });
+	}
+
 	public async search(prompt?: string) {
 		// Check if the API key and URL are set
 		if (!this._authInfo || !this._settings?.apiUrl) {
@@ -710,57 +768,44 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
 
-		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
-		const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));
-		const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
-		const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
-		const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
+        const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));
+        const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
+        const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
+        const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
 
-		
-		return `<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<script src="${tailwindUri}"></script>
-			<script src="${showdownUri}"></script>
-			<script src="${microlightUri}"></script>
-			<link rel="stylesheet" href="${stylesUri}">
-		</head>
-		<body>
-			<div id="container">
-				<div id="top-wrapper">
-					<input type="text" placeholder="Agent 1 Developer" />
-					<select>
-						<option value="option1">Agent 1 Developer</option>
-						<option value="option2">Agent 2 Project Manajer</option>
-						<!-- Additional options here -->
-					</select>
-					<button>+Add</button>
-				</div>
-				<div id="response" class="text-sm">
-					<!-- response content goes here -->
-				</div>
-				<div id="input-wrapper">
-					<!-- Model selector combobox -->
-					<select id="model-selector">
-						<option value="base-model">Base Model</option>
-						<option value="advanced-model">Advanced Model</option>
-						<!-- Add more models as necessary -->
-					</select>
-					<!-- Temperature slider and label -->
-					<div>
-						<label for="temperature-slider">Temperature:</label>
-						<input type="range" id="temperature-slider" min="0" max="100" value="50" />
-					</div>
-					<!-- Text input for the prompt -->
-					<input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
-				</div>
-			</div>
-        <script src="${scriptUri}"></script>
-    	</body>
-		</html>`;
-	}
+        return `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <script src="${tailwindUri}"></script>
+            <script src="${showdownUri}"></script>
+            <script src="${microlightUri}"></script>
+            <link rel="stylesheet" href="${stylesUri}">
+        </head>
+        <body>
+            <div id="container">
+                <div id="top-wrapper">
+                    <label for="provider-selector">Provider:</label>
+                    <select id="provider-selector"></select>
+                    <label for="model-selector">Model:</label>
+                    <select id="model-selector"></select>
+                    <button id="add-model">+Add</button>
+                </div>
+                <div id="response" class="text-sm"></div>
+                <div id="input-wrapper">
+                    <div>
+                        <label for="temperature-slider">Temperature:</label>
+                        <input type="range" id="temperature-slider" min="0" max="100" value="${0.5 * 100}" />
+                    </div>
+                    <input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
+                </div>
+            </div>
+            <script src="${scriptUri}"></script>
+        </body>
+        </html>`;
+    }
 
 	public addImageToChat(imageDataUrl: string, fileName: string) {
 		const imageMarkdown = `![${fileName}](${imageDataUrl})`;
