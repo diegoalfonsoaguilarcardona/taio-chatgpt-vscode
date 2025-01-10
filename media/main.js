@@ -8,6 +8,7 @@
     let response = '';
     let providers = []; // To store providers
     let models = []; // To store models for the selected provider
+    let selectedProviderIndex = 0;
 
     // Function to populate the provider and model selectors
     function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
@@ -39,6 +40,13 @@
         }
     }
 
+    window.addEventListener('load', () => {
+        // Notify the extension that the webview is ready
+        vscode.postMessage({ type: 'ready' });
+    });
+    
+    // Note: Ensure you import the vscode API object correctly in your web script.
+    
     // Handle messages sent from the extension to the webview
     window.addEventListener("message", (event) => {
         const message = event.data;
@@ -156,19 +164,21 @@
     });
 
     document.getElementById('provider-selector').addEventListener('change', function () {
-        const selectedProviderIndex = parseInt(this.value, 10);
+        selectedProviderIndex = parseInt(this.value, 10);
         models = providers[selectedProviderIndex].models;
         populateSelectors(providers, selectedProviderIndex, 0);
         vscode.postMessage({
-            type: 'providerChanged',
+            type: 'providerModelChanged',
             providerIndex: selectedProviderIndex,
+            modelIndex: 0
         });
     });
 
     document.getElementById('model-selector').addEventListener('change', function () {
         const selectedModelIndex = parseInt(this.value, 10);
         vscode.postMessage({
-            type: 'modelChanged',
+            type: 'providerModelChanged',
+            providerIndex: selectedProviderIndex,
             modelIndex: selectedModelIndex,
         });
     });

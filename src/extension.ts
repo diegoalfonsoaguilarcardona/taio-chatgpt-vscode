@@ -56,8 +56,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// Create a new ChatGPTViewProvider instance and register it with the extension's context
 	const provider = new ChatGPTViewProvider(context.extensionUri);
 
-	console.log("set settings:", config.get('apiUrl'))
-
 	let providers: Provider[] = config.get('providers') || [];
 	console.log("Providers:", providers);
 
@@ -138,22 +136,38 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Change the extension's session token or settings when configuration is changed
 	vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
-		if (event.affectsConfiguration('chatgpt.apiKey')) {
+		if (event.affectsConfiguration('chatgpt.providers')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
-			provider.setAuthenticationInfo({ apiKey: config.get('apiKey') });
-		} else if (event.affectsConfiguration('chatgpt.apiUrl')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
-			let url = config.get('apiUrl') as string || BASE_URL;
-			provider.setSettings({ apiUrl: url });
-		} else if (event.affectsConfiguration('chatgpt.model')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
-			provider.setSettings({ model: config.get('model') || 'gpt-3.5-turbo' });
-		} else if (event.affectsConfiguration('chatgpt.maxModelTokens')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
-			provider.setSettings({ maxModelTokens: config.get('maxModelTokens') || 4000 });
-		} else if (event.affectsConfiguration('chatgpt.maxResponseTokens')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
-			provider.setSettings({ maxResponseTokens: config.get('maxResponseTokens') || 4000 });
+			let providers: Provider[] = config.get('providers') || [];
+
+			if (providers && providers.length > 0) {
+				const firstProvider = providers[0];
+				if (firstProvider.models && firstProvider.models.length > 0) {
+					const firstModel = firstProvider.models[0];
+					activate_provider_settings = {
+						model: firstModel.name,
+						apiUrl: firstProvider.apiUrl,
+						maxModelTokens: firstModel.maxModelTokens,
+						maxResponseTokens: firstModel.maxResponseTokens,
+						temperature: firstModel.temperature,
+						apiKey: firstProvider.apiKey
+					};
+				}
+				provider.setSettings({
+					apiUrl: activate_provider_settings.apiUrl,
+					model: activate_provider_settings.model,
+					maxModelTokens: activate_provider_settings.maxModelTokens,
+					maxResponseTokens: activate_provider_settings.maxResponseTokens
+				});
+			
+				// Put configuration settings into the provider
+				provider.setAuthenticationInfo({
+					apiKey: activate_provider_settings.apiKey,
+					apiUrl: activate_provider_settings.apiUrl
+				});
+				
+				provider.set_providers(providers);//Update the selectors
+			}
 		} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
 			provider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });
@@ -187,10 +201,6 @@ export function activate(context: vscode.ExtensionContext) {
 		  }
 		})
 	  );
-
-	setTimeout(() => {
-		provider.set_providers(providers);
-	}, 10000);  // 10000 milliseconds = 10 seconds
 }
 
 interface SystemMessage extends ChatCompletionSystemMessageParam {
@@ -315,6 +325,13 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		// add an event listener for messages received by the webview
 		webviewView.webview.onDidReceiveMessage(async data =>  {
 			switch (data.type) {
+				case 'ready':
+					{
+						const config = vscode.workspace.getConfiguration('chatgpt');
+						let providers: Provider[] = config.get('providers') || [];
+						this.set_providers(providers);
+						break;
+					}
 				case 'codeSelected':
 					{
 						// do nothing if the pasteOnClick option is disabled
@@ -399,6 +416,42 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 							console.error('data.id is not in the expected format.');
 						}
 						console.log("messages:", this._messages);
+						break;
+					}
+				case "providerModelChanged":
+					{
+						const providerIndex = data.providerIndex;
+						const modelIndex = data.modelIndex;
+						console.log("Provider Changed, providerIndex:", providerIndex, ", model:", modelIndex);
+
+						const config = vscode.workspace.getConfiguration('chatgpt');
+						let providers: Provider[] = config.get('providers') || [];
+			
+						if (providers && providers.length > providerIndex) {
+							const provider_data = providers[providerIndex];
+							if (provider_data.models && provider_data.models.length > modelIndex) {
+								const model_data = provider_data.models[modelIndex];
+								const provider_settings = {
+									model: model_data.name,
+									apiUrl: provider_data.apiUrl,
+									maxModelTokens: model_data.maxModelTokens,
+									maxResponseTokens: model_data.maxResponseTokens,
+									temperature: model_data.temperature,
+									apiKey: provider_data.apiKey
+								};
+								this.setSettings({
+									apiUrl: provider_settings.apiUrl,
+									model: provider_settings.model,
+									maxModelTokens: provider_settings.maxModelTokens,
+									maxResponseTokens: provider_settings.maxResponseTokens
+								});
+								// Put configuration settings into the provider
+								this.setAuthenticationInfo({
+									apiKey: provider_settings.apiKey,
+									apiUrl: provider_settings.apiUrl
+								});
+							}						
+						}
 						break;
 					}
 			}
