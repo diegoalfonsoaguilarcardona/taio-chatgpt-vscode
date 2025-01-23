@@ -775,8 +775,17 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			
 			// Assuming this._messages is defined and is an array
 			for (const message of this._messages) {
-				if (message.selected == true) {
-					messagesToSend.push(message);
+				if (message.selected === true) {
+					if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {
+						// Append the content to the previous message if the role is the same
+						messagesToSend[messagesToSend.length - 1] = {
+							...messagesToSend[messagesToSend.length - 1],
+							content: messagesToSend[messagesToSend.length - 1].content + '\n' + message.content,
+						};
+					} else {
+						// Add the message as a new entry if the role is different
+						messagesToSend.push({ ...message });
+					}
 				}
 			}			
 			const stream = await this._openai.chat.completions.create({
