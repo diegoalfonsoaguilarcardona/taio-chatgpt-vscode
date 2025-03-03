@@ -780,6 +780,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		}
 
 		const promtNumberOfTokens = this._getMessagesNumberOfTokens();
+		let full_message = "";
 		try {
 			console.log("Creating message sender...");
 			
@@ -809,10 +810,11 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 			  stream: true,
 			  ...this._settings.options, // Spread operator to include all keys from options
 			});
+			
 			console.log("Message sender created");
 			
 			let completionTokens = 0;
-			let full_message = "";
+			full_message = "";
 			for await (const chunk of stream) {
 				const content = chunk.choices[0]?.delta?.content || "";
 				console.log("chunk:",chunk);
@@ -834,6 +836,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		} catch (e: any) {
 			console.error(e);
 			if (this._response!=undefined) {
+				this._messages?.push({ role: "assistant", content: full_message, selected:true })
 				chat_response = this._response;
 				chat_response += `\n\n---\n[ERROR] ${e}`;
 			}
