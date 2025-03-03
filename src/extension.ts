@@ -48,6 +48,12 @@ interface ProviderSettings {
 }
 
 
+interface Prompt{
+	name: string;
+	prompt: string;
+}
+
+
 export function activate(context: vscode.ExtensionContext) {
 
 	console.log('activating extension "chatgpt"');
@@ -59,6 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let providers: Provider[] = config.get('providers') || [];
 	console.log("Providers:", providers);
+
+	let prompts: Prompt[] = config.get('prompts') || [];
+	console.log("prompts:", prompts);
 
 	let activate_provider_settings: ProviderSettings = {
 	  model: "none",
@@ -174,6 +183,15 @@ export function activate(context: vscode.ExtensionContext) {
 				
 				provider.set_providers(providers);//Update the selectors
 			}
+		} else if (event.affectsConfiguration('chatgpt.prompts')) {
+			const config = vscode.workspace.getConfiguration('chatgpt');
+			let prompts: Prompt[] = config.get('prompts') || [];
+
+			if (prompts && prompts.length > 0) {
+				const firstPrompt = prompts[0];
+				provider.set_prompt(firstPrompt);
+			}
+			provider.set_prompts(prompts);
 		} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {
 			const config = vscode.workspace.getConfiguration('chatgpt');
 			provider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });
@@ -259,7 +277,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	// In the constructor, we store the URI of the extension
 	constructor(private readonly _extensionUri: vscode.Uri) {
 		this._messages = [];
-		this._messages?.push({ role: "system", content: "You are a helpful assistant.", selected:true });
+		this._messages?.push({ role: "system", content: this.getStartSystemPrompt(), selected:true });
 		console.log("constructor....");
 		console.log("messages:", this._messages);
 	}
@@ -339,7 +357,9 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 					{
 						const config = vscode.workspace.getConfiguration('chatgpt');
 						let providers: Provider[] = config.get('providers') || [];
+						let prompts: Prompt[] = config.get('prompts') || [];
 						this.set_providers(providers);
+						this.set_prompts(prompts);
 						break;
 					}
 				case 'codeSelected':
@@ -465,8 +485,37 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 						}
 						break;
 					}
+				case "systemPromptChanged":
+					{
+						const systemPromptIndex = data.systemPromptIndex;
+						console.log("systemPrompt Changed, providerIndex:", systemPromptIndex);
+
+						const config = vscode.workspace.getConfiguration('chatgpt');
+						let prompts: Prompt[] = config.get('prompts') || [];
+			
+						if (prompts && prompts.length > systemPromptIndex) {
+							const prompt_data = prompts[systemPromptIndex];
+							if (prompt_data.name && prompt_data.prompt) {
+								this.set_prompt(prompt_data);
+							}						
+						}
+						break;
+					}
 			}
 		});
+	}
+
+	public getStartSystemPrompt() {
+		const config = vscode.workspace.getConfiguration('chatgpt');
+		let prompts: Prompt[] = config.get('prompts') || [];
+		let start_system_prompt = "You are a helpful assistant.";
+		if (prompts && prompts.length > 0) {
+			const prompt_data = prompts[0];
+			if (prompt_data.name && prompt_data.prompt) {
+				start_system_prompt = prompt_data.prompt;
+			}						
+		}
+		return start_system_prompt;
 	}
 
 
@@ -481,7 +530,8 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._totalNumberOfTokens = 0;
 		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
 		this._messages = [];
-		this._messages?.push({ role: "system", content: "You are a helpful assistant.", selected:true });
+		
+		this._messages?.push({ role: "system", content: this.getStartSystemPrompt(), selected:true });
 		const chat_response = this._updateChatMessages(
 			this._getMessagesNumberOfTokens(),
 			0
@@ -737,6 +787,25 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({ type: 'initialize', value: providers });
 	}
 
+	public set_prompts(prompts: Prompt[]): void {
+		console.log("Set Prompts:", prompts);
+		this._view?.webview.postMessage({ type: 'initialize_prompts', value: prompts });
+	}
+
+	public set_prompt(prompt: Prompt): void {
+		// Check if _messages is defined
+		if (this._messages) {
+		  this._messages[0] = { role: "system", content: prompt.prompt, selected: true };
+		} else {
+		  this._messages = [{ role: "system", content: prompt.prompt, selected: true }];
+		}
+		console.log("calling updateResponse");
+		let chat_response = this._updateChatMessages(0, 0)
+
+		this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+		this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
+	}
+
 	public async search(prompt?: string) {
 		// Check if the API key and URL are set
 		if (!this._authInfo || !this._settings?.apiUrl) {
@@ -847,45 +916,46 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
-
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
-        const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));
-        const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
-        const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
-        const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
-
-        return `<!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <script src="${tailwindUri}"></script>
-            <script src="${showdownUri}"></script>
-            <script src="${microlightUri}"></script>
-            <link rel="stylesheet" href="${stylesUri}">
-        </head>
-        <body>
-            <div id="container">
-                <div id="top-wrapper">
-                    <label for="provider-selector">Provider:</label>
-                    <select id="provider-selector"></select>
-                    <label for="model-selector">Model:</label>
-                    <select id="model-selector"></select>
-                    <button id="add-model">+Add</button>
-                </div>
-                <div id="response" class="text-sm"></div>
-                <div id="input-wrapper">
-                    <div>
-                        <label for="temperature-slider">Temperature:</label>
-                        <input type="range" id="temperature-slider" min="0" max="100" value="${0.5 * 100}" />
-                    </div>
-                    <input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
-                </div>
-            </div>
-            <script src="${scriptUri}"></script>
-        </body>
-        </html>`;
-    }
+	
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
+		const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));
+		const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
+		const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
+		const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
+	
+		return `<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<script src="${tailwindUri}"></script>
+			<script src="${showdownUri}"></script>
+			<script src="${microlightUri}"></script>
+			<link rel="stylesheet" href="${stylesUri}">
+		</head>
+		<body>
+			<div id="container">
+				<div id="top-wrapper">
+					<label for="provider-selector">Provider:</label>
+					<select id="provider-selector"></select>
+					<label for="model-selector">Model:</label>
+					<select id="model-selector"></select>
+					<button id="add-model">+Add</button>
+				</div>
+				<div id="response" class="text-sm"></div>
+				<div id="input-wrapper">
+					<div>
+						<label for="system-prompt-selector">System Prompt:</label>
+						<select id="system-prompt-selector">
+						</select>
+					</div>
+					<input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
+				</div>
+			</div>
+			<script src="${scriptUri}"></script>
+		</body>
+		</html>`;
+	}
 
 	public addImageToChat(imageDataUrl: string, fileName: string) {
 		const imageMarkdown = `![${fileName}](${imageDataUrl})`;

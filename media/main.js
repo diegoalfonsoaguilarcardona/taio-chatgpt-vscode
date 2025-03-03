@@ -7,6 +7,7 @@
 
     let response = '';
     let providers = []; // To store providers
+    let prompts = []; 
     let models = []; // To store models for the selected provider
     let selectedProviderIndex = 0;
 
@@ -40,6 +41,22 @@
         }
     }
 
+    function populatePrompts(prompts, selectedPromptIndex = 0) {
+        const promptSelector = document.getElementById('system-prompt-selector');
+        promptSelector.innerHTML = ''; // Clear existing options
+        prompts.forEach((prompt, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = prompt.name;
+            promptSelector.appendChild(option);
+        });
+
+        if (prompts.length > 0) {
+            promptSelector.value = selectedPromptIndex; // Set default selection
+            //models = providers[selectedProviderIndex].models;
+        }
+    }
+
     window.addEventListener('load', () => {
         // Notify the extension that the webview is ready
         vscode.postMessage({ type: 'ready' });
@@ -56,6 +73,12 @@
                 setResponse();
                 break;
             }
+            case "updateResponse": {
+                console.log("Update Response!!!!!");
+                setResponse();
+                console.log("After Update Response !!!!!!!!!");
+                break;                
+            }
             case "clearResponse": {
                 response = '';
                 break;
@@ -67,6 +90,13 @@
             case "initialize": { 
                 providers = message.value;
                 populateSelectors(providers);
+                break;
+            }
+
+            case "initialize_prompts": {
+                console.log("Initialize Prompts:", message.value); 
+                prompts = message.value;
+                populatePrompts(prompts);
                 break;
             }
         }
@@ -222,13 +252,21 @@
         });
     });
 
-    document.getElementById('temperature-slider').addEventListener('input', function () {
-        const temperature = parseInt(this.value, 10) / 100;
+    document.getElementById('system-prompt-selector').addEventListener('change', function () {
+        const systemPromptIndex = parseInt(this.value, 10);
         vscode.postMessage({
-            type: 'temperatureChanged',
-            temperature: temperature,
+            type: 'systemPromptChanged',
+            systemPromptIndex: systemPromptIndex
         });
     });
+
+    //document.getElementById('temperature-slider').addEventListener('input', function () {
+    //    const temperature = parseInt(this.value, 10) / 100;
+    //    vscode.postMessage({
+    //        type: 'temperatureChanged',
+    //        temperature: temperature,
+    //    });
+    //});
 
     window.myFunction = function (checkboxElem) {
         vscode.postMessage({
