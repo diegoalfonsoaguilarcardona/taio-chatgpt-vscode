@@ -5,10 +5,21 @@ p {
     padding-top: 0.3rem;
     padding-bottom: 0.3rem;
 }
-ul, ol {
+
+ul {
     list-style: initial !important;
     margin-left: 10px !important;
 }
+
+ol {
+    list-style-type: decimal !important;
+    list-style-position: outside;
+    padding-left: 40px; /* Adjust as needed to ensure numbers are visible */
+    margin-left: 20px !important; /* Reset margin to see true boundaries */
+}
+
+
+
 h1, h2, h3, h4, h5, h6 {
     font-weight: bold !important;
 }
@@ -66,6 +77,14 @@ body, html {
 #model-selector, #temperature-slider, label[for="temperature-slider"] {
     margin-bottom: 10px;
 }
+
+think {
+    display: inline; /* Ensure it doesn't visually affect layout like block */
+    color: lightblue !important; /* Use !important to override other styles */
+    font-style: italic !important; /* Also use !important for emphasis */
+}
+
+
 
 select {
     color: var(--vscode-dropdown-foreground);

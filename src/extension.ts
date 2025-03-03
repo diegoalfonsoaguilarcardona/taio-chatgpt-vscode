@@ -9,25 +9,26 @@ import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCom
 
 type AuthInfo = { apiKey?: string, apiUrl?: string };
 type Settings = {
-	selectedInsideCodeblock?: boolean,
-	codeblockWithLanguageId?: false,
-	pasteOnClick?: boolean,
-	keepConversation?: boolean,
-	timeoutLength?: number,
-	model?: string,
-	maxModelTokens?: number,
-	maxResponseTokens?: number,
-	apiUrl?: string
+  selectedInsideCodeblock?: boolean;
+  codeblockWithLanguageId?: false;
+  pasteOnClick?: boolean;
+  keepConversation?: boolean;
+  timeoutLength?: number;
+  model?: string;
+  apiUrl?: string;
+  options?: {
+	[key: string]: any; // Allows for any number of properties with any value type
+  };
 };
 
 
 const BASE_URL = 'https://api.openai.com/v1';
 
 interface Model {
-	name: string;
-	maxModelTokens: number;
-	maxResponseTokens: number;
-	temperature: number;
+  name: string;
+  options: {
+	[key: string]: any; // Allows the `options` object to have any string keys with any value types
+  };
 }
 
 interface Provider {
@@ -38,12 +39,12 @@ interface Provider {
 }
 
 interface ProviderSettings {
-	model: string;
-	apiUrl: string;
-	maxModelTokens: number;
-	maxResponseTokens: number;
-	temperature: number;
-	apiKey: string;
+  model: string;
+  apiUrl: string;
+  apiKey: string;
+  options: {
+	[key: string]: any; // This allows options to have any number of properties with any types
+  };
 }
 
 
@@ -60,39 +61,43 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log("Providers:", providers);
 
 	let activate_provider_settings: ProviderSettings = {
-		model: "none",
-		apiUrl: BASE_URL,
+	  model: "none",
+	  apiUrl: BASE_URL,
+	  apiKey: "none",
+	  options: {
 		maxModelTokens: 1000,
 		maxResponseTokens: 1000,
 		temperature: 1.0,
-		apiKey: "none"
+	  },
 	};
 
 	if (providers && providers.length > 0) {
 		const firstProvider = providers[0];
 		if (firstProvider.models && firstProvider.models.length > 0) {
 			const firstModel = firstProvider.models[0];
+			// Assuming firstModel and firstProvider are already defined based on your JSON structure:
 			activate_provider_settings = {
-				model: firstModel.name,
-				apiUrl: firstProvider.apiUrl,
-				maxModelTokens: firstModel.maxModelTokens,
-				maxResponseTokens: firstModel.maxResponseTokens,
-				temperature: firstModel.temperature,
-				apiKey: firstProvider.apiKey
+			  model: firstModel.name,
+			  apiUrl: firstProvider.apiUrl,
+			  apiKey: firstProvider.apiKey,
+			  options: {
+				...firstModel.options, // Spread operator to include all keys from options
+			  },
 			};
 		}
 	}
 	
 	provider.setSettings({
-		selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
-		codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
-		pasteOnClick: config.get('pasteOnClick') || false,
-		keepConversation: config.get('keepConversation') || false,
-		timeoutLength: config.get('timeoutLength') || 60,
-		apiUrl: activate_provider_settings.apiUrl,
-		model: activate_provider_settings.model,
-		maxModelTokens: activate_provider_settings.maxModelTokens,
-		maxResponseTokens: activate_provider_settings.maxResponseTokens
+	  selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
+	  codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
+	  pasteOnClick: config.get('pasteOnClick') || false,
+	  keepConversation: config.get('keepConversation') || false,
+	  timeoutLength: config.get('timeoutLength') || 60,
+	  apiUrl: activate_provider_settings.apiUrl,
+	  model: activate_provider_settings.model,
+	  options: {
+		...activate_provider_settings.options, // Use spread operator to include all options
+	  },
 	});
 
 	// Put configuration settings into the provider
@@ -145,19 +150,20 @@ export function activate(context: vscode.ExtensionContext) {
 				if (firstProvider.models && firstProvider.models.length > 0) {
 					const firstModel = firstProvider.models[0];
 					activate_provider_settings = {
-						model: firstModel.name,
-						apiUrl: firstProvider.apiUrl,
-						maxModelTokens: firstModel.maxModelTokens,
-						maxResponseTokens: firstModel.maxResponseTokens,
-						temperature: firstModel.temperature,
-						apiKey: firstProvider.apiKey
+					  model: firstModel.name,
+					  apiUrl: firstProvider.apiUrl,
+					  apiKey: firstProvider.apiKey,
+					  options: {
+						...firstModel.options, // Use spread operator to include all options
+					  },
 					};
 				}
 				provider.setSettings({
-					apiUrl: activate_provider_settings.apiUrl,
-					model: activate_provider_settings.model,
-					maxModelTokens: activate_provider_settings.maxModelTokens,
-					maxResponseTokens: activate_provider_settings.maxResponseTokens
+				  apiUrl: activate_provider_settings.apiUrl,
+				  model: activate_provider_settings.model,
+				  options: {
+					...activate_provider_settings.options, // Use spread operator to include all options
+				  },
 				});
 			
 				// Put configuration settings into the provider
@@ -204,15 +210,15 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 interface SystemMessage extends ChatCompletionSystemMessageParam {
-	selected: boolean;  // Additional property specific to Message
+	selected?: boolean;  // Additional property specific to Message
 }
 
 interface UserMessage extends ChatCompletionUserMessageParam {
-  selected: boolean;  // Additional property specific to Message
+  selected?: boolean;  // Additional property specific to Message
 }
 
 interface AssistantMessage extends ChatCompletionAssistantMessageParam {
-	selected: boolean;  // Additional property specific to Message
+	selected?: boolean;  // Additional property specific to Message
 }
 
 type Message =
@@ -238,15 +244,15 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	private _enc = encodingForModel("gpt-4"); //Hardcoded for now
 
 	private _settings: Settings = {
-		selectedInsideCodeblock: false,
-		codeblockWithLanguageId: false,
-		pasteOnClick: true,
-		keepConversation: true,
-		timeoutLength: 60,
-		apiUrl: BASE_URL,
-		model: 'gpt-3.5-turbo',
-		maxModelTokens: 4000,
-		maxResponseTokens: 1000
+	  selectedInsideCodeblock: false,
+	  codeblockWithLanguageId: false,
+	  pasteOnClick: true,
+	  keepConversation: true,
+	  timeoutLength: 60,
+	  apiUrl: BASE_URL,
+	  model: 'gpt-3.5-turbo',
+	  options: {
+	  },
 	};
 	private _authInfo?: AuthInfo;
 
@@ -265,15 +271,19 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	public setSettings(settings: Settings) {
-		let changeModel = false;
-		if (settings.apiUrl || settings.model || settings.maxModelTokens || settings.maxResponseTokens) {
-			changeModel = true;
-		}
-		this._settings = { ...this._settings, ...settings };
-
-		if (changeModel) {
-			//this._newAPI();
-		}
+	  let changeModel = false;
+	
+	  // Check if there are any keys in the options object of the settings
+	  if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {
+		changeModel = true;
+	  }
+	
+	  // Update settings with the new values
+	  this._settings = { ...this._settings, ...settings };
+	
+	  if (changeModel) {
+		//this._newAPI();
+	  }
 	}
 
 	public getSettings() {
@@ -432,18 +442,19 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 							if (provider_data.models && provider_data.models.length > modelIndex) {
 								const model_data = provider_data.models[modelIndex];
 								const provider_settings = {
-									model: model_data.name,
-									apiUrl: provider_data.apiUrl,
-									maxModelTokens: model_data.maxModelTokens,
-									maxResponseTokens: model_data.maxResponseTokens,
-									temperature: model_data.temperature,
-									apiKey: provider_data.apiKey
+								  model: model_data.name,
+								  apiUrl: provider_data.apiUrl,
+								  apiKey: provider_data.apiKey,
+								  options: {
+									...model_data.options // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
+								  },
 								};
 								this.setSettings({
-									apiUrl: provider_settings.apiUrl,
-									model: provider_settings.model,
-									maxModelTokens: provider_settings.maxModelTokens,
-									maxResponseTokens: provider_settings.maxResponseTokens
+								  apiUrl: provider_settings.apiUrl,
+								  model: provider_settings.model,
+								  options: {
+									...provider_settings.options, // Spread operator to include all keys from options
+								  },
 								});
 								// Put configuration settings into the provider
 								this.setAuthenticationInfo({
@@ -668,7 +679,7 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		}
 		if (this._totalNumberOfTokens !== undefined) {
 			this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
-			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}, maxModelTokens: ${this._settings.maxModelTokens}, maxResponseTokens: ${this._settings.maxResponseTokens}</sub>* \n\n---\n\n\n\n\n\n\n`;
+			chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}</sub>* \n\n---\n\n\n\n\n\n\n`;
 		}
 		return chat_response;
 	}
@@ -771,28 +782,32 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 		const promtNumberOfTokens = this._getMessagesNumberOfTokens();
 		try {
 			console.log("Creating message sender...");
+			
 			let messagesToSend: Array<Message> = [];
 			
 			// Assuming this._messages is defined and is an array
 			for (const message of this._messages) {
-				if (message.selected === true) {
-					if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {
-						// Append the content to the previous message if the role is the same
-						messagesToSend[messagesToSend.length - 1] = {
-							...messagesToSend[messagesToSend.length - 1],
-							content: messagesToSend[messagesToSend.length - 1].content + '\n' + message.content,
-						};
-					} else {
-						// Add the message as a new entry if the role is different
-						messagesToSend.push({ ...message });
-					}
-				}
-			}			
+			  // Check if 'selected' is true; undefined or false values will be considered false
+			  if (message.selected) {
+				//if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {
+				//  // Append the content to the previous message if the role is the same
+				//  messagesToSend[messagesToSend.length - 1] = {
+				//	...messagesToSend[messagesToSend.length - 1],
+				//	content: messagesToSend[messagesToSend.length - 1].content + '\n' + message.content,
+				//  };
+				//} else {
+				  // Add the message as a new entry, omitting the 'selected' key
+				  const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'
+				  messagesToSend.push(messageWithoutSelected);
+				//}
+			  }
+			}
+
 			const stream = await this._openai.chat.completions.create({
-				model: this._settings.model,
-				messages: messagesToSend,
-				stream: true,
-				max_tokens: this._settings.maxResponseTokens,
+			  model: this._settings.model,
+			  messages: messagesToSend,
+			  stream: true,
+			  ...this._settings.options, // Spread operator to include all keys from options
 			});
 			console.log("Message sender created");
 			

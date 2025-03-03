@@ -72,6 +72,33 @@
         }
     });
 
+    showdown.extension('thinkExtension', function() {
+        return [
+          {
+            type: 'lang', // Process block-level syntax
+            regex: /<think>([\s\S]*?)<\/think>/g,
+            replace: function(match, content) {
+              // Trim and process lines, ensuring let's handle `<p>` tags ourselves
+              const pTags = content.trim().split('\n').map(line => {
+                if (line.trim()) {
+                  return `<p>${line.trim()}</p>`;
+                }
+                return '';
+              }).join('');
+      
+              return `<think>${pTags}</think>`;
+            }
+          },
+          {
+            type: 'output', // After markdown is converted to HTML
+            filter: function(text) {
+              // Remove wrapping <p> tags around <think> elements
+              return text.replace(/<p><think>/g, '<think>').replace(/<\/think><\/p>/g, '</think>');
+            }
+          }
+        ];
+    });
+
     function fixCodeBlocks(response) {
         const REGEX_CODEBLOCK = new RegExp('```', 'g');
         const matches = response.match(REGEX_CODEBLOCK);
@@ -86,10 +113,22 @@
             simplifiedAutoLink: true,
             excludeTrailingPunctuationFromURLs: true,
             literalMidWordUnderscores: true,
-            simpleLineBreaks: true
+            simpleLineBreaks: true,
+            extensions: ['thinkExtension']
         });
+
+        
+        console.log("!!!!!!!!!!!!!!!!!!!!!Response!!!!!!!!!!!!");
+        console.log(response)
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         response = fixCodeBlocks(response);
+        console.log("!!!!!!!!!!!!!!!!!!!!!FixCodeBlockResponse!!!!!!!!!!!!");
+        console.log(response)
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         const html = converter.makeHtml(response);
+        console.log("!!!!!!!!!!!!!!!!!!!!!HTML!!!!!!!!!!!!");
+        console.log(html)
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         const responseDiv = document.getElementById("response");
         responseDiv.innerHTML = html;
 
