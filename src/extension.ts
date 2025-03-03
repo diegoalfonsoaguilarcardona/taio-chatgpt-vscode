@@ -940,7 +940,6 @@ class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 					<select id="provider-selector"></select>
 					<label for="model-selector">Model:</label>
 					<select id="model-selector"></select>
-					<button id="add-model">+Add</button>
 				</div>
 				<div id="response" class="text-sm"></div>
 				<div id="input-wrapper">
