@@ -35,6 +35,17 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   };
   private _authInfo?: AuthInfo;
 
+  // MCP integration
+  private _mcpClients: { [name: string]: any } = {};
+  private _selectedMcpServers: string[] = [];
+
+  public setMcpClients(clients: { [name: string]: any }) {
+    this._mcpClients = clients;
+  }
+  public setSelectedMcpServers(names: string[]) {
+    this._selectedMcpServers = names;
+  }
+
   // In the constructor, we store the URI of the extension
   constructor(private readonly _extensionUri: vscode.Uri) {
     this._messages = [];
@@ -609,6 +620,27 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       throw new Error('Messages have invalid roles.');
     }
 
+    // MCP: Gather tools from selected MCP servers
+    let functions: any[] = [];
+    if (this._selectedMcpServers && this._selectedMcpServers.length > 0 && this._mcpClients) {
+      for (const serverName of this._selectedMcpServers) {
+        console.log("serverName:", serverName);
+        const client = this._mcpClients[serverName];
+        if (client && typeof client.listTools === "function") {
+          try {
+            // listTools may be async
+            const tools = await client.listTools();
+            console.log("tools:", tools);
+            if (Array.isArray(tools)) {
+              functions = functions.concat(tools);
+            }
+          } catch (err) {
+            console.error(`Failed to list tools for MCP server '${serverName}':`, err);
+          }
+        }
+      }
+    }
+
     const promtNumberOfTokens = this._getMessagesNumberOfTokens();
     let full_message = "";
     try {
@@ -620,49 +652,153 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       for (const message of this._messages) {
         // Check if 'selected' is true; undefined or false values will be considered false
         if (message.selected) {
-          //if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {
-          //  // Append the content to the previous message if the role is the same
-          //  messagesToSend[messagesToSend.length - 1] = {
-          //	...messagesToSend[messagesToSend.length - 1],
-          //	content: messagesToSend[messagesToSend.length - 1].content + '\n' + message.content,
-          //  };
-          //} else {
-            // Add the message as a new entry, omitting the 'selected' key
-            const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'
-            messagesToSend.push(messageWithoutSelected);
-          //}
+          // Add the message as a new entry, omitting the 'selected' key
+          const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'
+          messagesToSend.push(messageWithoutSelected);
         }
       }
 
-      const stream = await this._openai.chat.completions.create({
+      // If we have MCP tools, add them to the request
+      const completionParams: any = {
         model: this._settings.model,
         messages: messagesToSend,
         stream: true,
-        ...this._settings.options, // Spread operator to include all keys from options
-      });
-      
+        ...this._settings.options,
+      };
+      if (functions.length > 0) {
+        completionParams.functions = functions;
+        completionParams.function_call = 'auto';
+      }
+
+      // OpenAI v4.x streaming: use .stream() for async iterator
+      let stream: any;
+      try {
+        // Try .stream() method (OpenAI SDK >=4.28.0)
+        const resp: any = await this._openai.chat.completions.create(completionParams);
+        if (typeof resp.stream === "function") {
+          stream = await resp.stream();
+        } else if (typeof (resp as any)[Symbol.asyncIterator] === "function") {
+          // Some SDK versions return the stream directly
+          stream = resp;
+        }
+      } catch (err: any) {
+        throw new Error("OpenAI streaming API did not return an async iterable stream. Check SDK version and usage. " + (err && (err as Error).message ? (err as Error).message : err));
+      }
+
+      if (!stream || typeof (stream as any)[Symbol.asyncIterator] !== "function") {
+        throw new Error("OpenAI streaming API did not return an async iterable stream. Check SDK version and usage.");
+      }
+
       console.log("Message sender created");
       
       let completionTokens = 0;
       full_message = "";
+      let toolCallInfo = null;
+      let toolCallArgs = "";
+      let toolCallName = "";
+      let toolCallDetected = false;
       for await (const chunk of stream) {
+        // Detect function_call/tool_call in the stream
+        if (chunk.choices[0]?.delta?.function_call) {
+          toolCallDetected = true;
+          const delta = chunk.choices[0].delta.function_call;
+          if (delta.name) toolCallName = delta.name;
+          if (delta.arguments) toolCallArgs += delta.arguments;
+          // Show a message in the UI that a tool is being called
+          this._view?.webview.postMessage({
+            type: 'addResponse',
+            value: `[TOOL CALL] Model is calling tool: ${toolCallName || '[unknown]'}`
+          });
+        }
         const content = chunk.choices[0]?.delta?.content || "";
-        console.log("chunk:",chunk);
-        console.log("content:", content);
+        //console.log("chunk:",chunk);
+        //console.log("content:", content);
         const tokenList = this._enc.encode(content);
         completionTokens += tokenList.length;
-        console.log("tokens:", completionTokens);
+        //console.log("tokens:", completionTokens);
         full_message += content;
-        //this._response = chat_response;
         this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
-
       }
-      this._messages?.push({ role: "assistant", content: full_message, selected:true })
+
+      // If a tool call was detected, actually call the tool and continue the conversation
+      if (toolCallDetected && toolCallName) {
+        let toolResult = "";
+        try {
+          let parsedArgs = {};
+          try {
+            parsedArgs = JSON.parse(toolCallArgs);
+          } catch (e) {
+            parsedArgs = {};
+          }
+          // Find the MCP client that has this tool
+          let toolInvoked = false;
+          for (const serverName of this._selectedMcpServers) {
+            const client = this._mcpClients[serverName];
+            if (client && typeof client.callFunction === "function") {
+              try {
+                toolResult = await client.callFunction({ name: toolCallName, arguments: parsedArgs });
+                toolInvoked = true;
+                break;
+              } catch (err) {
+                // Try next server
+              }
+            }
+          }
+          if (!toolInvoked) {
+            toolResult = `[ERROR] Tool ${toolCallName} not found or failed to execute.`;
+          }
+        } catch (err) {
+          toolResult = `[ERROR] Exception calling tool: ${err}`;
+        }
+        // Add the tool result as a function message
+        this._messages?.push({ role: "function", name: toolCallName, content: toolResult, selected: true } as any);
+        // Now, continue the conversation with the tool result
+        let messagesToSend: Array<Message> = [];
+        for (const message of this._messages) {
+          if (message.selected) {
+            const { selected, ...messageWithoutSelected } = message;
+            messagesToSend.push(messageWithoutSelected);
+          }
+        }
+        const completionParams2: any = {
+          model: this._settings.model,
+          messages: messagesToSend,
+          stream: true,
+          ...this._settings.options,
+        };
+        let stream2: any;
+        try {
+          const resp2: any = await this._openai.chat.completions.create(completionParams2);
+          if (typeof resp2.stream === "function") {
+            stream2 = await resp2.stream();
+          } else if (typeof (resp2 as any)[Symbol.asyncIterator] === "function") {
+            stream2 = resp2;
+          }
+        } catch (err: any) {
+          throw new Error("OpenAI streaming API did not return an async iterable stream. Check SDK version and usage. " + (err && (err as Error).message ? (err as Error).message : err));
+        }
+        if (!stream2 || typeof (stream2 as any)[Symbol.asyncIterator] !== "function") {
+          throw new Error("OpenAI streaming API did not return an async iterable stream. Check SDK version and usage.");
+        }
+        let completionTokens2 = 0;
+        let full_message2 = "";
+        for await (const chunk2 of stream2) {
+          const content2 = chunk2.choices[0]?.delta?.content || "";
+          const tokenList2 = this._enc.encode(content2);
+          completionTokens2 += tokenList2.length;
+          full_message2 += content2;
+          this._view?.webview.postMessage({ type: 'addResponse', value: full_message2 });
+        }
+        this._messages?.push({ role: "assistant", content: full_message2, selected: true });
+        chat_response = this._updateChatMessages(promtNumberOfTokens, completionTokens2);
+      } else {
+        this._messages?.push({ role: "assistant", content: full_message, selected:true })
+        chat_response = this._updateChatMessages(promtNumberOfTokens, completionTokens);
+      }
       console.log("Full message:", full_message);
       console.log("Full Number of tokens:", completionTokens);
       const tokenList = this._enc.encode(full_message);
       console.log("Full Number of tokens tiktoken:", tokenList.length);
-      chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)
     } catch (e: any) {
       console.error(e);
       if (this._response!=undefined) {

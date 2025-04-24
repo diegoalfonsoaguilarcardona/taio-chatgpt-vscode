@@ -40,6 +40,18 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 			mcpServerProcesses[name] = proc;
 			console.log(`Started MCP server '${name}' (PID: ${proc.pid})`);
+			proc.on('error', (err) => {
+				console.error(`MCP server process error for '${name}':`, err);
+			});
+			proc.on('exit', (code, signal) => {
+				console.error(`MCP server process for '${name}' exited with code ${code}, signal ${signal}`);
+			});
+			proc.stdout?.on('data', (data) => {
+				console.log(`[MCP ${name} STDOUT]: ${data.toString()}`);
+			});
+			proc.stderr?.on('data', (data) => {
+				console.error(`[MCP ${name} STDERR]: ${data.toString()}`);
+			});
 
 			const transport = new StdioClientTransport({
 				command: server.command,
@@ -47,12 +59,15 @@ export function activate(context: vscode.ExtensionContext) {
 				env: server.env
 			});
 			const client = new Client({ name, version: '0.1.0', transport });
+			// No .once events, just log creation
 			mcpClients[name] = client;
 			console.log(`MCP client created for server '${name}'`);
 		} catch (err) {
 			console.error(`Failed to start MCP server '${name}':`, err);
 		}
 	}
+	// Pass MCP clients to the provider
+	provider.setMcpClients(mcpClients);
 
 	let activate_provider_settings: ProviderSettings = {
 	  model: "none",
@@ -148,8 +163,9 @@ export function activate(context: vscode.ExtensionContext) {
 			);
 			if (selected) {
 				const selectedNames = selected.map(item => item.label);
-				// Store the selection in the extension context (in-memory for now)
-				(context as any).selectedMcpServers = selectedNames;
+				// Store the selection in a plain JS object, not the frozen context
+				(globalThis as any).__chatgpt_selectedMcpServers = selectedNames;
+				provider.setSelectedMcpServers(selectedNames);
 				vscode.window.showInformationMessage(
 					`Selected MCP servers: ${selectedNames.join(', ')}`
 				);
