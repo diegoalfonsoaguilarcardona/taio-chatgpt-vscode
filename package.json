@@ -83,6 +83,12 @@
       {
         "command": "chatgpt.addImageToChat",
         "title": "Add Image to ChatGPT"
+      },
+      {
+        "command": "chatgpt.selectMcpServers",
+        "title": "ChatGPT: Select MCP Servers",
+        "category": "ChatGPT",
+        "description": "Select which MCP servers to use for the current session"
       }
     ],
     "menus": {

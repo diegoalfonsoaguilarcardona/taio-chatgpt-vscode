@@ -127,9 +127,34 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),
 		vscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),
 		vscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),
-		vscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())
+		vscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat()),
 
-		
+		// MCP server selector command
+		vscode.commands.registerCommand('chatgpt.selectMcpServers', async () => {
+			const mcpServerNames = Object.keys(mcpServers);
+			if (mcpServerNames.length === 0) {
+				vscode.window.showInformationMessage('No MCP servers are configured.');
+				return;
+			}
+			const selected = await vscode.window.showQuickPick(
+				mcpServerNames.map(name => ({
+					label: name,
+					picked: true
+				})),
+				{
+					canPickMany: true,
+					title: 'Select MCP Servers for this session'
+				}
+			);
+			if (selected) {
+				const selectedNames = selected.map(item => item.label);
+				// Store the selection in the extension context (in-memory for now)
+				(context as any).selectedMcpServers = selectedNames;
+				vscode.window.showInformationMessage(
+					`Selected MCP servers: ${selectedNames.join(', ')}`
+				);
+			}
+		})
 	);
 
 

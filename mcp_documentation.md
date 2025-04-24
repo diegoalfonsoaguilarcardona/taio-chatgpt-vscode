@@ -40,7 +40,14 @@ Assume the entrypoint is at `/Users/youruser/MCP/context7-server/build/index.js`
    After saving your settings, reload VSCode. The extension will automatically start the configured MCP servers and connect to them.
 
 5. **Selecting MCP Servers in a Chat Session**  
-   When starting a new chat session, you can select which MCP servers to use (if the extension UI supports per-session selection).
+   You can select which MCP servers to use for the current session by running the command:
+
+   - Open the Command Palette (`Cmd`/`Ctrl` + `Shift` + `P`)
+   - Type and select **ChatGPT: Select MCP Servers**
+   - Check or uncheck the MCP servers you want to enable for this session
+   - Click OK. Your selection will be confirmed with an information message.
+
+   The selection is stored in memory for the current session.
 
 ## Troubleshooting
 
