@@ -625,18 +625,61 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     if (this._selectedMcpServers && this._selectedMcpServers.length > 0 && this._mcpClients) {
       for (const serverName of this._selectedMcpServers) {
         console.log("serverName:", serverName);
-        const client = this._mcpClients[serverName];
-        if (client && typeof client.listTools === "function") {
+        const mcpEntry = this._mcpClients[serverName];
+        if (!mcpEntry) continue;
+        const { client, transport } = mcpEntry;
+        if (client && transport) {
           try {
-            // listTools may be async
-            const tools = await client.listTools();
-            console.log("tools:", tools);
-            if (Array.isArray(tools)) {
-              functions = functions.concat(tools);
+            // Attempt to connect if not already connected
+            if (typeof client.connect === "function" && transport && !transport.connected) {
+              console.log(`[MCP][${serverName}] Not connected, attempting to connect...`);
+              try {
+                await client.connect(transport);
+                console.log(`[MCP][${serverName}] Connected successfully.`);
+              } catch (connectErr) {
+                console.error(`[MCP][${serverName}] Failed to connect:`, connectErr);
+                continue;
+              }
             }
-          } catch (err) {
-            console.error(`Failed to list tools for MCP server '${serverName}':`, err);
+            let toolsAdded = false;
+            if (typeof client.listTools === "function") {
+              try {
+                const response = await client.listTools(); // Assume this returns an object
+                console.log(`[MCP][${serverName}] Tools:`, response);
+        
+                if (response && Array.isArray(response.tools)) {
+                  functions = functions.concat(response.tools);
+                  toolsAdded = true;
+                  console.log(`[MCP][${serverName}] Tools added to functions.`);
+                }
+              } catch (err) {
+                console.warn(`[MCP][${serverName}] listTools failed:`, err);
+              }
+            }
+            if (!toolsAdded) {
+              if (typeof client.listPrompts === "function") {
+                const prompts = await client.listPrompts();
+                console.log(`[MCP][${serverName}] Prompts:`, prompts);
+                if (Array.isArray(prompts)) {
+                  functions = functions.concat(prompts);
+                }
+              }
+              if (typeof client.listResources === "function") {
+                const resources = await client.listResources();
+                console.log(`[MCP][${serverName}] Resources:`, resources);
+                if (Array.isArray(resources)) {
+                  functions = functions.concat(resources);
+                }
+              }
+            }
+          } catch (err: any) {
+            if (err && err.code === -32601) {
+              console.warn(`[MCP][${serverName}] Server does not support listing prompts/resources (method not found).`);
+            } else {
+              console.error(`Failed to list prompts/resources for MCP server '${serverName}':`, err);
+            }
           }
+          console.log("[MCP] Aggregated functions array:", functions);
         }
       }
     }
@@ -665,6 +708,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         stream: true,
         ...this._settings.options,
       };
+      console.log("function call:", functions);
       if (functions.length > 0) {
         completionParams.functions = functions;
         completionParams.function_call = 'auto';
@@ -673,6 +717,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       // OpenAI v4.x streaming: use .stream() for async iterator
       let stream: any;
       try {
+        console.log("completionParams:", completionParams);
         // Try .stream() method (OpenAI SDK >=4.28.0)
         const resp: any = await this._openai.chat.completions.create(completionParams);
         if (typeof resp.stream === "function") {

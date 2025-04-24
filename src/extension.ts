@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// MCP server process management
 	const mcpServerProcesses: { [name: string]: ChildProcessWithoutNullStreams } = {};
-	const mcpClients: { [name: string]: Client } = {};
+	const mcpClients: { [name: string]: { client: Client, transport: StdioClientTransport } } = {};
 
 	for (const [name, server] of Object.entries(mcpServers)) {
 		try {
@@ -59,8 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
 				env: server.env
 			});
 			const client = new Client({ name, version: '0.1.0', transport });
-			// No .once events, just log creation
-			mcpClients[name] = client;
+			mcpClients[name] = { client, transport };
 			console.log(`MCP client created for server '${name}'`);
 		} catch (err) {
 			console.error(`Failed to start MCP server '${name}':`, err);
