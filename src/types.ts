@@ -43,6 +43,16 @@ export interface Prompt {
   prompt: string;
 }
 
+export interface MCPServerConfig {
+  command: string;
+  args: string[];
+  env?: { [key: string]: string };
+}
+
+export type MCPServersConfig = {
+  [serverName: string]: MCPServerConfig;
+};
+
 export interface SystemMessage extends ChatCompletionSystemMessageParam {
   selected?: boolean;  // Additional property specific to Message
 }

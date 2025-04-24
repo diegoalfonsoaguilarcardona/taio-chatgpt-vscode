@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { Provider, Prompt, ProviderSettings } from './types';
+import { Provider, Prompt, ProviderSettings, MCPServersConfig } from './types';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { ChatGPTViewProvider } from './chatGptViewProvider';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 // Base URL for OpenAI API
 const BASE_URL = 'https://api.openai.com/v1';
@@ -20,6 +23,36 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let prompts: Prompt[] = config.get('prompts') || [];
 	console.log("prompts:", prompts);
+
+	// MCP servers configuration
+	const mcpServers: MCPServersConfig = config.get('mcpServers') || {};
+	console.log("MCP Servers:", mcpServers);
+
+	// MCP server process management
+	const mcpServerProcesses: { [name: string]: ChildProcessWithoutNullStreams } = {};
+	const mcpClients: { [name: string]: Client } = {};
+
+	for (const [name, server] of Object.entries(mcpServers)) {
+		try {
+			const proc = spawn(server.command, server.args, {
+				env: { ...process.env, ...(server.env || {}) },
+				stdio: 'pipe'
+			});
+			mcpServerProcesses[name] = proc;
+			console.log(`Started MCP server '${name}' (PID: ${proc.pid})`);
+
+			const transport = new StdioClientTransport({
+				command: server.command,
+				args: server.args,
+				env: server.env
+			});
+			const client = new Client({ name, version: '0.1.0', transport });
+			mcpClients[name] = client;
+			console.log(`MCP client created for server '${name}'`);
+		} catch (err) {
+			console.error(`Failed to start MCP server '${name}':`, err);
+		}
+	}
 
 	let activate_provider_settings: ProviderSettings = {
 	  model: "none",

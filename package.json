@@ -225,16 +225,23 @@
                       }
                     }
                   },
-                  "required": ["name"]
+                  "required": [
+                    "name"
+                  ]
                 }
               }
             },
-            "required": ["name", "apiKey", "apiUrl", "models"]
+            "required": [
+              "name",
+              "apiKey",
+              "apiUrl",
+              "models"
+            ]
           },
           "order": 1
         },
-        "chatgpt.prompts" : {
-          "type":"array",
+        "chatgpt.prompts": {
+          "type": "array",
           "description": "List of possible prompts to use",
           "items": {
             "type": "object",
@@ -248,7 +255,10 @@
                 "description": "The prompt it self"
               }
             },
-            "required": ["name", "prompt"]
+            "required": [
+              "name",
+              "prompt"
+            ]
           },
           "order": 2
         },
@@ -311,6 +321,38 @@
           "default": true,
           "description": "Append language id of the selected code to the codeblock (```language...code...```)",
           "order": 12
+        },
+        "chatgpt.mcpServers": {
+          "type": "object",
+          "description": "MCP servers available for use. Each key is a server name, and the value is an object with 'command', 'args', and 'env'. Example: { \"weather\": { \"command\": \"node\", \"args\": [\"/path/to/weather-server/build/index.js\"], \"env\": { \"OPENWEATHER_API_KEY\": \"...\" } } }",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "Executable to launch the MCP server (e.g., 'node')"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Arguments to pass to the command (e.g., entrypoint script path)"
+              },
+              "env": {
+                "type": "object",
+                "description": "Environment variables for the MCP server process",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "command",
+              "args"
+            ]
+          },
+          "order": 13
         }
       }
     }
@@ -345,6 +387,7 @@
     "webpack-cli": "^5.0.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
     "@types/node-fetch": "^2.6.11",
     "js-tiktoken": "^1.0.10",
     "js-yaml": "^4.1.0",
