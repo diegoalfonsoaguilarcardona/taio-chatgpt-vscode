@@ -742,4 +742,19 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
   }
+
+  public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {
+    let codeBlock = `**${relativePath}**\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
+  
+    let newMessage: UserMessage = {
+      role: "user",
+      content: codeBlock,
+      selected: true
+    };
+  
+    this._messages?.push(newMessage);
+  
+    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
+    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+  }
 }

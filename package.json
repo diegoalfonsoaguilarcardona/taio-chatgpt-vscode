@@ -83,6 +83,10 @@
       {
         "command": "chatgpt.addImageToChat",
         "title": "Add Image to ChatGPT"
+      },
+      {
+        "command": "chatgpt.addFileToChat",
+        "title": "Add File Content to ChatGPT"
       }
     ],
     "menus": {
@@ -162,6 +166,11 @@
         {
           "command": "chatgpt.addImageToChat",
           "when": "resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif",
+          "group": "navigation"
+        },
+        {
+          "command": "chatgpt.addFileToChat",
+          "when": "resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/",
           "group": "navigation"
         }
       ]

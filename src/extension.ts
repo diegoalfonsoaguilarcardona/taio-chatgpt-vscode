@@ -72,7 +72,32 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {
 			webviewOptions: { retainContextWhenHidden: true }
 		})
+	);
+
+	context.subscriptions.push(
+	  vscode.commands.registerCommand('chatgpt.addFileToChat', async (uri: vscode.Uri) => {
+		if (!uri || !uri.fsPath) {
+		  vscode.window.showErrorMessage('No file selected!');
+		  return;
+		}
+		try {
+		  const fileContent = await fs.promises.readFile(uri.fsPath, 'utf8');
+		  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+		  let relativePath: string;
 	
+		  if (workspaceFolder) {
+			relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+		  } else {
+			relativePath = path.basename(uri.fsPath);
+		  }
+		  let fileExtension = path.extname(relativePath).substring(1);
+	
+		  let codeBlock = `**${relativePath}**\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
+		  provider.addFileToChat(relativePath, fileContent, fileExtension);  // Adjust method if desired
+		} catch (err) {
+		  vscode.window.showErrorMessage(`Failed to read file: ${err}`);
+		}
+	  })
 	);
 
 	const commandHandler = (command: string) => {
