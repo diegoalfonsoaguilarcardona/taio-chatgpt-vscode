@@ -1,0 +1,1486 @@
+- role: system
+  content: |-
+    You are a software architect tasked with defining the architecture of software at various levels of abstraction. Focus on designing robust, scalable, and efficient software architectures by considering the system's requirements, constraints, and best practices.
+
+    # Steps
+
+    1. **Analyze Requirements**: Thoroughly review the software requirements to understand functional and non-functional needs.
+    2. **Identify Key Components**: Develop a comprehensive list of the major components or modules needed for the system.
+    3. **Design Patterns**: Select appropriate design patterns that best fit the system architecture and address specific challenges.
+    4. **Define Interfaces**: Determine clear and consistent interfaces for communication between different components or layers.
+    5. **Technology Stack**: Choose suitable technologies, programming languages, and frameworks that align with the system requirements.
+    6. **Scalability & Performance**: Consider scalability and performance factors, ensuring that the system can handle expected load and growth.
+    7. **Security Considerations**: Identify potential security risks and propose mitigation strategies.
+    8. **Documentation**: Prepare clear architectural diagrams and documentation for reference and understanding by stakeholders.
+
+    # Output Format
+
+    Provide an in-depth architectural overview in prose format, covering each step and including diagrams if applicable. The document should include:
+    - A brief summary of key findings and decisions at the beginning.
+    - A detailed explanation of each architectural component and decision.
+    - Architectural diagrams or sketches, referenced within the text.
+    - Any assumptions or considerations taken into account.
+
+    # Examples 
+
+    ## Example 1
+
+    ### Input: 
+    - **System Requirements**: E-commerce platform capable of managing user accounts, product listings, orders, and payments.
+    - **Constraints**: Must support up to 10,000 simultaneous users; must comply with PCI DSS standards.
+
+    ### Output:
+    - **Summary**: An e-commerce platform architecture using microservices to handle core features with a focus on scalability and security.
+    - **Components**: User Service, Product Service, Order Service, Payment Gateway.
+    - **Design Patterns**: Microservice architecture, event-driven communication.
+    - **Interfaces**: RESTful APIs for inter-service communication.
+    - **Technology Stack**: Node.js, MongoDB, RabbitMQ, Docker.
+    - **Scalability & Performance**: Use of load balancers and database sharding.
+    - **Security Considerations**: Implement authentication via OAuth2, encrypt sensitive data.
+    - **Documentation**: Includes a diagram showing component interactions and data flow.
+
+    (Real examples should be detailed and provide a thorough reasoning process behind each architectural decision.)
+
+    # Notes
+
+    - Ensure that the architectures are both innovative and practical, balancing cutting-edge solutions with stability.
+    - Consider cultural and domain-specific practices if provided with regional or industry-specific requirements.
+  selected: true
+- role: user
+  content: |-
+    I have this project, it is a visual studio code extension.  Explain to me how it works, what it does, and understand how it can be modified.  So ask me for the files that you need to read to do this.
+    ```ini
+    .
+    ├── CHANGELOG.md
+    ├── diegoaacchatgpt-1.1.0.vsix
+    ├── dist
+    │   ├── extension.js
+    │   ├── extension.js.LICENSE.txt
+    │   └── extension.js.map
+    ├── examples
+    │   ├── create.png
+    │   ├── explain.png
+    │   ├── main.png
+    │   └── refactor.png
+    ├── media
+    │   ├── main.js
+    │   ├── scripts
+    │   │   ├── microlight.min.js
+    │   │   ├── showdown.min.js
+    │   │   └── tailwind.min.js
+    │   └── styles.css
+    ├── package-lock.json
+    ├── package.json
+    ├── README.md
+    ├── resources
+    │   ├── buy-default-yellow-small.png
+    │   ├── extensionIcon.png
+    │   └── icon.png
+    ├── src
+    │   ├── chatGptViewProvider.ts
+    │   ├── extension.ts
+    │   └── types.ts
+    ├── toGenerateXSIX.txt
+    ├── tsconfig.json
+    ├── vsc-extension-quickstart.md
+    ├── webpack.config.js
+    └── yarn.lock
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Excellent, you’ve provided the full project tree for your Visual Studio Code (VS Code) extension. To deliver the architect’s understanding of how it works, what it does, and how to modify it, I need to analyze its main functionality, extension activation, command registration, UI/webview integration, and communication with any backend/API (considering a name like `chatGptViewProvider` suggests ChatGPT integration).
+
+    ## Key Files I Need to Read
+
+    For a top-down understanding, let’s focus on the files that define its functionality and UI:
+
+    1. **Manifest & Metadata**
+        - `package.json` — Declares extension metadata, activation events, commands, menus, and contributions.
+        - `README.md` — User-facing documentation, typically listing features and usage patterns.
+
+    2. **Extension Entrypoint & Main Logic**
+        - `src/extension.ts` — The main entrypoint; usually initializes the extension, registers commands, and creates providers.
+        - `src/chatGptViewProvider.ts` — Presumably provides the main chat UI/webview and interface logic with ChatGPT or similar.
+        - `src/types.ts` — TypeScript types/interfaces; useful for understanding data models, message types, etc.
+
+    3. **Front-end/UI Assets**
+        - `media/main.js` — If the UI uses a webview, this is likely the front-end JS loaded there.
+        - `media/styles.css` — Styling for the webview.
+
+    4. **Supporting Files for Build & Config**
+        - `webpack.config.js` and `tsconfig.json` are for bundling and TypeScript configuration, respectively (less critical for understanding function, but they help for modifications).
+
+    **First step:**  
+    Please upload or paste the contents of the following files (ideally in this order, starting from the manifest and core logic):
+
+    - `package.json`
+    - `src/extension.ts`
+    - `src/chatGptViewProvider.ts`
+    - `src/types.ts`
+    - `README.md` (optional, if you want a summarized explanation of features)
+    - `media/main.js` **(if the UI/webview incorporates custom JS interaction)**
+
+    This will allow me to:
+
+    - Explain what the extension does and how it works.
+    - Describe its architecture and flow (from VS Code activation to user interaction).
+    - Point out how you could modify or extend its functionality.
+
+    ---
+
+    **Let me know if you prefer to start with a subset, or post the files in order.**  
+    Once I have these files, I’ll give a comprehensive architectural breakdown and guidance on extending or modifying your extension!
+  selected: true
+- role: user
+  content: |-
+    **package.json**
+    ```json
+    {
+      "name": "diegoaacchatgpt",
+      "displayName": "ChatGPT for Visual Studio Code: write and improve code using AI",
+      "description": "Use ChatGPT and GPT4 right inside the IDE to enhance and automate your coding with AI-powered assistance (unofficial)",
+      "version": "1.1.0",
+      "publisher": "diegoaac",
+      "icon": "resources/extensionIcon.png",
+      "license": "MIT",
+      "repository": {
+        "url": "https://github.com/timkmecl/chatgpt-vscode"
+      },
+      "engines": {
+        "vscode": "^1.73.0"
+      },
+      "categories": [
+        "Other"
+      ],
+      "keywords": [
+        "chatgpt",
+        "openai",
+        "gpt3",
+        "gpt4",
+        "copilot",
+        "ai",
+        "explain",
+        "find bugs",
+        "explain ",
+        "refactor"
+      ],
+      "activationEvents": [
+        "onView:chatgpt.chatView",
+        "onCommand:chatgpt.ask",
+        "onCommand:chatgpt.explain",
+        "onCommand:chatgpt.refactor",
+        "onCommand:chatgpt.optimize",
+        "onCommand:chatgpt.findProblems",
+        "onCommand:chatgpt.documentation",
+        "onCommand:chatgpt.useSelectionAsChat"
+      ],
+      "main": "./dist/extension.js",
+      "contributes": {
+        "commands": [
+          {
+            "command": "chatgpt.ask",
+            "title": "Ask ChatGPT"
+          },
+          {
+            "command": "chatgpt.explain",
+            "title": "ChatGPT: Explain selection"
+          },
+          {
+            "command": "chatgpt.refactor",
+            "title": "ChatGPT: Refactor selection"
+          },
+          {
+            "command": "chatgpt.findProblems",
+            "title": "ChatGPT: Find problems"
+          },
+          {
+            "command": "chatgpt.optimize",
+            "title": "ChatGPT: Optimize selection"
+          },
+          {
+            "command": "chatgpt.documentation",
+            "title": "ChatGPT: Write documentation"
+          },
+          {
+            "command": "chatgpt.resetConversation",
+            "title": "Reset ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.pasteChat",
+            "title": "Paste ChatGPT chat"
+          },
+          {
+            "command": "chatgpt.useSelectionAsChat",
+            "title": "Use selection as ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.tryAgain",
+            "title": "Retry ChatGPT request"
+          },
+          {
+            "command": "chatgpt.addImageToChat",
+            "title": "Add Image to ChatGPT"
+          },
+          {
+            "command": "chatgpt.addFileToChat",
+            "title": "Add File Content to ChatGPT"
+          }
+        ],
+        "menus": {
+          "editor/context": [
+            {
+              "command": "chatgpt.ask",
+              "when": "editorTextFocus",
+              "group": "chatgpt-menu-group@1"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@2"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@3"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@4"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@5"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@6"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@7"
+            }
+          ],
+          "commandPalette": [
+            {
+              "command": "chatgpt.ask"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.resetConversation"
+            },
+            {
+              "command": "chatgpt.pasteChat"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection"
+            }
+          ],
+          "explorer/context": [
+            {
+              "command": "chatgpt.addImageToChat",
+              "when": "resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif",
+              "group": "navigation"
+            },
+            {
+              "command": "chatgpt.addFileToChat",
+              "when": "resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/",
+              "group": "navigation"
+            }
+          ]
+        },
+        "viewsContainers": {
+          "activitybar": [
+            {
+              "id": "chatgpt",
+              "title": "ChatGPT",
+              "icon": "resources/icon.png"
+            }
+          ]
+        },
+        "views": {
+          "chatgpt": [
+            {
+              "type": "webview",
+              "id": "chatgpt.chatView",
+              "name": "ChatGPT"
+            }
+          ]
+        },
+        "configuration": {
+          "title": "chatGPT",
+          "type": "object",
+          "properties": {
+            "chatgpt.providers": {
+              "type": "array",
+              "description": "List of AI providers with their configurations.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the provider (e.g., OpenAI, CustomAPI)."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "description": "API key for the provider."
+                  },
+                  "apiUrl": {
+                    "type": "string",
+                    "description": "API URL for the provider."
+                  },
+                  "models": {
+                    "type": "array",
+                    "description": "List of models offered by this provider.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Name of the model (e.g., gpt-3.5-turbo)."
+                        },
+                        "options": {
+                          "type": "object",
+                          "description": "Options for the model.",
+                          "additionalProperties": {
+                            "type": "any",
+                            "description": "Custom option key-value pairs for the model."
+                          }
+                        }
+                      },
+                      "required": ["name"]
+                    }
+                  }
+                },
+                "required": ["name", "apiKey", "apiUrl", "models"]
+              },
+              "order": 1
+            },
+            "chatgpt.prompts" : {
+              "type":"array",
+              "description": "List of possible prompts to use",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the prompt (e.g., ChainOfThougt, Simple Engenier)."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The prompt it self"
+                  }
+                },
+                "required": ["name", "prompt"]
+              },
+              "order": 2
+            },
+            "chatgpt.pasteOnClick": {
+              "type": "boolean",
+              "default": true,
+              "description": "Paste the code from a codeblock inside the response into the editor when you click on it",
+              "order": 3
+            },
+            "chatgpt.promptPrefix.explain": {
+              "type": "string",
+              "default": "Explain what this code does: ",
+              "description": "The prompt prefix used for explaining the selected code",
+              "order": 4
+            },
+            "chatgpt.promptPrefix.refactor": {
+              "type": "string",
+              "default": "Refactor this code and explain what's changed: ",
+              "description": "The prompt prefix used for refactoring the selected code",
+              "order": 5
+            },
+            "chatgpt.promptPrefix.findProblems": {
+              "type": "string",
+              "default": "Find problems with the following code, fix them and explain what was wrong (Do not change anything else, if there are no problems say so): ",
+              "description": "The prompt prefix used for finding problems in the selected code",
+              "order": 6
+            },
+            "chatgpt.promptPrefix.documentation": {
+              "type": "string",
+              "default": "Write documentation for the following code: ",
+              "description": "The prompt prefix used for writing documentation for the selected code",
+              "order": 7
+            },
+            "chatgpt.promptPrefix.optimize": {
+              "type": "string",
+              "default": "Optimize the following code if there is anything to improve, if not say so: ",
+              "description": "The prompt prefix used for optimizing the selected code",
+              "order": 8
+            },
+            "chatgpt.keepConversation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep the conversation going by using the same conversation ID for all requests (allows follow-up questions)",
+              "order": 9
+            },
+            "chatgpt.timeoutLength": {
+              "type": "number",
+              "default": "120",
+              "description": "How long should the request wait for a response before timing out (in seconds)",
+              "order": 10
+            },
+            "chatgpt.selectedInsideCodeblock": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append selected code as a codeblock (```...code...```) instead of plain text",
+              "order": 11
+            },
+            "chatgpt.codeblockWithLanguageId": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append language id of the selected code to the codeblock (```language...code...```)",
+              "order": 12
+            }
+          }
+        }
+      },
+      "scripts": {
+        "vscode:prepublish": "yarn run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "update-package-lock": "npm install --package-lock-only"
+      },
+      "devDependencies": {
+        "@types/glob": "^8.0.0",
+        "@types/js-yaml": "^4.0.9",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/vscode": "^1.73.0",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "@vscode/test-electron": "^2.2.0",
+        "eslint": "^8.28.0",
+        "glob": "^8.0.3",
+        "mocha": "^10.1.0",
+        "ts-loader": "^9.4.1",
+        "typescript": "^4.9.3",
+        "webpack": "^5.75.0",
+        "webpack-cli": "^5.0.0"
+      },
+      "dependencies": {
+        "@types/node-fetch": "^2.6.11",
+        "js-tiktoken": "^1.0.10",
+        "js-yaml": "^4.1.0",
+        "node-fetch": "^3.3.2",
+        "openai": "^4.29.2"
+      }
+    }
+
+    ```
+  selected: true
+- role: user
+  content: "**src/chatGptViewProvider.ts**\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml';\nimport OpenAI from \"openai\";\nimport { encodingForModel } from \"js-tiktoken\";\nimport { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, BASE_URL } from './types';\nimport { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';\n\nexport class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n  public static readonly viewType = 'chatgpt.chatView';\n  private _view?: vscode.WebviewView;\n\n  private _conversation?: any;\n  private _messages?: Message[];\n  private _openai?: OpenAI;\n\n  private _response?: string;\n  private _totalNumberOfTokens?: number;\n  private _prompt?: string;\n  private _fullPrompt?: string;\n  private _currentMessageNumber = 0;\n  private _enc = encodingForModel(\"gpt-4\"); //Hardcoded for now\n\n  private _settings: Settings = {\n    selectedInsideCodeblock: false,\n    codeblockWithLanguageId: false,\n    pasteOnClick: true,\n    keepConversation: true,\n    timeoutLength: 60,\n    apiUrl: BASE_URL,\n    model: 'gpt-3.5-turbo',\n    options: {\n    },\n  };\n  private _authInfo?: AuthInfo;\n\n  // In the constructor, we store the URI of the extension\n  constructor(private readonly _extensionUri: vscode.Uri) {\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    console.log(\"constructor....\");\n    console.log(\"messages:\", this._messages);\n  }\n\n  // Set the API key and create a new API instance based on this key\n  public setAuthenticationInfo(authInfo: AuthInfo) {\n    this._authInfo = authInfo;\n    this._newAPI();\n  }\n\n  public setSettings(settings: Settings) {\n    let changeModel = false;\n  \n    // Check if there are any keys in the options object of the settings\n    if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {\n      changeModel = true;\n    }\n  \n    // Update settings with the new values\n    this._settings = { ...this._settings, ...settings };\n  \n    if (changeModel) {\n      //this._newAPI();\n    }\n  }\n\n  public getSettings() {\n    return this._settings;\n  }\n\n  // This private method initializes a new ChatGPTAPI instance\n  private _newAPI() {\n    console.log(\"New API\");\n    console.log(\"Messages:\", this._messages);\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      console.warn(\"API key or API URL not set, please go to extension settings (read README.md for more info)\");\n    } else {\n      console.log(\"apiUrl:\", this._settings?.apiUrl);\n      this._openai = new OpenAI(\n        {\n          apiKey: this._authInfo?.apiKey,\n          baseURL: this._authInfo?.apiUrl\n        }\n      );\n    }\n    setTimeout(() => {\n      const chat_response = this._updateChatMessages(\n        this._getMessagesNumberOfTokens(),\n        0\n      );\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    }, 2000);\n  }\n\n  public resolveWebviewView(\n    webviewView: vscode.WebviewView,\n    context: vscode.WebviewViewResolveContext,\n    _token: vscode.CancellationToken,\n  ) {\n    this._view = webviewView;\n\n    // set options for the webview, allow scripts\n    webviewView.webview.options = {\n      enableScripts: true,\n      localResourceRoots: [\n        this._extensionUri\n      ]\n    };\n\n    // set the HTML for the webview\n    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);\n\n    // add an event listener for messages received by the webview\n    webviewView.webview.onDidReceiveMessage(async data =>  {\n      switch (data.type) {\n        case 'ready':\n          {\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n            let prompts: Prompt[] = config.get('prompts') || [];\n            this.set_providers(providers);\n            this.set_prompts(prompts);\n            break;\n          }\n        case 'codeSelected':\n          {\n            // do nothing if the pasteOnClick option is disabled\n            if (!this._settings.pasteOnClick) {\n              break;\n            }\n            let code = data.value;\n            const snippet = new vscode.SnippetString();\n            snippet.appendText(code);\n            // insert the code as a snippet into the active text editor\n            vscode.window.activeTextEditor?.insertSnippet(snippet);\n            break;\n          }\n        case 'pasteImage': \n          {\n            const base64Data = data.value;\n            const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));\n            const fileType = imageType.split('/')[1];\n            const fileName = `clipboard_image.${fileType}`;\n            this.addImageToChat(base64Data, fileName);\n            break;\n          }\n        case 'prompt':\n          {\n            console.log(\"prompt\");\n            this.search(data.value);\n            break;\n          }\n        case 'promptNoQuery':\n          {\n            console.log(\"promptNoQuery\");\n\n            let searchPrompt = await this._generate_search_prompt(data.value);\n            \n            this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n            let chat_response = this._updateChatMessages(\n              this._getMessagesNumberOfTokens(),\n              0\n            );\n            this._response = chat_response;\n            this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n            break;\n          }\n        case 'checkboxChanged':\n          {\n            console.log(\"checkboxChanged:\", data);\n            const idParts = data.id.split('-'); // Split the id into parts\n            if(idParts.length === 3) {\n              const indexStr = idParts[2]; // Grab the last part, which should contain the index\n              const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n            \n              if(this._messages && index >= 0 && index < this._messages.length) {\n                // If the index is within the bounds of the array, update the checked status\n                this._messages[index].selected = data.checked;\n              } else {\n                // Handle cases where index is out of bounds or _messages is not an array\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              // Handle cases where data.id does not follow the expected format\n              console.error('data.id is not in the expected format.');\n            }\n            break;\n          }\n        case 'messageContentChanged':\n          {\n            console.log(\"messageContentChanged:\", data);\n            const idParts = data.id.split('-'); // Split the id into parts\n            if(idParts.length === 3) {\n              const indexStr = idParts[2]; // Grab the last part, which should contain the index\n              const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n            \n              if(this._messages && index >= 0 && index < this._messages.length) {\n                // If the index is within the bounds of the array, update the checked status\n                this._messages[index].content = data.value;\n              } else {\n                // Handle cases where index is out of bounds or _messages is not an array\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              // Handle cases where data.id does not follow the expected format\n              console.error('data.id is not in the expected format.');\n            }\n            console.log(\"messages:\", this._messages);\n            break;\n          }\n        case \"providerModelChanged\":\n          {\n            const providerIndex = data.providerIndex;\n            const modelIndex = data.modelIndex;\n            console.log(\"Provider Changed, providerIndex:\", providerIndex, \", model:\", modelIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n      \n            if (providers && providers.length > providerIndex) {\n              const provider_data = providers[providerIndex];\n              if (provider_data.models && provider_data.models.length > modelIndex) {\n                const model_data = provider_data.models[modelIndex];\n                const provider_settings = {\n                  model: model_data.name,\n                  apiUrl: provider_data.apiUrl,\n                  apiKey: provider_data.apiKey,\n                  options: {\n                  ...model_data.options // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature\n                  },\n                };\n                this.setSettings({\n                  apiUrl: provider_settings.apiUrl,\n                  model: provider_settings.model,\n                  options: {\n                  ...provider_settings.options, // Spread operator to include all keys from options\n                  },\n                });\n                // Put configuration settings into the provider\n                this.setAuthenticationInfo({\n                  apiKey: provider_settings.apiKey,\n                  apiUrl: provider_settings.apiUrl\n                });\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case \"systemPromptChanged\":\n          {\n            const systemPromptIndex = data.systemPromptIndex;\n            console.log(\"systemPrompt Changed, providerIndex:\", systemPromptIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let prompts: Prompt[] = config.get('prompts') || [];\n      \n            if (prompts && prompts.length > systemPromptIndex) {\n              const prompt_data = prompts[systemPromptIndex];\n              if (prompt_data.name && prompt_data.prompt) {\n                this.set_prompt(prompt_data);\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n      }\n    });\n  }\n\n  public getStartSystemPrompt() {\n    const config = vscode.workspace.getConfiguration('chatgpt');\n    let prompts: Prompt[] = config.get('prompts') || [];\n    let start_system_prompt = \"You are a helpful assistant.\";\n    if (prompts && prompts.length > 0) {\n      const prompt_data = prompts[0];\n      if (prompt_data.name && prompt_data.prompt) {\n        start_system_prompt = prompt_data.prompt;\n      }\t\t\t\t\t\t\n    }\n    return start_system_prompt;\n  }\n\n\n  public async resetConversation() {\n    console.log(this, this._conversation);\n    if (this._conversation) {\n      this._conversation = null;\n    }\n    this._prompt = '';\n    this._response = '';\n    this._fullPrompt = '';\n    this._totalNumberOfTokens = 0;\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n    this._messages = [];\n    \n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    const chat_response = this._updateChatMessages(\n      this._getMessagesNumberOfTokens(),\n      0\n    );\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public async pasteChat() {\n    console.log(\"pasteChat\");\n  \n    // Ensure there is an active text editor where we can paste the YAML\n    if (!vscode.window.activeTextEditor) {\n      vscode.window.showErrorMessage('No active text editor!');\n      return;\n    }\n  \n    try {\n      // Get the original _messages object\n      // If you want to exclude any other properties from the YAML, you can map and remove them here\n      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({\n        role, content, selected\n      }));\n  \n      // Convert messages to a YAML string\n      const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n  \n      // Create a new snippet and append the YAML string\n      const snippet = new vscode.SnippetString();\n      snippet.appendText(messagesYaml);\n  \n      // Insert the snippet into the active text editor\n      await vscode.window.activeTextEditor.insertSnippet(snippet);\n  \n      console.log(\"Chat pasted as YAML successfully.\");\n    } catch (error) {\n      console.error(\"Failed to paste chat as YAML:\", error);\n      vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);\n    }\n  }\n  \n  public async useSelectionAsChat() {\n    console.log(\"use selection as chat\");\n\n    // Ensure there is an active text editor with a selection\n    const activeEditor = vscode.window.activeTextEditor;\n    if (!activeEditor) {\n      vscode.window.showErrorMessage('No active text editor with a selection!');\n      return;\n    }\n\n    const selection = activeEditor.selection;\n    if (selection.isEmpty) {\n      vscode.window.showErrorMessage('No text selected!');\n      return;\n    }\n\n    // Get the selected text\n    const selectedText = activeEditor.document.getText(selection);\n\n    try {\n      // Parse the selected text as YAML\n      const parsedMessages = yaml.load(selectedText);\n\n      // Validate the parsed YAML structure\n      if (!Array.isArray(parsedMessages)) {\n        throw new Error('Selected text is not an array of messages.');\n      }\n\n      // Validation of each message in the array\n      for (const msg of parsedMessages) {\n        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {\n          throw new Error('Invalid message format. Each message must have role, content, and selected properties.');\n        }\n      }\n\n      // If valid, update the _messages array with new data\n      this._messages = parsedMessages;\n\n      // Update the webview visualization\n      const chat_response = this._updateChatMessages(\n        this._getMessagesNumberOfTokens(),\n        0\n      );\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\n      console.log(\"Updated messages from selection successfully.\");\n    } catch (error) {\n      console.error(\"Failed to use selection as chat:\", error);\n      vscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n    }\n  }\n\n  public fixCodeBlocks(response: string) {\n    // Use a regular expression to find all occurrences of the substring in the string\n    const REGEX_CODEBLOCK = new RegExp('\\`\\`\\`', 'g');\n    const matches = response.match(REGEX_CODEBLOCK);\n\n    // Return the number of occurrences of the substring in the response, check if even\n    const count = matches ? matches.length : 0;\n    if (count % 2 === 0) {\n      return response;\n    } else {\n      // else append ``` to the end to make the last code block complete\n      console.log(\"Warning - code block not complete\");\n      return response.concat('\\n\\`\\`\\`');\n    }\n\n  }\n\n  private _getMessagesNumberOfTokens() {\n    \n    let full_promt = \"\";\n    if (this._messages) {\n      for (const message of this._messages) {\n        if (message.selected) {\n          full_promt += \"\\n# <u>\" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n        }\n      }\n    }\n\n    const tokenList = this._enc.encode(full_promt);\n    return tokenList.length;\n  }\n\n\n  \n  public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {\n    let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({\n    role, content\n    })) || [];\n    return ret;\n  }\n\n  private _containsCodeBlockOrListItems(content: string): boolean {\n    // Regex pattern to match code blocks.\n    const codeBlockPattern = /```[\\s\\S]*?```/;\n  \n    // Regex pattern to match bullet points or numbered list items.\n    const listItemPattern = /^(?:\\s*(?:[-*+]|\\d+\\.)\\s+.+)$/m;\n  \n    // Test if the content contains a code block or list items.\n    return codeBlockPattern.test(content) || listItemPattern.test(content);\n  }\n\n\n  private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {\n    return this.isChatCompletionContentPartImage(value);\n  }\n  \n    \n  private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {\n    return typeof value === 'object'\n      && value != null\n      && typeof value.text === 'string'\n      && value.type === 'text';\n  }\n  private isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {\n    return typeof value === 'object'\n      && value !== null\n      && typeof value.image_url === 'object'\n      && typeof value.image_url.url === 'string'\n      && value.type === 'image_url';\n  }\n    \n  private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {\n    let chat_response = \"\";\n    if (this._messages) {\n      this._messages.forEach((message, index) => {\n        const selected = message.selected;\n        const checked_string = selected ? \"checked\" : \"\";\n        if (typeof message.content === 'string') {\n          if (this._containsCodeBlockOrListItems(message.content)) {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n          } else {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>\"+ message.content + \"</div>\";\n          }\n        } else if (Array.isArray(message.content)) {\n          // Handle the case where message.content is an array of ChatCompletionContentPartImage\n          chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false'>\";\n          message.content.forEach(part => {\n            console.log(\"processing an object...\")\n            if (this.isChatCompletionContentPartImage(part)) {\n              console.log(\"Is an image!!!\")\n              // Process each ChatCompletionContentPartImage item\n              chat_response += \"<img src='\"+ part.image_url.url + \"' alt='Base64 Image'/>\";\n            }\n            if (this.isChatCompletionContentPartText(part)) {\n              console.log(\"Is a text!!!\")\n              chat_response += part.text;\n            }\n          });\n          chat_response += \"</div>\"\n        }\n      });\n    }\n    if (this._totalNumberOfTokens !== undefined) {\n      this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;\n      chat_response += `\\n\\n---\\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}</sub>* \\n\\n---\\n\\n\\n\\n\\n\\n\\n`;\n    }\n    return chat_response;\n  }\n  \n  private async _generate_search_prompt(prompt:string) {\n    this._prompt = prompt;\n    if (!prompt) {\n      prompt = '';\n    }\n\n    // Focus the ChatGPT view\n    if (!this._view) {\n      await vscode.commands.executeCommand('chatgpt.chatView.focus');\n    } else {\n      this._view?.show?.(true);\n    }\n\n    // Initialize response and token count\n    \n    if (!this._response) {\n      this._response = '';\n    }\n    if (!this._totalNumberOfTokens) {\n      this._totalNumberOfTokens = 0;\n    }\n\n    // Get selected text and language ID (if applicable)\n    const selection = vscode.window.activeTextEditor?.selection;\n    const selectedText = vscode.window.activeTextEditor?.document.getText(selection);\n    const languageId =\n      (this._settings.codeblockWithLanguageId\n        ? vscode.window.activeTextEditor?.document?.languageId\n        : undefined) || '';\n\n    // Build the search prompt\n    let searchPrompt = '';\n    if (selection && selectedText) {\n      if (this._settings.selectedInsideCodeblock) {\n        searchPrompt = `${prompt}\\n\\`\\`\\`${languageId}\\n${selectedText}\\n\\`\\`\\``;\n      } else {\n        searchPrompt = `${prompt}\\n${selectedText}\\n`;\n      }\n    } else {\n      searchPrompt = prompt;\n    }\n    this._fullPrompt = searchPrompt;\n\n    // Increment message number and store for tracking\n    this._currentMessageNumber++;\n    return searchPrompt;\n\n  }\n\n  public set_providers(providers: Provider[]): void {\n    this._view?.webview.postMessage({ type: 'initialize', value: providers });\n  }\n\n  public set_prompts(prompts: Prompt[]): void {\n    console.log(\"Set Prompts:\", prompts);\n    this._view?.webview.postMessage({ type: 'initialize_prompts', value: prompts });\n  }\n\n  public set_prompt(prompt: Prompt): void {\n    // Check if _messages is defined\n    if (this._messages) {\n      this._messages[0] = { role: \"system\", content: prompt.prompt, selected: true };\n    } else {\n      this._messages = [{ role: \"system\", content: prompt.prompt, selected: true }];\n    }\n    console.log(\"calling updateResponse\");\n    let chat_response = this._updateChatMessages(0, 0)\n\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  public async search(prompt?: string) {\n    // Check if the API key and URL are set\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      this._view?.webview.postMessage({\n        type: 'addResponse',\n        value: '[ERROR] \"API key or API URL not set, please go to extension settings (read README.md for more info)\"',\n      });\n      return;\n    }\n    \n    let chat_response = '';\n    let searchPrompt = \"\";\n    if (prompt!=undefined) {\n      searchPrompt = await this._generate_search_prompt(prompt);\n    } \n    // Show loading indicator\n    this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });\n    this._view?.webview.postMessage({ type: 'addResponse', value: '...' });\n\n    if (searchPrompt != \"\") {\n      this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n    }\n\n    if (!this._openai) {\n      throw new Error('OpenAI instance is not initialized.');\n    }\n    \n    if (typeof this._settings.model !== 'string') {\n      throw new Error('Model identifier is not valid or not defined.');\n    }\n\n    // Only if you can't change the Message interface\n    const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {\n      return ['user', 'assistant', 'system'].includes(role);\n    };\n    \n    // Validate and type narrow `this._messages` before sending\n    if (!this._messages || !Array.isArray(this._messages) ||\n      (!this._messages.every(msg => isValidRole(msg.role)))) {\n      throw new Error('Messages have invalid roles.');\n    }\n\n    const promtNumberOfTokens = this._getMessagesNumberOfTokens();\n    let full_message = \"\";\n    try {\n      console.log(\"Creating message sender...\");\n      \n      let messagesToSend: Array<Message> = [];\n      \n      // Assuming this._messages is defined and is an array\n      for (const message of this._messages) {\n        // Check if 'selected' is true; undefined or false values will be considered false\n        if (message.selected) {\n          //if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {\n          //  // Append the content to the previous message if the role is the same\n          //  messagesToSend[messagesToSend.length - 1] = {\n          //\t...messagesToSend[messagesToSend.length - 1],\n          //\tcontent: messagesToSend[messagesToSend.length - 1].content + '\\n' + message.content,\n          //  };\n          //} else {\n            // Add the message as a new entry, omitting the 'selected' key\n            const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'\n            messagesToSend.push(messageWithoutSelected);\n          //}\n        }\n      }\n\n      const stream = await this._openai.chat.completions.create({\n        model: this._settings.model,\n        messages: messagesToSend,\n        stream: true,\n        ...this._settings.options, // Spread operator to include all keys from options\n      });\n      \n      console.log(\"Message sender created\");\n      \n      let completionTokens = 0;\n      full_message = \"\";\n      for await (const chunk of stream) {\n        const content = chunk.choices[0]?.delta?.content || \"\";\n        console.log(\"chunk:\",chunk);\n        console.log(\"content:\", content);\n        const tokenList = this._enc.encode(content);\n        completionTokens += tokenList.length;\n        console.log(\"tokens:\", completionTokens);\n        full_message += content;\n        //this._response = chat_response;\n        this._view?.webview.postMessage({ type: 'addResponse', value: full_message });\n\n      }\n      this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n      console.log(\"Full message:\", full_message);\n      console.log(\"Full Number of tokens:\", completionTokens);\n      const tokenList = this._enc.encode(full_message);\n      console.log(\"Full Number of tokens tiktoken:\", tokenList.length);\n      chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)\n    } catch (e: any) {\n      console.error(e);\n      if (this._response!=undefined) {\n        this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n        chat_response = this._response;\n        chat_response += `\\n\\n---\\n[ERROR] ${e}`;\n      }\n    }\n    this._response = chat_response;\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  private _getHtmlForWebview(webview: vscode.Webview) {\n  \n    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));\n    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));\n    const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));\n    const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));\n    const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));\n  \n    return `<!DOCTYPE html>\n    <html lang=\"en\">\n    <head>\n      <meta charset=\"UTF-8\">\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n      <script src=\"${tailwindUri}\"></script>\n      <script src=\"${showdownUri}\"></script>\n      <script src=\"${microlightUri}\"></script>\n      <link rel=\"stylesheet\" href=\"${stylesUri}\">\n    </head>\n    <body>\n      <div id=\"container\">\n        <div id=\"top-wrapper\">\n          <label for=\"provider-selector\">Provider:</label>\n          <select id=\"provider-selector\"></select>\n          <label for=\"model-selector\">Model:</label>\n          <select id=\"model-selector\"></select>\n        </div>\n        <div id=\"response\" class=\"text-sm\"></div>\n        <div id=\"input-wrapper\">\n          <div>\n            <label for=\"system-prompt-selector\">System Prompt:</label>\n            <select id=\"system-prompt-selector\">\n            </select>\n          </div>\n          <input type=\"text\" id=\"prompt-input\" placeholder=\"Ask ChatGPT something\">\n        </div>\n      </div>\n      <script src=\"${scriptUri}\"></script>\n    </body>\n    </html>`;\n  }\n\n  public addImageToChat(imageDataUrl: string, fileName: string) {\n    const imageMarkdown = `![${fileName}](${imageDataUrl})`;\n    let newMessage: UserMessage = { \n      role: \"user\", \n      content: [\n        {\n          \"type\": \"text\",\n          \"text\": fileName + \":\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": imageDataUrl\n          }\n        }\n      ], \n      selected: true\n    };\n\n    \n    this._messages?.push(newMessage);\n  \n    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {\n    let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n  \n    let newMessage: UserMessage = {\n      role: \"user\",\n      content: codeBlock,\n      selected: true\n    };\n  \n    this._messages?.push(newMessage);\n  \n    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n}\n```"
+  selected: true
+- role: user
+  content: "**src/extension.ts**\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport { Provider, Prompt, ProviderSettings } from './types';\nimport { ChatGPTViewProvider } from './chatGptViewProvider';\n\n// Base URL for OpenAI API\nconst BASE_URL = 'https://api.openai.com/v1';\n\nexport function activate(context: vscode.ExtensionContext) {\n\tconsole.log('activating extension \"chatgpt\"');\n\t// Get the settings from the extension's configuration\n\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\n\t// Create a new ChatGPTViewProvider instance and register it with the extension's context\n\tconst provider = new ChatGPTViewProvider(context.extensionUri);\n\n\tlet providers: Provider[] = config.get('providers') || [];\n\tconsole.log(\"Providers:\", providers);\n\n\tlet prompts: Prompt[] = config.get('prompts') || [];\n\tconsole.log(\"prompts:\", prompts);\n\n\tlet activate_provider_settings: ProviderSettings = {\n\t  model: \"none\",\n\t  apiUrl: BASE_URL,\n\t  apiKey: \"none\",\n\t  options: {\n\t\tmaxModelTokens: 1000,\n\t\tmaxResponseTokens: 1000,\n\t\ttemperature: 1.0,\n\t  },\n\t};\n\n\tif (providers && providers.length > 0) {\n\t\tconst firstProvider = providers[0];\n\t\tif (firstProvider.models && firstProvider.models.length > 0) {\n\t\t\tconst firstModel = firstProvider.models[0];\n\t\t\t// Assuming firstModel and firstProvider are already defined based on your JSON structure:\n\t\t\tactivate_provider_settings = {\n\t\t\t  model: firstModel.name,\n\t\t\t  apiUrl: firstProvider.apiUrl,\n\t\t\t  apiKey: firstProvider.apiKey,\n\t\t\t  options: {\n\t\t\t\t...firstModel.options, // Spread operator to include all keys from options\n\t\t\t  },\n\t\t\t};\n\t\t}\n\t}\n\t\n\tprovider.setSettings({\n\t  selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,\n\t  codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,\n\t  pasteOnClick: config.get('pasteOnClick') || false,\n\t  keepConversation: config.get('keepConversation') || false,\n\t  timeoutLength: config.get('timeoutLength') || 60,\n\t  apiUrl: activate_provider_settings.apiUrl,\n\t  model: activate_provider_settings.model,\n\t  options: {\n\t\t...activate_provider_settings.options, // Use spread operator to include all options\n\t  },\n\t});\n\n\t// Put configuration settings into the provider\n\tprovider.setAuthenticationInfo({\n\t\tapiKey: activate_provider_settings.apiKey,\n\t\tapiUrl: activate_provider_settings.apiUrl\n\t});\n\t\n\t// Register the provider with the extension's context\n\tcontext.subscriptions.push(\n\t\tvscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {\n\t\t\twebviewOptions: { retainContextWhenHidden: true }\n\t\t})\n\t);\n\n\tcontext.subscriptions.push(\n\t  vscode.commands.registerCommand('chatgpt.addFileToChat', async (uri: vscode.Uri) => {\n\t\tif (!uri || !uri.fsPath) {\n\t\t  vscode.window.showErrorMessage('No file selected!');\n\t\t  return;\n\t\t}\n\t\ttry {\n\t\t  const fileContent = await fs.promises.readFile(uri.fsPath, 'utf8');\n\t\t  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);\n\t\t  let relativePath: string;\n\t\n\t\t  if (workspaceFolder) {\n\t\t\trelativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);\n\t\t  } else {\n\t\t\trelativePath = path.basename(uri.fsPath);\n\t\t  }\n\t\t  let fileExtension = path.extname(relativePath).substring(1);\n\t\n\t\t  let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n\t\t  provider.addFileToChat(relativePath, fileContent, fileExtension);  // Adjust method if desired\n\t\t} catch (err) {\n\t\t  vscode.window.showErrorMessage(`Failed to read file: ${err}`);\n\t\t}\n\t  })\n\t);\n\n\tconst commandHandler = (command: string) => {\n\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\tconst prompt = config.get(command) as string;\n\t\tprovider.search(prompt);\n\t};\n\n\t// Register the commands that can be called from the extension's package.json\n\tcontext.subscriptions.push(\n\t\tvscode.commands.registerCommand('chatgpt.ask', () =>\n\t\t\tvscode.window.showInputBox({ prompt: 'What do you want to do?' })\n\t\t\t\t.then((value) => provider.search(value))\n\t\t),\n\t\tvscode.commands.registerCommand('chatgpt.explain', () => commandHandler('promptPrefix.explain')),\n\t\tvscode.commands.registerCommand('chatgpt.refactor', () => commandHandler('promptPrefix.refactor')),\n\t\tvscode.commands.registerCommand('chatgpt.optimize', () => commandHandler('promptPrefix.optimize')),\n\t\tvscode.commands.registerCommand('chatgpt.findProblems', () => commandHandler('promptPrefix.findProblems')),\n\t\tvscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),\n\t\tvscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),\n\t\tvscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),\n\t\tvscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())\n\n\t\t\n\t);\n\n\n\t// Change the extension's session token or settings when configuration is changed\n\tvscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {\n\t\tif (event.affectsConfiguration('chatgpt.providers')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tlet providers: Provider[] = config.get('providers') || [];\n\n\t\t\tif (providers && providers.length > 0) {\n\t\t\t\tconst firstProvider = providers[0];\n\t\t\t\tif (firstProvider.models && firstProvider.models.length > 0) {\n\t\t\t\t\tconst firstModel = firstProvider.models[0];\n\t\t\t\t\tactivate_provider_settings = {\n\t\t\t\t\t  model: firstModel.name,\n\t\t\t\t\t  apiUrl: firstProvider.apiUrl,\n\t\t\t\t\t  apiKey: firstProvider.apiKey,\n\t\t\t\t\t  options: {\n\t\t\t\t\t\t...firstModel.options, // Use spread operator to include all options\n\t\t\t\t\t  },\n\t\t\t\t\t};\n\t\t\t\t}\n\t\t\t\tprovider.setSettings({\n\t\t\t\t  apiUrl: activate_provider_settings.apiUrl,\n\t\t\t\t  model: activate_provider_settings.model,\n\t\t\t\t  options: {\n\t\t\t\t\t...activate_provider_settings.options, // Use spread operator to include all options\n\t\t\t\t  },\n\t\t\t\t});\n\t\t\t\n\t\t\t\t// Put configuration settings into the provider\n\t\t\t\tprovider.setAuthenticationInfo({\n\t\t\t\t\tapiKey: activate_provider_settings.apiKey,\n\t\t\t\t\tapiUrl: activate_provider_settings.apiUrl\n\t\t\t\t});\n\t\t\t\t\n\t\t\t\tprovider.set_providers(providers);//Update the selectors\n\t\t\t}\n\t\t} else if (event.affectsConfiguration('chatgpt.prompts')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tlet prompts: Prompt[] = config.get('prompts') || [];\n\n\t\t\tif (prompts && prompts.length > 0) {\n\t\t\t\tconst firstPrompt = prompts[0];\n\t\t\t\tprovider.set_prompt(firstPrompt);\n\t\t\t}\n\t\t\tprovider.set_prompts(prompts);\n\t\t} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.codeblockWithLanguageId')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.pasteOnClick')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ pasteOnClick: config.get('pasteOnClick') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.keepConversation')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ keepConversation: config.get('keepConversation') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.timeoutLength')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ timeoutLength: config.get('timeoutLength') || 60 });\n\t\t}\n\t});\n\n\n\tcontext.subscriptions.push(\n\t\tvscode.commands.registerCommand('chatgpt.addImageToChat', async (uri: vscode.Uri) => {\n\t\t  if (uri && uri.fsPath) {\n\t\t\tconst filePath = uri.fsPath;\n\t\t\tconst fileName = path.basename(filePath);\n\t\t\tconst fileData = await fs.promises.readFile(filePath, { encoding: 'base64' });\n\t\t\tconst fileType = path.extname(filePath).substring(1); // get file extension without dot\n\t\t\tconst imageDataUrl = `data:image/${fileType};base64,${fileData}`;\n\t\n\t\t\t// Post a message to the webview to add the image\n\t\t\tprovider.addImageToChat(imageDataUrl, fileName);\n\t\t  }\n\t\t})\n\t  );\n}\n\n// This method is called when your extension is deactivated\nexport function deactivate() { }\n```"
+  selected: true
+- role: user
+  content: |-
+    **src/types.ts**
+    ```ts
+    import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';
+
+    export type AuthInfo = { apiKey?: string, apiUrl?: string };
+
+    export type Settings = {
+      selectedInsideCodeblock?: boolean;
+      codeblockWithLanguageId?: false;
+      pasteOnClick?: boolean;
+      keepConversation?: boolean;
+      timeoutLength?: number;
+      model?: string;
+      apiUrl?: string;
+      options?: {
+        [key: string]: any; // Allows for any number of properties with any value type
+      };
+    };
+
+    export interface Model {
+      name: string;
+      options: {
+        [key: string]: any; // Allows the `options` object to have any string keys with any value types
+      };
+    }
+
+    export interface Provider {
+      name: string;
+      apiKey: string;
+      apiUrl: string;
+      models: Model[];
+    }
+
+    export interface ProviderSettings {
+      model: string;
+      apiUrl: string;
+      apiKey: string;
+      options: {
+        [key: string]: any; // This allows options to have any number of properties with any types
+      };
+    }
+
+    export interface Prompt {
+      name: string;
+      prompt: string;
+    }
+
+    export interface SystemMessage extends ChatCompletionSystemMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export interface UserMessage extends ChatCompletionUserMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export type Message =
+      | SystemMessage
+      | UserMessage
+      | AssistantMessage
+
+    export const BASE_URL = 'https://api.openai.com/v1';
+    ```
+  selected: true
+- role: user
+  content: "**README.md**\n```md\n# ChatGPT for Visual Studio Code: Write and Improve Code Using AI\n\nEnhance your development workflow by leveraging the power of ChatGPT (GPT-3.5, GPT-4, and more) directly within Visual Studio Code. Generate, explain, refactor, document, and troubleshoot your code with AI assistance, all without leaving your editor.\n\n![ChatGPT in VS Code](examples/main.png)\n\n---\n\n## 🚀 Features\n\n- **Multi-provider, multi-model support**: Configure multiple AI providers and easily switch between models (e.g., OpenAI or your custom endpoints).\n- **Interactive Chat Panel**: Dedicated ChatGPT side panel in the VS Code Activity Bar for ongoing conversations.\n- **Code Actions**:  \n\t- Ask ChatGPT any coding question.\n\t- Explain selected code.\n\t- Refactor code with explanations.\n\t- Detect and fix bugs in code.\n\t- Optimize code for performance and readability.\n\t- Generate documentation for code snippets.\n- **YAML Chat Export/Import**: Export your conversation as YAML, or import YAML conversations as sessions for reproducibility.\n- **File and Image Attachments**: Send source files or images to ChatGPT by right-clicking in the explorer.\n- **Custom System Prompts**: Define and select your own system prompts for specialized AI behaviors (reviewer, tutor, etc).\n- **Configuration Options**: Fine-tune how code is sent (inside code blocks, with language IDs), control streaming, timeouts, and more.\n- **Token Usage Tracking**: See token counts and usage for better understanding of API limits.\n\n---\n\n## 📦 Installation\n\n1. Install from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/) (or manually download the `.vsix` from releases and install via VS Code).\n2. Open the **Command Palette** (`Ctrl+Shift+P`) and search for `ChatGPT: Ask`, or open the ChatGPT side panel from the Activity Bar.\n\n---\n\n## 🛠️ Usage Guide\n\n### Interacting with AI\n\n- **Chat Side Panel**: Access the ChatGPT panel from the activity bar, type your prompt, and interact with the conversation just like in a chat app.\n- **Context Menu Actions**:\n\t- Right-click code (or select code → right-click) for quick actions like *Explain*, *Refactor*, *Find Problems*, *Optimize*, or *Document*.\n\t- Attach a file or image by right-clicking it in the explorer and choosing “Add to ChatGPT”.\n\n### Export/Import Chat\n\n- Use `ChatGPT: Paste Chat` to export the chat as YAML in your editor.\n- Use `ChatGPT: Use Selection as Chat` to load a YAML conversation from the editor into your current chat session.\n\n![Explain Selection Example](examples/explain.png)\n![Refactor Example](examples/refactor.png)\n\n---\n\n## ⚙️ Configuration\n\nOpen **Settings** (`Ctrl+,` or `Cmd+,`) and search for `chatgpt` to find and configure options such as:\n\n<!-- Example table of key settings -->\n| Setting                     | Description                                                    |\n|-----------------------------|----------------------------------------------------------------|\n| chatgpt.providers           | List of AI providers, API keys, API URLs, and available models.|\n| chatgpt.prompts             | Your reusable system prompts for controlling AI “personality”. |\n| chatgpt.pasteOnClick        | Paste code from chat code blocks on click in the editor.        |\n| chatgpt.selectedInsideCodeblock | Send selected code as markdown codeblocks.                |\n| chatgpt.codeblockWithLanguageId | Append language for better formatting and syntax hints.   |\n| chatgpt.keepConversation    | Retain context across messages.                                |\n| chatgpt.timeoutLength       | Request timeout in seconds.                                    |\n\n### Example: Configuring Providers\n\n```jsonc\n\"chatgpt.providers\": [\n\t{\n\t\"name\": \"OpenAI\",\n\t\"apiKey\": \"your-openai-api-key\",\n\t\"apiUrl\": \"https://api.openai.com/v1\",\n\t\"models\": [\n\t\t{\n\t\t\"name\": \"gpt-3.5-turbo\",\n\t\t\"options\": {\n\t\t\t\"temperature\": 0.7\n\t\t}\n\t\t},\n\t\t{\n\t\t\"name\": \"gpt-4\",\n\t\t\"options\": {\n\t\t\t\"temperature\": 0.5\n\t\t}\n\t\t}\n\t]\n\t}\n]\n```\n\n### Example: Adding Custom System Prompts\n\n```jsonc\n\"chatgpt.prompts\": [\n\t{\n\t\"name\": \"Code Reviewer\",\n\t\"prompt\": \"You are a strict code reviewer. Explain suggestions thoroughly.\"\n\t},\n\t{\n\t\"name\": \"Simple Helper\",\n\t\"prompt\": \"You are a helpful but concise assistant.\"\n\t}\n]\n```\n\n---\n\n## 🔒 Privacy & Security\n\n- **Your API Keys**: You must supply your own OpenAI (or alternative) API keys. These are stored locally by VS Code and sent only to the API you select.\n- **No Data is Sent to Third Parties** except your configured providers.\n\n---\n\n## 🧩 Extending & Contributing\n\n### Building Locally\n\n1. Clone this repository.\n2. Install dependencies: `yarn install` or `npm install`\n3. Build the extension: `yarn compile` or `npm run compile`\n4. Launch in VS Code “Extension Development Host”.\n\n### Development Notes\n\n- Main code: [`src/extension.ts`](src/extension.ts), [`src/chatGptViewProvider.ts`](src/chatGptViewProvider.ts)\n- Webview UI: [`media/`](media/)\n- Configuration: [`package.json`](package.json)\n\nPRs and feature requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) (create if needed) for guidelines.\n\n---\n\n## 📝 License\n\nMIT License.  \nThis is an unofficial third-party integration. ChatGPT/OpenAI are trademarks of OpenAI, Inc.\n\n---\n\n## 🙋 Support & Feedback\n\nPlease open an [issue](https://github.com/timkmecl/chatgpt-vscode/issues) for bugs, support, or feature requests!\n\n---\n\nHappy coding!  \n— The ChatGPT for VS Code Team\n\n---\n\n*This project is not affiliated with or endorsed by OpenAI. Use responsibly.*\n\n---\n\n```"
+  selected: true
+- role: user
+  content: |-
+    **media/main.js**
+    ```js
+    // @ts-ignore
+
+    // This script will be run within the webview itself
+    // It cannot access the main VS Code APIs directly.
+    (function () {
+        const vscode = acquireVsCodeApi();
+
+        let response = '';
+        let providers = []; // To store providers
+        let prompts = []; 
+        let models = []; // To store models for the selected provider
+        let selectedProviderIndex = 0;
+
+        // Function to populate the provider and model selectors
+        function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
+            const providerSelector = document.getElementById('provider-selector');
+            providerSelector.innerHTML = ''; // Clear existing options
+            providers.forEach((provider, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = provider.name;
+                providerSelector.appendChild(option);
+            });
+
+            if (providers.length > 0) {
+                providerSelector.value = selectedProviderIndex; // Set default selection
+                models = providers[selectedProviderIndex].models;
+            }
+
+            const modelSelector = document.getElementById('model-selector');
+            modelSelector.innerHTML = ''; // Clear existing options
+            models.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = model.name;
+                modelSelector.appendChild(option);
+            });
+
+            if (models.length > 0) {
+                modelSelector.value = selectedModelIndex; // Set default selection
+            }
+        }
+
+        function populatePrompts(prompts, selectedPromptIndex = 0) {
+            const promptSelector = document.getElementById('system-prompt-selector');
+            promptSelector.innerHTML = ''; // Clear existing options
+            prompts.forEach((prompt, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = prompt.name;
+                promptSelector.appendChild(option);
+            });
+
+            if (prompts.length > 0) {
+                promptSelector.value = selectedPromptIndex; // Set default selection
+                //models = providers[selectedProviderIndex].models;
+            }
+        }
+
+        window.addEventListener('load', () => {
+            // Notify the extension that the webview is ready
+            vscode.postMessage({ type: 'ready' });
+        });
+        
+        // Note: Ensure you import the vscode API object correctly in your web script.
+        
+        // Handle messages sent from the extension to the webview
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                case "addResponse": {
+                    response = message.value;
+                    setResponse();
+                    break;
+                }
+                case "updateResponse": {
+                    console.log("Update Response!!!!!");
+                    setResponse();
+                    console.log("After Update Response !!!!!!!!!");
+                    break;                
+                }
+                case "clearResponse": {
+                    response = '';
+                    break;
+                }
+                case "setPrompt": {
+                    document.getElementById("prompt-input").value = message.value;
+                    break;
+                }
+                case "initialize": { 
+                    providers = message.value;
+                    populateSelectors(providers);
+                    break;
+                }
+
+                case "initialize_prompts": {
+                    console.log("Initialize Prompts:", message.value); 
+                    prompts = message.value;
+                    populatePrompts(prompts);
+                    break;
+                }
+            }
+        });
+
+        showdown.extension('thinkExtension', function() {
+            return [
+              {
+                type: 'lang', // Process block-level syntax
+                regex: /<think>([\s\S]*?)<\/think>/g,
+                replace: function(match, content) {
+                  // Trim and process lines, ensuring let's handle `<p>` tags ourselves
+                  const pTags = content.trim().split('\n').map(line => {
+                    if (line.trim()) {
+                      return `<p>${line.trim()}</p>`;
+                    }
+                    return '';
+                  }).join('');
+          
+                  return `<think>${pTags}</think>`;
+                }
+              },
+              {
+                type: 'output', // After markdown is converted to HTML
+                filter: function(text) {
+                  // Remove wrapping <p> tags around <think> elements
+                  return text.replace(/<p><think>/g, '<think>').replace(/<\/think><\/p>/g, '</think>');
+                }
+              }
+            ];
+        });
+
+        function fixCodeBlocks(response) {
+            const REGEX_CODEBLOCK = new RegExp('```', 'g');
+            const matches = response.match(REGEX_CODEBLOCK);
+
+            const count = matches ? matches.length : 0;
+            return count % 2 === 0 ? response : response.concat('\n```');
+        }
+
+        function setResponse() {
+            var converter = new showdown.Converter({
+                omitExtraWLInCodeBlocks: true,
+                simplifiedAutoLink: true,
+                excludeTrailingPunctuationFromURLs: true,
+                literalMidWordUnderscores: true,
+                simpleLineBreaks: true,
+                extensions: ['thinkExtension']
+            });
+
+            
+            console.log("!!!!!!!!!!!!!!!!!!!!!Response!!!!!!!!!!!!");
+            console.log(response)
+            console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            response = fixCodeBlocks(response);
+            console.log("!!!!!!!!!!!!!!!!!!!!!FixCodeBlockResponse!!!!!!!!!!!!");
+            console.log(response)
+            console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            const html = converter.makeHtml(response);
+            console.log("!!!!!!!!!!!!!!!!!!!!!HTML!!!!!!!!!!!!");
+            console.log(html)
+            console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = html;
+
+            var preCodeBlocks = document.querySelectorAll("pre code");
+            for (var i = 0; i < preCodeBlocks.length; i++) {
+                preCodeBlocks[i].classList.add(
+                    "p-2",
+                    "my-2",
+                    "block",
+                    "overflow-x-scroll"
+                );
+            }
+
+            var codeBlocks = document.querySelectorAll('code');
+            codeBlocks.forEach(codeBlock => {
+                if (codeBlock.innerText.startsWith("Copy code")) {
+                    codeBlock.innerText = codeBlock.innerText.replace("Copy code", "");
+                }
+
+                codeBlock.classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
+
+                codeBlock.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    vscode.postMessage({
+                        type: 'codeSelected',
+                        value: this.innerText
+                    });
+                });
+
+                const d = document.createElement('div');
+                d.innerHTML = codeBlock.innerHTML;
+                codeBlock.innerHTML = null;
+                codeBlock.appendChild(d);
+                d.classList.add("code");
+            });
+
+            microlight.reset('code');
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+        }
+
+        document.getElementById('prompt-input').addEventListener('paste', async function (e) {
+            const clipboardItems = e.clipboardData.items;
+            for (const item of clipboardItems) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const base64Data = event.target.result;
+                        vscode.postMessage({
+                            type: 'pasteImage',
+                            value: base64Data
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+            if (e.key === "Enter" && !e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'prompt',
+                    value: this.value
+                });
+            }
+            else if (e.key === "Enter" && e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'promptNoQuery',
+                    value: this.value
+                });
+            }
+        });
+
+        document.getElementById('provider-selector').addEventListener('change', function () {
+            selectedProviderIndex = parseInt(this.value, 10);
+            models = providers[selectedProviderIndex].models;
+            populateSelectors(providers, selectedProviderIndex, 0);
+            vscode.postMessage({
+                type: 'providerModelChanged',
+                providerIndex: selectedProviderIndex,
+                modelIndex: 0
+            });
+        });
+
+        document.getElementById('model-selector').addEventListener('change', function () {
+            const selectedModelIndex = parseInt(this.value, 10);
+            vscode.postMessage({
+                type: 'providerModelChanged',
+                providerIndex: selectedProviderIndex,
+                modelIndex: selectedModelIndex,
+            });
+        });
+
+        document.getElementById('system-prompt-selector').addEventListener('change', function () {
+            const systemPromptIndex = parseInt(this.value, 10);
+            vscode.postMessage({
+                type: 'systemPromptChanged',
+                systemPromptIndex: systemPromptIndex
+            });
+        });
+
+        //document.getElementById('temperature-slider').addEventListener('input', function () {
+        //    const temperature = parseInt(this.value, 10) / 100;
+        //    vscode.postMessage({
+        //        type: 'temperatureChanged',
+        //        temperature: temperature,
+        //    });
+        //});
+
+        window.myFunction = function (checkboxElem) {
+            vscode.postMessage({
+                type: 'checkboxChanged',
+                id: checkboxElem.id,
+                checked: checkboxElem.checked
+            });
+        }
+
+        window.makeEditable = function (element) {
+            element.contentEditable = 'true';
+            element.focus();
+        }
+
+        window.saveContent = function (element) {
+            element.contentEditable = 'false';
+            const updatedContent = element.innerText;
+            vscode.postMessage({
+                type: 'messageContentChanged',
+                id: element.id,
+                value: updatedContent,
+            });
+        }
+
+    })();
+    ```
+  selected: true
+- role: user
+  content: |-
+    **media/styles.css**
+    ```css
+    .code {
+        white-space: pre;
+    }
+    p {
+        padding-top: 0.3rem;
+        padding-bottom: 0.3rem;
+    }
+
+    ul {
+        list-style: initial !important;
+        margin-left: 10px !important;
+    }
+
+    ol {
+        list-style-type: decimal !important;
+        list-style-position: outside;
+        padding-left: 40px; /* Adjust as needed to ensure numbers are visible */
+        margin-left: 20px !important; /* Reset margin to see true boundaries */
+    }
+
+
+
+    h1, h2, h3, h4, h5, h6 {
+        font-weight: bold !important;
+    }
+
+    body, html {
+        height: 100%;
+        margin: 0;
+    }
+    #container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    #top-wrapper {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1;
+        height: 50px;
+    }
+    #response {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px;
+        padding-top: 60px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    #input-wrapper {
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        grid-gap: 10px;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-top: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+    }
+    #prompt-input {
+        grid-column: 1 / -1;
+        color: var(--vscode-editor-foreground);
+        background-color: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-editorGroup-border);
+        outline: none;
+        padding: 10px;
+        width: calc(100% - 22px);
+    }
+
+    #model-selector, #temperature-slider, label[for="temperature-slider"] {
+        margin-bottom: 10px;
+    }
+
+    think {
+        display: inline; /* Ensure it doesn't visually affect layout like block */
+        color: lightblue !important; /* Use !important to override other styles */
+        font-style: italic !important; /* Also use !important for emphasis */
+    }
+
+
+
+    select {
+        color: var(--vscode-dropdown-foreground);
+        background-color: var(--vscode-dropdown-background);
+        border: 1px solid var(--vscode-dropdown-border);
+        padding: 5px;
+        font-size: inherit;
+        cursor: pointer;
+    }
+
+    select option {
+        background: var(--vscode-dropdown-listBackground);
+    }
+
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: var(--vscode-slider-background);
+        height: 2px;
+        border-radius: 0;
+        outline: none;
+        cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+        margin-top: -7px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+    }
+
+    input[type="range"]::-ms-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+    }
+
+    #top-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1;
+    }
+
+    #top-wrapper input[type="text"], #top-wrapper select, #top-wrapper button {
+        margin: 0 5px;
+    }
+
+    #top-wrapper button {
+        padding: 5px 15px;
+    }
+
+    :root {
+        --vscode-dropdown-foreground: #C5C5C5;
+        --vscode-dropdown-background: #3C3C3C;
+        --vscode-dropdown-border: #303030;
+        --vscode-dropdown-listBackground: #252526;
+        --vscode-slider-background: #C5C5C5;
+        --vscode-slider-activeBackground: #007ACC;
+        --vscode-slider-knob: #CCCCCC;
+    }
+    ```
+  selected: true
+- role: user
+  content: So with all this, explain to me what the application does
+  selected: true
+- role: assistant
+  content: |-
+    Certainly! Here is a detailed architectural analysis and user-level explanation of **“ChatGPT for Visual Studio Code: write and improve code using AI”**, based on the code and documentation you’ve provided.
+
+    ---
+
+    ## **Summary of the Extension**
+
+    This Visual Studio Code (VS Code) extension embeds ChatGPT (GPT-3.5, GPT-4, and compatible AI models) directly into the editor as a side panel. It enables you to chat with AI, generate and explain code, refactor, optimize, document, and troubleshoot code – all within the IDE. It supports multiple AI providers/models, YAML-based chat import/export, file/image attachments, customizable system prompts, and rich configuration.
+
+    ---
+
+    ## **High-Level Architecture**
+    ![Component Architecture Diagram](https://i.imgur.com/OB4OffQ.png)
+    *(Note: This is a conceptual textual diagram)*
+
+    - **VS Code API Layer**
+        - Handles commands, menus, context actions, configuration changes.
+    - **Backend (Extension Process, `src/extension.ts` + `src/chatGptViewProvider.ts`)**
+        - Manages chat logic, state, OpenAI API, command handlers, and WebView messaging.
+    - **WebView (UI, HTML/JS/CSS bundled in `/media/`)**
+        - Displays the chat UI, handles user prompts and interactions, allows switching providers/models/prompts on the fly.
+    - **OpenAI or Custom Provider**
+        - Receives prompts/messages and returns model responses for the user.
+
+    ---
+
+    ## **Detailed Features & Functionality**
+
+    ### 1. **Chat Panel UI in VS Code**
+    - The extension adds a new ChatGPT panel in the activity bar (`viewsContainers.activitybar` in `package.json`).
+    - The panel (`chatgpt.chatView`) is a **webview** (custom HTML+JS UI) loaded and managed by the backend.
+
+    ### 2. **Interactive Chat**
+    - The user types prompts in the panel or selects special commands via menus/context actions.
+    - Chat messages (system, user, assistant) are streamed live from the AI and shown in the UI with syntax highlighting, markdown, code blocks, etc.
+    - Code responses in code blocks can be instantly pasted into your editor with one click.
+
+    ### 3. **Multi-provider, Multi-model Support**
+    - Users can define multiple providers (e.g., OpenAI, custom endpoints) and models in settings.
+    - Provider/model selection UI is available in the chat panel.
+    - The extension dynamically switches the backend settings/API/auth based on your selection.
+
+    ### 4. **Context Menu and Command Palette Integration**
+    - You can right-click on code and access “Explain", "Refactor”, "Find Problems”, “Optimize”, “Write Documentation”, or “Ask ChatGPT” and more.
+    - These commands send the selection (with context-aware prompt) to ChatGPT.
+
+    ### 5. **File and Image Attachments (Explorer Context)**
+    - Right-click on files/images in the VS Code explorer to add their content (or image) as a message in the chat.
+    - Images are handled as inline base64 data URLs; code files are wrapped in code blocks labeled with their language ID.
+
+    ### 6. **Custom System Prompts**
+    - You can define and select custom system prompts, changing ChatGPT’s “personality” (e.g., reviewer, tutor, explainer).
+
+    ### 7. **Chat Export/Import as YAML**
+    - Export your current chat history to YAML (“Paste Chat”) for reproducibility or for sharing.
+    - Select a YAML-formatted chat in your editor and import it as the current chat (“Use Selection as Chat”).
+
+    ### 8. **Configuration and Fine-Tuning**
+    - Extensive settings in VS Code for providers, models, prompts, code handling (block/language), token usage (streaming), timeouts, conversation persistence, and more.
+    - All provider credentials and settings are **local only**—no 3rd-party telemetry.
+
+    ### 9. **Token Usage and Status**
+    - The bottom of each chat response shows token usage, model used, and message count for easier tracking and cost awareness.
+
+    ### 10. **Streaming OpenAI Responses**
+    - Uses the streaming API—responses are shown token-by-token in real-time.
+
+    ### 11. **Security & Extensibility**
+    - API keys/config are local and under your control.
+    - The design allows for adding new AI providers, new UI/UX features, new chat commands, etc.
+
+    ---
+
+    ## **How It Works: Architectural Flow**
+
+    **1. Extension Activation**
+    - On install/activation, `activate()` (in `src/extension.ts`) runs.
+        - Reads config/providers/prompts from settings.
+        - Registers all commands (e.g., ask, explain, refactor) and context menu items for chat actions.
+        - Registers the WebView provider.
+
+    **2. WebView Setup and Messaging**
+    - The `ChatGPTViewProvider` creates a webview (panel UI with HTML/JS/CSS in `/media/`).
+        - On UI load, the webview JS (`media/main.js`) notifies the extension (“ready”) and gets back the current config/providers/prompts.
+        - Providers/models/prompts populate dropdowns in the UI.
+
+    **3. User Interactions**
+    - Typing a prompt or using a command (explain, refactor, etc.) sends a message to the backend.
+    - Backend fetches/focuses the view, builds system message + user prompt + current context, and uses the OpenAI SDK to send the prompt.
+    - The OpenAI or provider API streams the result. Backend collects tokens and forwards the live, streaming response to the webview UI.
+    - Code blocks in the answer are clickable; clicking pastes them into your editor (if enabled).
+
+    **4. Chat State and Export/Import**
+    - Chat messages (`system`, `user`, `assistant`, plus any attachments/images) are tracked as objects with role/content/selected state.
+    - Export/Import as YAML reads/writes this state for reproducibility/session sharing.
+
+    **5. Attachments Integration**
+    - Files/images added via Explorer context menus are read (base64 for images, text for files) and included as user messages.
+    - Images use OpenAI’s “image_url” content part type.
+
+    **6. Settings Management**
+    - Setting changes immediately update the chat backend and the UI when VS Code’s settings are changed (live reload).
+    - You can define new providers, models, system prompts, rendering rules, etc.
+
+    ---
+
+    ## **How to Modify or Extend**
+
+    - **Add New AI Providers/Models:**  
+      Update settings with new provider/model configs. The backend and UI will support new endpoints and their models automatically via the dynamic system.
+
+    - **Add New Prompt Actions:**  
+      Implement a new command in `src/extension.ts`, register with `package.json`, and define new prompt/prefix logic.
+
+    - **Change Webview UI:**  
+      Update HTML/JS/CSS in `/media`. You can reorganize the UI, add new controls, support new message types.
+
+    - **Session/Chat State Manipulation:**  
+      Modify `src/chatGptViewProvider.ts` for new chat export/import, custom message formatting, etc.
+
+    - **Security Integration:**  
+      Keys never leave your VS Code; add further constraints or encryption as desired.
+
+    ---
+
+    ## **Key Architectural Components**
+
+    | Area     | File(s)/Folder      | Responsibility |
+    |----------|--------------------------|-----------------------------------------------|
+    | **Manifest/Settings** | package.json         | Commands, menus, settings, view registration  |
+    | **Main Process**      | src/extension.ts     | Activation, command handlers, state           |
+    | **Chat Logic**        | src/chatGptViewProvider.ts | Message, context, OpenAI/provider logic, WebView bind |
+    | **Types/Interfaces**  | src/types.ts         | Data models (providers, settings, messages)   |
+    | **WebView UI**        | media/* (main.js, styles.css, ...) | Chat panel rendering, user interaction        |
+    | **Examples/Resources**| examples/, resources/| Images/icons for UI, documentation, etc       |
+
+    ---
+
+    ## **Summary For a Developer**
+
+    **“ChatGPT for VS Code” is a well-architected, extensible extension providing an interactive, AI-augmented chat assistant directly within the editor. It supports multi-provider configuration, advanced actions (explain/refactor/optimize/etc), file/image inputs, YAML-based conversation state handling, and rich frontend integration. You can adapt/configure it for virtually any modern conversational AI API, tweak UI and workflow, or build out new features with straightforward codebase changes.**
+
+    ---
+
+    Let me know if you’d like a **component/interaction diagram**, modification guide, or have questions about adding a particular feature!
+  selected: true
+- role: user
+  content: So I want you to create a file (.md) that describes this project, then displays the full tree, then explain what each important file does, what are the important parts for each file and everything that you consider to be important so then an artificial intelligence (some LLM) can understand (and also be able to modify) the project.
+  selected: true
+- role: assistant
+  content: |-
+    Certainly! Below is a detailed markdown document, as requested. This document thoroughly describes the project, its tree, and explains the purpose and key parts of each important file. It is designed to give an LLM or developer strong context to understand and modify the extension.
+
+    ---
+
+    # Project Overview: ChatGPT for Visual Studio Code
+
+    **ChatGPT for Visual Studio Code** is a robust VS Code extension that brings AI-powered assistance for code generation, explanation, refactoring, and more, right into your IDE. It supports multiple AI providers/models, context menu actions, file/image attachments, chat session import/export, and rich configuration.
+
+    ---
+
+    ## Project Directory Tree
+
+    ```
+    .
+    ├── CHANGELOG.md
+    ├── diegoaacchatgpt-1.1.0.vsix
+    ├── dist
+    │   ├── extension.js
+    │   ├── extension.js.LICENSE.txt
+    │   └── extension.js.map
+    ├── examples
+    │   ├── create.png
+    │   ├── explain.png
+    │   ├── main.png
+    │   └── refactor.png
+    ├── media
+    │   ├── main.js
+    │   ├── scripts
+    │   │   ├── microlight.min.js
+    │   │   ├── showdown.min.js
+    │   │   └── tailwind.min.js
+    │   └── styles.css
+    ├── package-lock.json
+    ├── package.json
+    ├── README.md
+    ├── resources
+    │   ├── buy-default-yellow-small.png
+    │   ├── extensionIcon.png
+    │   └── icon.png
+    ├── src
+    │   ├── chatGptViewProvider.ts
+    │   ├── extension.ts
+    │   └── types.ts
+    ├── toGenerateXSIX.txt
+    ├── tsconfig.json
+    ├── vsc-extension-quickstart.md
+    ├── webpack.config.js
+    └── yarn.lock
+    ```
+
+    ---
+
+    ## File-by-File Explanation
+
+    ### Top-Level Files
+
+    - **README.md**:  
+      Comprehensive documentation for users and developers; explains features, setup, configuration, and contribution.
+
+    - **package.json**:  
+      The extension's manifest. Defines metadata, commands, menus/context actions, contributions (views, menus), configuration schema, dependencies, and scripts for build/test.
+
+    - **CHANGELOG.md**:  
+      Changelog of released versions.
+
+    - **diegoaacchatgpt-1.1.0.vsix**:  
+      The packaged distributable extension.
+
+    ---
+
+    ### `/src` — Core Source Code (Extension "backend")
+
+    - **src/extension.ts**  
+      *Entrypoint for the extension process.*  
+      - Activates the extension, reads settings and provider configuration.
+      - Instantiates and registers the `ChatGPTViewProvider` webview.
+      - Registers all VS Code commands (e.g., ask, explain, refactor) and context menu actions.
+      - Handles configuration changes to update the chat provider, system prompts, and UI on the fly.
+      - Bridges file and image attachments between VS Code explorer/context menus and the chat.
+
+      **Key Functions/Sections:**
+      - `activate(context)` — main logic for setup, registration, and reactive config watching.
+      - Command registrations
+      - File/image attachment handling
+
+    ---
+
+    - **src/chatGptViewProvider.ts**  
+      *Encapsulates the entire chat session logic and webview integration.*  
+      - Implements `WebviewViewProvider` to render the chat panel with a custom UI.
+      - Maintains in-memory chat state (messages, providers, prompts, settings, authentication).
+      - Handles incoming messages from the WebView (prompt input, prompt selection, attachments).
+      - Manages interaction with OpenAI API (or any compatible AI provider) using the `openai` Node SDK.
+      - Converts chat state to/from YAML for import/export.
+      - Renders the response stream in real-time to the WebView, supports code block paste.
+      - Allows for message selection (as context), message editing, provider/model/system prompt selection, images/files as messages.
+      
+      **Key Functions/Sections:**
+      - Constructor: setup state, system prompt
+      - `resolveWebviewView()`: HTML/JS/CSS injection, message listener for chat actions from UI  
+      - `_newAPI()`: creates/configures new OpenAI API client; manages provider authentication
+      - `search()` and `_generate_search_prompt()`: main prompt build/AI call workflow, streaming response to UI
+      - Message/event handlers for YAML export/import, code block paste, image/file add, prompt/provider/model/system prompt change.
+      - Chat state serialization (`getSelectedMessagesWithoutSelectedProperty`, `fixCodeBlocks`, etc.)
+      - `_updateChatMessages()`: assembles chat state for display with meta (tokens etc.)
+      - `_getHtmlForWebview()`: returns HTML that loads all required assets and wires up the panel
+
+    ---
+
+    - **src/types.ts**  
+      *Shared type definitions/interfaces.*  
+      - Defines `Provider`, `Model`, `Prompt`, `Settings`, `Message` (system, user, assistant), and API base constant.
+      - Extensions of OpenAI chat completion parameter types for strong typing.
+
+    ---
+
+    ### `/media` — Webview UI (Client-Side code)
+
+    - **media/main.js**  
+      *The front-end logic for the ChatGPT panel in VS Code.*  
+      - Runs inside the webview; cannot access VS Code APIs directly except via `postMessage`.
+      - Receives configuration, providers, and prompts from the backend and fills out UI selectors.
+      - Handles prompt input (on enter), and sends prompt/code selection/image paste messages back to backend.
+      - Handles provider/model/system prompt dropdown changes.
+      - Renders AI assistant responses as Markdown using Showdown, with syntax highlighting (microlight) and Tailwind CSS for styling.
+      - Handles codeblock click-to-paste (creates messages to extension).
+      - Implements “live” response updating, and scrolls to the bottom on update.
+
+    ---
+
+    - **media/styles.css**  
+      *Custom CSS for webview UI.*  
+      - Layout, code styling, scrolls, selectors, color variables for consistency with vscode themes.
+      - Styles for chat bubbles, inputs, code blocks, and custom `<think>` elements.
+
+    - **media/scripts/microlight.min.js**  
+      Syntax highlighter for code blocks.
+
+    - **media/scripts/showdown.min.js**  
+      Markdown-to-HTML converter (used to render AI responses as rich text).
+
+    - **media/scripts/tailwind.min.js**  
+      Tailwind CSS framework (utility-first CSS for consistent styling in the webview).
+
+    ---
+
+    ### `/examples` & `/resources`
+
+    - **/examples**  
+      *Reference screenshots/images* for documentation (README, marketplace, etc.).
+    - **/resources**  
+      *Extension icons* (for activity bar, packaging, etc.).
+
+    ---
+
+    ### `/dist`, `/toGenerateXSIX.txt`, `/vsc-extension-quickstart.md`
+
+    - **/dist**  
+      Compiled/bundled output from the build system; shipped .js for the extension backend.
+
+    - **toGenerateXSIX.txt**, **vsc-extension-quickstart.md**  
+      Project management and onboarding notes.
+
+    ---
+
+    ### Build & Project Config Files
+
+    - **tsconfig.json**  
+      TypeScript compiler configuration.
+
+    - **webpack.config.js**  
+      Build pipeline for packaging/bundling.
+
+    - **package-lock.json**, **yarn.lock**  
+      Package lockfiles.
+
+    ---
+
+    ## **Key Parts Per File**
+
+    ### `src/extension.ts`
+    - **`activate()` function**:  
+      Extension startup: reads configuration, registers all commands/webview.
+    - **Provider/model initialization**:  
+      Dynamically loads first available provider/model from config for OpenAI API usage.
+    - **Commands and context menus**:  
+      Wires user actions (“Explain”, “Refactor”, etc.) as commands, passes context to provider logic.
+    - **Configuration watching**:  
+      Auto-updates internal logic and webview if settings change.
+    - **File/image attachment handler**:  
+      Adds files from explorer context directly to chats.
+
+    ### `src/chatGptViewProvider.ts`
+    - **Class ChatGPTViewProvider**:  
+      Handles all backend chat logic, state, OpenAI API communication.
+    - **`resolveWebviewView()`**:  
+      Sets HTML UI and message event listeners.
+    - **`search()` and `_generate_search_prompt()`**:  
+      Builds the prompt based on command, selection and context, sends to OpenAI API.
+    - **Streaming responses**:  
+      Stream handler sends tokens/response chunks to UI in real-time as the AI generates them.
+    - **Attachment/image support**:  
+      Allows file and image messages in conversations.
+    - **Conversation YAML export/import**:  
+      Means to serialize/deserialize chat, aiding reproducibility and sharing.
+    - **UI state management**:  
+      Supplies UI with provider and prompt selection lists and state.
+
+    ### `media/main.js`
+    - **Handles all UI event wiring**:  
+      Prompt input, provider/model selection, system prompt switching, interactive code block handling, image pasting.
+    - **Markdown rendering with styling**:  
+      Converts markdown text from backend into styled HTML for the panel, syntax-highlights code blocks.
+    - **Webview ↔ Backend messaging**:  
+      Posts/receives messages for all user actions and backend replies.
+    - **Hooks for dynamic UI updates**:  
+      Populating selectors on-the-fly as providers/prompts change.
+
+    ### `package.json`
+    - **Defines all extension points**:  
+      - Commands, menus/context, configuration schema, webview definition, dependencies.
+      - Contributor guide: add commands by registering in `"contributes.commands"` and providing UI/context menu as needed.
+
+    ### `src/types.ts`
+    - **Project-wide strong typing for everything** from providers to messages to settings.
+
+    ---
+
+    ## **Important Design Notes for Modification**
+
+    - **Adding Providers or Models**:  
+      Extend the `"chatgpt.providers"` config and the UI/backend will pick them up automatically.
+    - **Adding Actions/Commands**:  
+      Register them in `package.json`, create handlers in `extension.ts`, and (optionally) wire UI buttons or context menu items.
+    - **UI Changes**:  
+      Edit `media/main.js` (logic/interactivity) and `media/styles.css` (style/layout). Update the HTML string in `getHtmlForWebview()` for layout changes.
+    - **Changing Chat Serialization/Storage**:  
+      Update YAML handling in `chatGptViewProvider.ts`, especially `pasteChat` and `useSelectionAsChat`.
+
+    ## **Security Considerations**
+
+    - API keys/configuration are user-local and never leave the machine except when directly contacting the provider.
+    - Any request to extend with telemetry or cloud features should be implemented with user clarity/consent.
+
+    ---
+
+    ## **Summary Table: Main Extensible/Important Areas**
+
+    | File/Area                 | Description                                           | How to Extend/Modify                                         |
+    |---------------------------|------------------------------------------------------|--------------------------------------------------------------|
+    | `package.json`            | Extension manifest, commands, settings               | Add commands, contexts, config fields, new view contributions|
+    | `src/extension.ts`        | Entrypoint/activation, commands, config watching     | Add new command handlers, new context menu actions           |
+    | `src/chatGptViewProvider.ts` | Chat state management, AI integration, webview comm| New chat logic, custom prompts, serialization, streaming etc |
+    | `media/main.js`           | Webview UI logic, markdown rendering, event binding  | Update UI, add new controls, rich message formats            |
+    | `media/styles.css`        | Webview panel styles                                 | Change look, UX, colors, elements                            |
+    | `src/types.ts`            | TypeScript interfaces and constants                  | Add new message/provider types                               |
+
+    ---
+
+    ## **Final Notes**
+
+    - The extension is designed for easy extensibility—most new features just involve registering a config/command, writing handler logic, then updating UI as needed.
+    - The clean separation of backend (extension process) and frontend (webview UI) allows modification without cross-impact.
+    - Provider and model definitions are dynamic and governed by the config schema, so new APIs or custom endpoints can be added without code changes.
+    - The YAML chat session feature is unique and supports fully reproducible/dev-sharable conversations.
+
+    ---
+
+    # End of Project Description Document
+
+    This file can be used both as **documentation for contributors and for LLMs** to understand, reason about, and extend/modify the VS Code ChatGPT extension.
+
+    ---
+  selected: true

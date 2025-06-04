@@ -1,0 +1,203 @@
+{
+    "chatgpt.providers": [
+        {
+            "name": "OpenAI",
+            "apiKey": "OPENAI_API_KEY",
+            "apiUrl": "https://api.openai.com/v1",
+            "models": [
+                {
+                    "name": "gpt-4o",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "gpt-4o-mini",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "gpt-4.1",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "gpt-4.1-mini",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "gpt-4.1-nano",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "o3",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "o3-mini",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "o4-mini",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "o4-mini-high",
+                    "options": {
+                    }
+                },
+            ]
+        },
+        {
+            "name": "Gemini",
+            "apiKey": "GEMINI_API_KEY",
+            "apiUrl": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "models": [
+                {
+                    "name": "gemini-1.5-flash",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "gemini-2.5-pro-exp-03-25",
+                    "options": {
+                    }
+                }
+            ]
+        },
+        {
+            "name": "OpenRouter",
+            "apiKey": "OPENROUTER_API_KEY",
+            "apiUrl": "https://openrouter.ai/api/v1",
+            "models": [
+                {
+                    "name": "google/gemini-2.5-pro-exp-03-25:free",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "deepseek/deepseek-chat",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "mistralai/mistral-large-2411",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "cognitivecomputations/dolphin-mixtral-8x22b",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "anthropic/claude-3.5-sonnet",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "anthropic/claude-3.7-sonnet",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "anthropic/claude-3.7-sonnet:thinking",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "openai/o1-preview",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "openai/o3-mini",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "openai/o3-mini-high",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "openai/gpt-4.5-preview",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "deepseek/deepseek-r1",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "deepseek/deepseek-r1-distill-llama-70b:free",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "deepseek/deepseek-r1-distill-llama-70b",
+                    "options": {
+                    }
+                },
+            ]
+        },
+        {
+            "name": "Ollama",
+            "apiKey": "OLLAMA_API_KEY",
+            "apiUrl": "http://localhost:11434/v1",
+            "models": [
+                {
+                    "name": "deepseek-r1:1.5b",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "llama3.2:1b",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "qwen2.5-coder:0.5b",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Groq",
+            "apiKey": "GROQ_API_KEY",
+            "apiUrl": "https://api.groq.com/openai/v1",
+            "models": [
+                {
+                    "name": "Deepseek-R1-Distill-Llama-70b",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "Llama-3.3-70b-Specdec",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                }
+            ]
+        }
+    ]
+}
