@@ -137,6 +137,74 @@
         return count % 2 === 0 ? response : response.concat('\n```');
     }
 
+    
+    function makeFileLinksClickable(container) {
+        // Find all code elements with file path pattern (`...`)
+        const regex = /`([^`]+)`/g;
+        function replaceFileLinks(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                let replaced = false;
+                let parts = node.textContent.split(/(`[^`]+`)/g);
+                if (parts.length > 1) {
+                    let frag = document.createDocumentFragment();
+                    parts.forEach(part => {
+                        let match = /^`([^`]+)`$/.exec(part);
+                        if (match) {
+                            let a = document.createElement("a");
+                            a.textContent = match[0];
+                            a.href = "#";
+                            a.className = "file-link";
+                            a.dataset.filepath = match[1];
+                            a.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                vscode.postMessage({
+                                    type: 'fileClicked',
+                                    value: this.dataset.filepath
+                                });
+                            });
+                            frag.appendChild(a);
+                            replaced = true;
+                        } else {
+                            frag.appendChild(document.createTextNode(part));
+                        }
+                    });
+                    node.parentNode.replaceChild(frag, node);
+                    return true; // done
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                // recurse children
+                Array.from(node.childNodes).forEach(replaceFileLinks);
+            }
+            return false;
+        }
+        replaceFileLinks(container);
+    }
+
+    function replaceInlineFileCodeWithLinks(container) {
+        // Regex: most simple file paths like 'foo.ext', 'dir/file.ext', etc.
+        const filePattern = /^[\w\-./]+\.[a-zA-Z0-9]+$/;
+        // Only affect <code> that is NOT inside a <pre> (pre/code = code block, just code = inline code)
+        container.querySelectorAll('code').forEach(codeElem => {
+            if (codeElem.closest('pre')) return; // skip code blocks
+            const text = codeElem.textContent.trim();
+            if (filePattern.test(text)) {
+                const a = document.createElement('a');
+                a.textContent = text;
+                a.href = "#";
+                a.className = "file-link";
+                a.dataset.filepath = text;
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    vscode.postMessage({
+                        type: 'fileClicked',
+                        value: text
+                    });
+                });
+                codeElem.replaceWith(a);
+            }
+        });
+    }
+    
     function setResponse() {
         var converter = new showdown.Converter({
             omitExtraWLInCodeBlocks: true,
@@ -161,6 +229,13 @@
         console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         const responseDiv = document.getElementById("response");
         responseDiv.innerHTML = html;
+
+        //makeFileLinksClickable(responseDiv);
+        replaceInlineFileCodeWithLinks(responseDiv);
+        
+        console.log("ResponseDiv after makeFileLinksClicable:");
+        console.log(responseDiv);
+        console.log("###################################");
 
         var preCodeBlocks = document.querySelectorAll("pre code");
         for (var i = 0; i < preCodeBlocks.length; i++) {

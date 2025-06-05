@@ -262,6 +262,24 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             }
             break;
           }
+        case 'fileClicked': {
+          console.log("file Clicked!!!!!");
+          const filePath = data.value; // e.g., 'src/extension.ts' (relative to workspace)
+          if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+            vscode.window.showErrorMessage('No workspace folder open.');
+            break;
+          }
+          const workspaceFolder = vscode.workspace.workspaceFolders[0];
+          const absolutePath = path.join(workspaceFolder.uri.fsPath, filePath);
+          try {
+            const fileContent = fs.readFileSync(absolutePath, 'utf-8');
+            const fileExt = path.extname(filePath).slice(1) || '';
+            this.addFileToChat(filePath, fileContent, fileExt);
+          } catch (e) {
+            vscode.window.showErrorMessage(`Could not read file: ${filePath} (${e instanceof Error ? e.message : String(e)})`);
+          }
+          break;
+        }
       }
     });
   }
