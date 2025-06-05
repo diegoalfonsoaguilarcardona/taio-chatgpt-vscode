@@ -192,9 +192,12 @@
                 a.textContent = text;
                 a.href = "#";
                 a.className = "file-link";
+                a.tabIndex = 0;
                 a.dataset.filepath = text;
                 a.addEventListener('click', function(e) {
                     e.preventDefault();
+                    window.lastClickedFileLink = this;
+                    window.lastClickedScrollTop = this.closest("#response").scrollTop;
                     vscode.postMessage({
                         type: 'fileClicked',
                         value: text
@@ -232,7 +235,7 @@
 
         //makeFileLinksClickable(responseDiv);
         replaceInlineFileCodeWithLinks(responseDiv);
-        
+
         console.log("ResponseDiv after makeFileLinksClicable:");
         console.log(responseDiv);
         console.log("###################################");
@@ -271,7 +274,18 @@
         });
 
         microlight.reset('code');
-        responseDiv.scrollTop = responseDiv.scrollHeight;
+
+        if (window.lastClickedFileLink && typeof window.lastClickedScrollTop === "number") {
+            responseDiv.scrollTop = window.lastClickedScrollTop;
+            // Optionally restore focus:
+            let selector = 'a.file-link[data-filepath="' + window.lastClickedFileLink.dataset.filepath + '"]';
+            let newFileLink = responseDiv.querySelector(selector);
+            if (newFileLink) newFileLink.focus();
+            window.lastClickedFileLink = null;
+            window.lastClickedScrollTop = null;
+        } else {
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+        }
     }
 
     document.getElementById('prompt-input').addEventListener('paste', async function (e) {
