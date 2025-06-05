@@ -137,49 +137,6 @@
         return count % 2 === 0 ? response : response.concat('\n```');
     }
 
-    
-    function makeFileLinksClickable(container) {
-        // Find all code elements with file path pattern (`...`)
-        const regex = /`([^`]+)`/g;
-        function replaceFileLinks(node) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                let replaced = false;
-                let parts = node.textContent.split(/(`[^`]+`)/g);
-                if (parts.length > 1) {
-                    let frag = document.createDocumentFragment();
-                    parts.forEach(part => {
-                        let match = /^`([^`]+)`$/.exec(part);
-                        if (match) {
-                            let a = document.createElement("a");
-                            a.textContent = match[0];
-                            a.href = "#";
-                            a.className = "file-link";
-                            a.dataset.filepath = match[1];
-                            a.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                vscode.postMessage({
-                                    type: 'fileClicked',
-                                    value: this.dataset.filepath
-                                });
-                            });
-                            frag.appendChild(a);
-                            replaced = true;
-                        } else {
-                            frag.appendChild(document.createTextNode(part));
-                        }
-                    });
-                    node.parentNode.replaceChild(frag, node);
-                    return true; // done
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                // recurse children
-                Array.from(node.childNodes).forEach(replaceFileLinks);
-            }
-            return false;
-        }
-        replaceFileLinks(container);
-    }
-
     function replaceInlineFileCodeWithLinks(container) {
         // Regex: most simple file paths like 'foo.ext', 'dir/file.ext', etc.
         const filePattern = /^[\w\-./]+\.[a-zA-Z0-9]+$/;
