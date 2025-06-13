@@ -223,7 +223,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               if (provider_data.models && provider_data.models.length > modelIndex) {
                 const model_data = provider_data.models[modelIndex];
                 const provider_settings = {
-                  model: model_data.name,
+                  model: model_data.model_name,
                   apiUrl: provider_data.apiUrl,
                   apiKey: provider_data.apiKey,
                   options: {

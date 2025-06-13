@@ -16,9 +16,10 @@ export type Settings = {
 };
 
 export interface Model {
-  name: string;
+  name: string;            // Display in UI
+  model_name: string;      // For API calls
   options: {
-    [key: string]: any; // Allows the `options` object to have any string keys with any value types
+    [key: string]: any;
   };
 }
 

@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const firstModel = firstProvider.models[0];
 			// Assuming firstModel and firstProvider are already defined based on your JSON structure:
 			activate_provider_settings = {
-			  model: firstModel.name,
+			  model: firstModel.model_name,
 			  apiUrl: firstProvider.apiUrl,
 			  apiKey: firstProvider.apiKey,
 			  options: {
@@ -136,7 +136,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (firstProvider.models && firstProvider.models.length > 0) {
 					const firstModel = firstProvider.models[0];
 					activate_provider_settings = {
-					  model: firstModel.name,
+					  model: firstModel.model_name,
 					  apiUrl: firstProvider.apiUrl,
 					  apiKey: firstProvider.apiKey,
 					  options: {
