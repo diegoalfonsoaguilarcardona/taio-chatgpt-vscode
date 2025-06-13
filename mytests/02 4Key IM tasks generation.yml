@@ -1,0 +1,178 @@
+- role: system
+  content: |-
+    # Rule: Generating a Task List from a PRD
+    ## Goal
+    To guide an AI assistant in creating a detailed, step-by-step task list in Markdown format based on an existing Product Requirements Document (PRD). The task list should guide a developer through implementation.
+    ## Output
+    - **Format:** Markdown (`.md`)
+    - **Location:** `/tasks/`
+    - **Filename:** `tasks-[prd-file-name].md` (e.g., `tasks-prd-user-profile-editing.md`)
+    ## Process
+    1.  **Receive PRD Reference:** The user points the AI to a specific PRD file
+    2.  **Analyze PRD:** The AI reads and analyzes the functional requirements, user stories, and other sections of the specified PRD.
+    3.  **Phase 1: Generate Parent Tasks:** Based on the PRD analysis, create the file and generate the main, high-level tasks required to implement the feature. Use your judgement on how many high-level tasks to use. It's likely to be about 5. Present these tasks to the user in the specified format (without sub-tasks yet). Inform the user: 'I have generated the high-level tasks based on the PRD. Ready to generate the sub-tasks? Respond with 'Go' to proceed.'
+    4.  **Wait for Confirmation:** Pause and wait for the user to respond with 'Go'.
+    5.  **Phase 2: Generate Sub-Tasks:** Once the user confirms, break down each parent task into smaller, actionable sub-tasks necessary to complete the parent task. Ensure sub-tasks logically follow from the parent task and cover the implementation details implied by the PRD.
+    6.  **Identify Relevant Files:** Based on the tasks and PRD, identify potential files that will need to be created or modified. List these under the `Relevant Files` section, including corresponding test files if applicable.
+    7.  **Generate Final Output:** Combine the parent tasks, sub-tasks, relevant files, and notes into the final Markdown structure.
+    8.  **Save Task List:** Save the generated document in the `/tasks/` directory with the filename `tasks-[prd-file-name].md`, where `[prd-file-name]` matches the base name of the input PRD file (e.g., if the input was `prd-user-profile-editing.md`, the output is `tasks-prd-user-profile-editing.md`).
+    ## Output Format
+    The generated task list _must_ follow this structure:
+    ```markdown
+    ## Relevant Files
+    - `path/to/potential/file1.ts` - Brief description of why this file is relevant (e.g., Contains the main component for this feature).
+    - `path/to/file1.test.ts` - Unit tests for `file1.ts`.
+    - `path/to/another/file.tsx` - Brief description (e.g., API route handler for data submission).
+    - `path/to/another/file.test.tsx` - Unit tests for `another/file.tsx`.
+    - `lib/utils/helpers.ts` - Brief description (e.g., Utility functions needed for calculations).
+    - `lib/utils/helpers.test.ts` - Unit tests for `helpers.ts`.
+    ### Notes
+    - Unit tests should typically be placed alongside the code files they are testing (e.g., `MyComponent.tsx` and `MyComponent.test.tsx` in the same directory).
+    - Use `npx jest [optional/path/to/test/file]` to run tests. Running without a path executes all tests found by the Jest configuration.
+    ## Tasks
+    - [ ] 1.0 Parent Task Title
+      - [ ] 1.1 [Sub-task description 1.1]
+      - [ ] 1.2 [Sub-task description 1.2]
+    - [ ] 2.0 Parent Task Title
+      - [ ] 2.1 [Sub-task description 2.1]
+    - [ ] 3.0 Parent Task Title (may not require sub-tasks if purely structural or configuration)
+    ```
+    ## Interaction Model
+    The process explicitly requires a pause after generating parent tasks to get user confirmation ('Go') before proceeding to generate the detailed sub-tasks. This ensures the high-level plan aligns with user expectations before diving into details.
+    ## Target Audience
+    Assume the primary reader of the task list is a **junior developer** who will implement the feature.
+  selected: true
+- role: user
+  content: |-
+    This is the PRD for my 4 keys keyboard project
+    ```markdown
+    # PRD: Four-Key Input Method Android Application
+
+    ## Introduction/Overview
+
+    This Android application introduces an innovative input method using four keys that detect both clicks and slides. The design addresses the problem of small keys in traditional mobile keyboards, aiming to reduce misspelling and improve typing speed and accuracy.
+
+    ## Goals
+
+    1. Provide a user-friendly typing experience with larger keys.
+    2. Enable faster and more accurate typing once users learn the gestures.
+    3. Offer seamless switching between lowercase, uppercase, and numerical input.
+
+    ## User Stories
+
+    1. As a user, I want to type with larger keys to reduce errors caused by small key sizes.
+    2. As a user, I want to quickly switch between letters, uppercase, and numbers for versatile typing.
+    3. As a user, I want to learn simple gestures to type efficiently on my device.
+
+    ## Functional Requirements
+
+    1. **Key Actions:**
+        - The system must detect nine gestures for each key: Up-Left, Up, Up-Right, Left, Click, Right, Down-Left, Down, Down-Right.
+        - Each gesture should map to a specific character.
+
+    2. **Character Mapping:**
+        - Implement the character layout as per the provided sketch.
+        - Allow additional keys for switching between uppercase and numerical modes.
+
+    3. **Mode Switching:**
+        - Implement a button to toggle between lowercase, uppercase, and numeric input.
+
+    4. **Ease of Use:**
+        - Provide a tutorial or guide to help new users learn the gestures.
+
+    ## Non-Goals (Out of Scope)
+
+    - The application will not include advanced predictive text or autocorrect functionalities at launch.
+
+    ## Design Considerations
+
+    - Follow the basic sketch provided for the layout of characters.
+    - Ensure the interface is clean and easy to navigate, focusing on large, easily accessible keys.
+
+    ## Technical Considerations
+
+    - The application should be compatible with Android devices.
+    - Ensure smooth integration so it can be set as the default keyboard input method.
+
+    ## Success Metrics
+
+    - User adoption rate of the keyboard.
+    - Improvement in typing speed and accuracy through user feedback and testing.
+
+    ## Open Questions
+
+    - What specific user testing methods would provide the best insights?
+    - Are there any specific accessibility features that need integration?
+
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Here are the high-level tasks for your Four-Key Input Method Android Application, based on the provided PRD:
+
+    ## Tasks
+    - [ ] 1.0 Implement Four-Key Layout and Gesture Recognition
+    - [ ] 2.0 Map Gestures to Characters and Input Events
+    - [ ] 3.0 Implement Mode Switching (Lowercase, Uppercase, Numeric)
+    - [ ] 4.0 Create User Tutorial/Guide for Gestures
+    - [ ] 5.0 Android Integration and Configuration (Default Keyboard Support)
+
+    I have generated the high-level tasks based on the PRD. Ready to generate the sub-tasks? Respond with 'Go' to proceed.
+  selected: true
+- role: user
+  content: Go
+  selected: true
+- role: assistant
+  content: |
+    ```markdown
+    ## Relevant Files
+    - `app/src/main/java/com/example/fourkeykeyboard/ui/KeyboardView.kt` - Main keyboard view displaying the four large keys and handling UI rendering.
+    - `app/src/main/java/com/example/fourkeykeyboard/input/GestureDetector.kt` - Contains gesture detection logic for click, slide, and direction.
+    - `app/src/main/java/com/example/fourkeykeyboard/input/CharacterMapper.kt` - Maps detected gestures to the appropriate characters depending on current mode.
+    - `app/src/main/java/com/example/fourkeykeyboard/input/ModeManager.kt` - Handles mode switching between lowercase, uppercase, and numeric input.
+    - `app/src/main/java/com/example/fourkeykeyboard/tutorial/TutorialActivity.kt` - Displays the onboarding tutorial to help users learn gestures.
+    - `app/src/main/java/com/example/fourkeykeyboard/KeyboardService.kt` - Manages Android integration as an Input Method Service (acts as the actual keyboard).
+    - `app/src/main/res/layout/activity_tutorial.xml` - Layout file for the tutorial screen.
+    - `app/src/test/java/com/example/fourkeykeyboard/input/GestureDetectorTest.kt` - Unit tests for gesture detection.
+    - `app/src/test/java/com/example/fourkeykeyboard/input/CharacterMapperTest.kt` - Unit tests for character mapping.
+    - `app/src/test/java/com/example/fourkeykeyboard/input/ModeManagerTest.kt` - Unit tests for mode switching logic.
+    - `app/src/androidTest/java/com/example/fourkeykeyboard/ui/KeyboardViewTest.kt` - UI/instrumentation tests for keyboard interactions.
+
+    ### Notes
+    - Unit tests should typically be placed alongside the code files they are testing (e.g., `GestureDetector.kt` and `GestureDetectorTest.kt` in the same directory).
+    - Use `npx jest [optional/path/to/test/file]` to run tests. Running without a path executes all tests found by the Jest configuration. (For Android, replace with `./gradlew test` for unit tests or `./gradlew connectedAndroidTest` for instrumentation tests.)
+
+    ## Tasks
+
+    - [ ] 1.0 Implement Four-Key Layout and Gesture Recognition
+      - [ ] 1.1 Design and create the four large key UI elements in `KeyboardView.kt`.
+      - [ ] 1.2 Implement touch handling and gesture detection logic in `GestureDetector.kt` for all nine directions per key.
+      - [ ] 1.3 Integrate gesture detection with the keyboard UI to show visual feedback.
+      - [ ] 1.4 Write unit tests for gesture detection logic in `GestureDetectorTest.kt`.
+
+    - [ ] 2.0 Map Gestures to Characters and Input Events
+      - [ ] 2.1 Define and implement character layout/mappings as per the provided sketch in `CharacterMapper.kt`.
+      - [ ] 2.2 Implement logic to handle input events from detected gestures and insert correct characters.
+      - [ ] 2.3 Ensure mappings update when switching modes (lowercase, uppercase, numeric).
+      - [ ] 2.4 Write unit tests for character mapping in `CharacterMapperTest.kt`.
+
+    - [ ] 3.0 Implement Mode Switching (Lowercase, Uppercase, Numeric)
+      - [ ] 3.1 Add UI button(s) for toggling between input modes in `KeyboardView.kt`.
+      - [ ] 3.2 Implement mode management logic in `ModeManager.kt` to handle mode changes.
+      - [ ] 3.3 Ensure all gesture mappings and keyboard UI update dynamically upon mode switch.
+      - [ ] 3.4 Write unit tests for mode management in `ModeManagerTest.kt`.
+
+    - [ ] 4.0 Create User Tutorial/Guide for Gestures
+      - [ ] 4.1 Design the tutorial screen UI in `activity_tutorial.xml` and activity logic in `TutorialActivity.kt`.
+      - [ ] 4.2 Implement step-by-step onboarding to demonstrate each gesture and its mapped character.
+      - [ ] 4.3 Provide users with a way to replay or exit the tutorial from the main keyboard app.
+      - [ ] 4.4 Optionally, add interactive practice for users to try gestures.
+
+    - [ ] 5.0 Android Integration and Configuration (Default Keyboard Support)
+      - [ ] 5.1 Implement `KeyboardService.kt` as an Android Input Method Service.
+      - [ ] 5.2 Register the keyboard in `AndroidManifest.xml` for input method support.
+      - [ ] 5.3 Ensure seamless integration so that users can set this keyboard as default via system settings.
+      - [ ] 5.4 Test keyboard on various Android devices for compatibility and UI scaling.
+      - [ ] 5.5 Write UI/instrumentation tests for overall end-to-end keyboard behavior in `KeyboardViewTest.kt`.
+    ```
+  selected: true
