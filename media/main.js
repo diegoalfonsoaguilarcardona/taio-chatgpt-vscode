@@ -69,12 +69,13 @@
         const message = event.data;
         switch (message.type) {
             case "addResponse": {
+                console.log("123 Add Response!!!!!");
                 response = message.value;
                 setResponse();
                 break;
             }
             case "updateResponse": {
-                console.log("Update Response!!!!!");
+                console.log("123 Update Response!!!!!");
                 setResponse();
                 console.log("After Update Response !!!!!!!!!");
                 break;                

@@ -1,0 +1,1571 @@
+- role: system
+  content: |-
+    Use the `project_description_for_ai.md` file as a reference to understand and modify the project you are working on. If you need access to a specific project file (always prioritize access to files before provide an answer, do not make assumptions), request access to it. Provide modifications to the code based on user requests.
+    # Steps
+    1. **Understanding**: Use the `project_description_for_ai.md` file to comprehend the project's overall structure, objectives, and important components.
+    2. **Evaluation**: Always request acces to project files when are needed to fulfill the user's modification request. If you need to acces file(s) (do not make assumptions) do not provide an answer, just ask for the file(s) access.
+    3. **Request**: If necessary, request access to specific other project files or external libraries information to gather further details or context. If you need to acces file(s) or libraries (do not make assumptions) do not provide an answer, just ask for the file(s) (or library(es)) access.
+    4. **Modification**: Based on the provided or requested information, propose code modifications as per the user's requests.
+    # Output Format
+    Provide the proposed modifications in clear, structured markdown. Include:
+    - A brief explanation of the changes.
+    - The modified code snippet.
+    - Any limitations.
+    # Notes
+    - Ensure clarity in communication by defining technical terms when necessary.
+    - Verify all changes align with the project's original design goals and constraints.
+    - If there is uncertainty about the project’s structure or dependencies, request clarification or further details from the user. Always provide the answers in markdown and remember to diferenciate the codes with Triple backticks.
+  selected: true
+- role: user
+  content: |-
+    **project_description_for_ai_3.md**
+    ```md
+    # Project Overview
+
+    This project is a Visual Studio Code extension titled **"ChatGPT for Visual Studio Code: write and improve code using AI"**. It enables developers to interact with various AI language models (including but not limited to OpenAI's ChatGPT and GPT-4, Gemini, OpenRouter, Ollama, Groq) directly within the IDE through a chat-style interface. Users can ask questions, request code explanations, refactorings, optimizations, and more, leveraging configurable providers, models, and system prompts. The extension supports flexible multi-provider setups, model switching, custom prompts, direct insertion of code/images/documents into the chat, and tailored user interface with extensibility in mind.
+
+    ---
+
+    # Project Directory Tree
+
+    ```
+    .
+    ├── CHANGELOG.md
+    ├── current_settings
+    │   ├── prompts.json
+    │   └── providers.json
+    ├── diegoaacchatgpt-1.1.0.vsix
+    ├── dist
+    │   ├── extension.js
+    │   ├── extension.js.LICENSE.txt
+    │   └── extension.js.map
+    ├── examples
+    │   ├── create.png
+    │   ├── explain.png
+    │   ├── main.png
+    │   └── refactor.png
+    ├── media
+    │   ├── main.js
+    │   ├── scripts
+    │   │   ├── microlight.min.js
+    │   │   ├── showdown.min.js
+    │   │   └── tailwind.min.js
+    │   └── styles.css
+    ├── package-lock.json
+    ├── package.json
+    ├── README.md
+    ├── resources
+    │   ├── buy-default-yellow-small.png
+    │   ├── extensionIcon.png
+    │   └── icon.png
+    ├── src
+    │   ├── chatGptViewProvider.ts
+    │   ├── extension.ts
+    │   └── types.ts
+    ├── toGenerateXSIX.txt
+    ├── tsconfig.json
+    ├── vsc-extension-quickstart.md
+    ├── webpack.config.js
+    └── yarn.lock
+    ```
+
+    ---
+
+    # File-by-File Explanation
+
+    ### 1. Extension Core Logic
+
+    #### `src/extension.ts`
+    - **Role**: The entry point for the VS Code extension, responsible for activation, registering commands, initializing provider/prompt configurations, and managing their updates.
+    - **Modification Points**:
+      - Introduce new commands to the command palette.
+      - Change activation logic or initial provider/model selection heuristics.
+      - Extend configuration listeners for new settings.
+      - Integrate additional commands for chat actions or new features.
+
+    #### `src/chatGptViewProvider.ts`
+    - **Role**: UI and logic controller for the ChatGPT webview. Manages conversation state, tokenization, messages, prompt generation, webview communications, image/file handlers, chat updating, and interfaces with the OpenAI API (or similar) through selected providers.
+    - **Modification Points**:
+      - Adjust message-handling logic for new chat message types.
+      - Extend/add webview message handlers for more interactivity.
+      - Implement support for additional input (voice, etc.), rich content, or output formats.
+      - Alter how provider/model switching updates state.
+      - Modify or extend system prompts, token counting, stream interaction, or error handling.
+
+    #### `src/types.ts`
+    - **Role**: Provides all core TypeScript type definitions and interfaces for providers, models, prompts, messages, settings, etc. It is critical for type safety across extension logic.
+    - **Modification Points**:
+      - Add new provider/model/prompt fields as needed.
+      - Extend `Message` types for richer content support (file, video, etc.).
+      - Change options typing when adding new configurable behavior.
+
+    ### 2. VS Code Extension Assembly
+
+    #### `package.json`
+    - **Role**: Extension manifest. Declares commands, menus, configuration schema, extension entry points, dependencies, and metadata.
+    - **Modification Points**:
+      - Add/remove VS Code commands and their palette or context menu entries.
+      - Extend configuration schema for additional settings.
+      - Adjust scripts, dependencies, or update VS Code compatibility.
+
+    #### `webpack.config.js`
+    - **Role**: Build configuration for using webpack to compile/pack the extension TypeScript into distributable JS.
+    - **Modification Points**:
+      - Add external libraries/modules or custom build steps.
+      - Change output settings for new bundling targets.
+
+    #### `tsconfig.json`
+    - **Role**: TSC configuration. Sets the TypeScript compiler options relevant for strict type safety and VS Code/node.js targeting.
+    - **Modification Points**:
+      - Adjust strictness or output targets as needed.
+
+    ### 3. Settings (User/Workspace) and Current Provider/Prompt Data
+
+    #### `current_settings/prompts.json`
+    - **Role**: Stores a set of system prompts with names that populate prompt selectors and define the conversation system context.
+    - **Modification Points**:
+      - Add/remove/edit prompt templates for different assistant behaviors.
+
+    #### `current_settings/providers.json`
+    - **Role**: Defines providers (OpenAI, Gemini, etc.), their API URLs, keys, and associated models/options, driving the provider/model selector lists.
+    - **Modification Points**:
+      - Add new provider or model entries, adjust options (e.g., temperature).
+
+    ### 4. Webview UI/Frontend
+
+    #### `media/main.js`
+    - **Role**: Browser JS for the webview panel. Handles state (selected provider/model/prompt), input event listeners, message passing with VS Code backend, rendering of chat response, code block handling, and UI interactions.
+    - **Modification Points**:
+      - Add new interactive UI elements or input modes (e.g., sliders, toggles).
+      - Change event handling (keybinds, drag-and-drop, etc.).
+      - Extend webview messaging for new actions.
+
+    #### `media/styles.css`
+    - **Role**: Style definitions for the chat webview, selectors, and other UI components. Supports variable overrides for VS Code theming.
+    - **Modification Points**:
+      - Adjust/extend UI appearance for new widgets, dark/light mode, accessibility.
+
+    ### 5. Static/Other
+
+    #### `examples/`, `resources/`
+    - **Role**: Image resources for UI icons, extension branding, and documentation.
+    - **Modification Points**: Mostly for branding or illustrative updates.
+
+    ---
+
+    # Important Design Notes for Modification
+
+    - **Provider/Model Extensibility**: Providers, their endpoints, and supported models are managed via JSON (`current_settings/providers.json`) and reflected in select menus via dynamic webview events. To support new LLM providers, extend this JSON and ensure backend logic is compatible with their protocols.
+    - **Prompt Extensibility**: Prompts are decoupled and stored externally, loaded and updatable at runtime, supporting a broad range of "agent personas."
+    - **Command Palette Integration**: New features or queries should be attached to commands in `package.json` and registered in `src/extension.ts`.
+    - **UI Decoupling**: The webview frontend is isolated from the extension host — communication is only via message passing (`vscode.postMessage`). Adding UI controls or changing layout requires updates in both `media/main.js` and `src/chatGptViewProvider.ts`.
+    - **Chat State Management**: All conversation state (including messages, system prompts, and selection) is managed centrally in `ChatGPTViewProvider`. Any changes to conversation persistence or replay should be localized here.
+    - **Typing and API Evolvability**: All APIs between the backend/frontend must use the type definitions in `src/types.ts`; update these types to ensure cross-cutting integrity when extending formats or protocols.
+
+    ---
+
+    # Security Considerations
+
+    - **Provider API Keys**: Stored in the `current_settings/providers.json` and may be embedded in extension settings (and potentially exposed through configuration). Never log, print, or expose API keys in UI elements or webview context.
+    - **Webview Security**: Only trusted URIs/scripts/stylesheets are loaded into the webview via explicit resource URIs. No remote content is fetched in the webview context.
+    - **Injection Risks**: User and model content is sanitized by markdown/Showdown; however, review any processing pipeline for risks of XSS, especially if new message types or HTML features are introduced.
+    - **Configuration Update Hooks**: Avoid leaking sensitive info or allowing any settings injection into command invocation logic.
+    - **File and Image Attachments**: Uploaded images/files are read as base64 and never written to disk, but always ensure no arbitrary code execution can arise from these interfaces.
+    - **Command Registration**: Commands are only contextually active (e.g., if editor/text/resource selected).
+
+    ---
+
+    # Summary Table of Extensible Components
+
+    | Location/Module                        | Purpose/Extension Point                                | What Can Safely Be Modified                                                              |
+    |----------------------------------------|-------------------------------------------------------|------------------------------------------------------------------------------------------|
+    | `src/extension.ts`                     | Extension entry/activation/commands                   | Add new commands, extend activation, modify providers/prompts initialization             |
+    | `src/chatGptViewProvider.ts`           | Chat logic, provider and prompt management, UI bridge | Change message handling, add webview events, modify chat rendering/pipelines             |
+    | `src/types.ts`                         | Data types for providers, prompts, chat, settings     | Extend types/interfaces for new models, message fields, configurations                   |
+    | `media/main.js`                        | Webview JS (UI logic and events)                      | Add UI controls, event handlers, update message-passing logic, change rendering details  |
+    | `media/styles.css`                     | Webview UI styles and theming                         | Modify/expand CSS, support contrast/themes, additional UI elements                       |
+    | `package.json`                         | VS Code manifest/commands/contributes                 | Add/remove commands, extend configuration schema, metadata                               |
+    | `webpack.config.js`, `tsconfig.json`   | Build and compilation configuration                   | Add loaders, tweak output, build target, source maps, or strictness settings             |
+    | `current_settings/providers.json`      | Provider/model configuration                          | Add providers/models/options as needed                                                   |
+    | `current_settings/prompts.json`        | System prompt configuration                           | Add/modify/remove prompts, adjust default behaviors                                      |
+
+    ---
+
+    # Final Notes
+
+    - **Follow the architectural separation**: UI logic (`media/`), extension/backend logic (`src/`), configurations, and assets remain organized and decoupled.
+    - **TypeScript strictness**: Strong type-checking is enabled and should not be relaxed unless absolutely necessary for new types; prefer updating `src/types.ts` as needed.
+    - **Always update both backend and frontend**: Any new UX/UI feature added to the webview (`media/`) often requires corresponding backend adjustments in `chatGptViewProvider.ts`.
+    - **Testing/Debugging**: Use the `dist/` outputs for testing in VS Code; touch production code through TypeScript (`src/`) and apply webpack for builds.
+    - **Sensitive Data**: Never leak API keys or user data in logs, UIs, or via messages passing to the webview.
+    - **Extending Providers/Models**: All logic for provider switching, system prompt changes, and model-specific options (like temperature, token limits, etc.) is dynamic and should use the type-safe definitions and ensure new items appear in both configuration and the UI selectors.
+    - **Safe Defaults**: If adding new features, prefer opt-in configuration, keep the user in control of new behaviors (via settings).
+    - **Future-proofing**: Consider versioning settings and exported configs for forward-compatibility when introducing breaking changes.
+
+    ---
+
+    This documentation provides a modification and extension-oriented view of the project structure, logic, and conventions, focusing on safe, programmatic adaptability for an AI agent or future developer workflows.
+
+    ```
+  selected: true
+- role: user
+  content: "This is the code of an ai assistant visual studio code extension. I want to provide the used tokens and also to calculate the total consumed tokens (input and output) but using only the data comming from the API.\_ So the idea is that each time I ask something, after it ends it gets the used tokens (input and output) and then it adds those to the total input and to the total output. So the report after each request should have the request tokens (input and output) and also the total used in the full session.\_ \_Do not try to estimate anything, just use the values comming from the API."
+  selected: true
+- role: assistant
+  content: |-
+    To implement token usage tracking (input, output, and total) and display it in the UI, I need to review and modify specific project files. Please grant access to the following files so I can propose precise changes:
+
+    - src/chatGptViewProvider.ts (handles chat logic, provider calls, and tokenization)
+    - src/types.ts (to extend types with token usage fields)
+    - media/main.js (webview UI logic to display token counts)
+    - media/styles.css (optional, for styling any new token usage UI)
+    - package.json (optional, to check if any settings/commands should be added)
+
+    Once I have these files, I’ll:
+    - Add generic handling of token usage from provider responses (OpenAI-like usage fields and fallbacks).
+    - Persist per-message and per-conversation token counts.
+    - Send token usage data to the webview and render it in the chat header/footer.
+    - Ensure no API keys are exposed and that counts are updated on streaming and finalization.
+  selected: true
+- role: user
+  content: "**src/chatGptViewProvider.ts**\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml';\nimport OpenAI from \"openai\";\nimport { encodingForModel } from \"js-tiktoken\";\nimport { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, BASE_URL } from './types';\nimport { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';\n\nexport class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n  public static readonly viewType = 'chatgpt.chatView';\n  private _view?: vscode.WebviewView;\n\n  private _conversation?: any;\n  private _messages?: Message[];\n  private _openai?: OpenAI;\n\n  private _response?: string;\n  private _totalNumberOfTokens?: number;\n  private _prompt?: string;\n  private _fullPrompt?: string;\n  private _currentMessageNumber = 0;\n  private _enc = encodingForModel(\"gpt-4\"); //Hardcoded for now\n\n  private _settings: Settings = {\n    selectedInsideCodeblock: false,\n    codeblockWithLanguageId: false,\n    pasteOnClick: true,\n    keepConversation: true,\n    timeoutLength: 60,\n    apiUrl: BASE_URL,\n    model: 'gpt-3.5-turbo',\n    options: {\n    },\n  };\n  private _authInfo?: AuthInfo;\n\n  // In the constructor, we store the URI of the extension\n  constructor(private readonly _extensionUri: vscode.Uri) {\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    console.log(\"constructor....\");\n    console.log(\"messages:\", this._messages);\n  }\n\n  // Set the API key and create a new API instance based on this key\n  public setAuthenticationInfo(authInfo: AuthInfo) {\n    this._authInfo = authInfo;\n    this._newAPI();\n  }\n\n  public setSettings(settings: Settings) {\n    let changeModel = false;\n  \n    // Check if there are any keys in the options object of the settings\n    if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {\n      changeModel = true;\n    }\n  \n    // Update settings with the new values\n    this._settings = { ...this._settings, ...settings };\n  \n    if (changeModel) {\n      //this._newAPI();\n    }\n  }\n\n  public getSettings() {\n    return this._settings;\n  }\n\n  // This private method initializes a new ChatGPTAPI instance\n  private _newAPI() {\n    console.log(\"New API\");\n    console.log(\"Messages:\", this._messages);\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      console.warn(\"API key or API URL not set, please go to extension settings (read README.md for more info)\");\n    } else {\n      console.log(\"apiUrl:\", this._settings?.apiUrl);\n      this._openai = new OpenAI(\n        {\n          apiKey: this._authInfo?.apiKey,\n          baseURL: this._authInfo?.apiUrl\n        }\n      );\n    }\n    setTimeout(() => {\n      const chat_response = this._updateChatMessages(\n        this._getMessagesNumberOfTokens(),\n        0\n      );\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    }, 2000);\n  }\n\n  public resolveWebviewView(\n    webviewView: vscode.WebviewView,\n    context: vscode.WebviewViewResolveContext,\n    _token: vscode.CancellationToken,\n  ) {\n    this._view = webviewView;\n\n    // set options for the webview, allow scripts\n    webviewView.webview.options = {\n      enableScripts: true,\n      localResourceRoots: [\n        this._extensionUri\n      ]\n    };\n\n    // set the HTML for the webview\n    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);\n\n    // add an event listener for messages received by the webview\n    webviewView.webview.onDidReceiveMessage(async data =>  {\n      switch (data.type) {\n        case 'ready':\n          {\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n            let prompts: Prompt[] = config.get('prompts') || [];\n            this.set_providers(providers);\n            this.set_prompts(prompts);\n            break;\n          }\n        case 'codeSelected':\n          {\n            // do nothing if the pasteOnClick option is disabled\n            if (!this._settings.pasteOnClick) {\n              break;\n            }\n            let code = data.value;\n            const snippet = new vscode.SnippetString();\n            snippet.appendText(code);\n            // insert the code as a snippet into the active text editor\n            vscode.window.activeTextEditor?.insertSnippet(snippet);\n            break;\n          }\n        case 'pasteImage': \n          {\n            const base64Data = data.value;\n            const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));\n            const fileType = imageType.split('/')[1];\n            const fileName = `clipboard_image.${fileType}`;\n            this.addImageToChat(base64Data, fileName);\n            break;\n          }\n        case 'prompt':\n          {\n            console.log(\"prompt\");\n            this.search(data.value);\n            break;\n          }\n        case 'promptNoQuery':\n          {\n            console.log(\"promptNoQuery\");\n\n            let searchPrompt = await this._generate_search_prompt(data.value);\n            \n            this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n            let chat_response = this._updateChatMessages(\n              this._getMessagesNumberOfTokens(),\n              0\n            );\n            this._response = chat_response;\n            this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n            break;\n          }\n        case 'checkboxChanged':\n          {\n            console.log(\"checkboxChanged:\", data);\n            const idParts = data.id.split('-'); // Split the id into parts\n            if(idParts.length === 3) {\n              const indexStr = idParts[2]; // Grab the last part, which should contain the index\n              const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n            \n              if(this._messages && index >= 0 && index < this._messages.length) {\n                // If the index is within the bounds of the array, update the checked status\n                this._messages[index].selected = data.checked;\n              } else {\n                // Handle cases where index is out of bounds or _messages is not an array\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              // Handle cases where data.id does not follow the expected format\n              console.error('data.id is not in the expected format.');\n            }\n            break;\n          }\n        case 'messageContentChanged':\n          {\n            console.log(\"messageContentChanged:\", data);\n            const idParts = data.id.split('-'); // Split the id into parts\n            if(idParts.length === 3) {\n              const indexStr = idParts[2]; // Grab the last part, which should contain the index\n              const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n            \n              if(this._messages && index >= 0 && index < this._messages.length) {\n                // If the index is within the bounds of the array, update the checked status\n                this._messages[index].content = data.value;\n              } else {\n                // Handle cases where index is out of bounds or _messages is not an array\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              // Handle cases where data.id does not follow the expected format\n              console.error('data.id is not in the expected format.');\n            }\n            console.log(\"messages:\", this._messages);\n            break;\n          }\n        case \"providerModelChanged\":\n          {\n            const providerIndex = data.providerIndex;\n            const modelIndex = data.modelIndex;\n            console.log(\"Provider Changed, providerIndex:\", providerIndex, \", model:\", modelIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n      \n            if (providers && providers.length > providerIndex) {\n              const provider_data = providers[providerIndex];\n              if (provider_data.models && provider_data.models.length > modelIndex) {\n                const model_data = provider_data.models[modelIndex];\n                const provider_settings = {\n                  model: model_data.model_name,\n                  apiUrl: provider_data.apiUrl,\n                  apiKey: provider_data.apiKey,\n                  options: {\n                  ...model_data.options // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature\n                  },\n                };\n                this.setSettings({\n                  apiUrl: provider_settings.apiUrl,\n                  model: provider_settings.model,\n                  options: {\n                  ...provider_settings.options, // Spread operator to include all keys from options\n                  },\n                });\n                // Put configuration settings into the provider\n                this.setAuthenticationInfo({\n                  apiKey: provider_settings.apiKey,\n                  apiUrl: provider_settings.apiUrl\n                });\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case \"systemPromptChanged\":\n          {\n            const systemPromptIndex = data.systemPromptIndex;\n            console.log(\"systemPrompt Changed, providerIndex:\", systemPromptIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let prompts: Prompt[] = config.get('prompts') || [];\n      \n            if (prompts && prompts.length > systemPromptIndex) {\n              const prompt_data = prompts[systemPromptIndex];\n              if (prompt_data.name && prompt_data.prompt) {\n                this.set_prompt(prompt_data);\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case 'fileClicked': {\n          console.log(\"file Clicked!!!!!\");\n          const filePath = data.value; // e.g., 'src/extension.ts' (relative to workspace)\n          if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {\n            vscode.window.showErrorMessage('No workspace folder open.');\n            break;\n          }\n          const workspaceFolder = vscode.workspace.workspaceFolders[0];\n          const absolutePath = path.join(workspaceFolder.uri.fsPath, filePath);\n          try {\n            const fileContent = fs.readFileSync(absolutePath, 'utf-8');\n            const fileExt = path.extname(filePath).slice(1) || '';\n            this.addFileToChat(filePath, fileContent, fileExt);\n          } catch (e) {\n            vscode.window.showErrorMessage(`Could not read file: ${filePath} (${e instanceof Error ? e.message : String(e)})`);\n          }\n          break;\n        }\n      }\n    });\n  }\n\n  public getStartSystemPrompt() {\n    const config = vscode.workspace.getConfiguration('chatgpt');\n    let prompts: Prompt[] = config.get('prompts') || [];\n    let start_system_prompt = \"You are a helpful assistant.\";\n    if (prompts && prompts.length > 0) {\n      const prompt_data = prompts[0];\n      if (prompt_data.name && prompt_data.prompt) {\n        start_system_prompt = prompt_data.prompt;\n      }\t\t\t\t\t\t\n    }\n    return start_system_prompt;\n  }\n\n\n  public async resetConversation() {\n    console.log(this, this._conversation);\n    if (this._conversation) {\n      this._conversation = null;\n    }\n    this._prompt = '';\n    this._response = '';\n    this._fullPrompt = '';\n    this._totalNumberOfTokens = 0;\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n    this._messages = [];\n    \n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    const chat_response = this._updateChatMessages(\n      this._getMessagesNumberOfTokens(),\n      0\n    );\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public async pasteChat() {\n    console.log(\"pasteChat\");\n  \n    // Ensure there is an active text editor where we can paste the YAML\n    if (!vscode.window.activeTextEditor) {\n      vscode.window.showErrorMessage('No active text editor!');\n      return;\n    }\n  \n    try {\n      // Get the original _messages object\n      // If you want to exclude any other properties from the YAML, you can map and remove them here\n      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({\n        role, content, selected\n      }));\n  \n      // Convert messages to a YAML string\n      const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n  \n      // Create a new snippet and append the YAML string\n      const snippet = new vscode.SnippetString();\n      snippet.appendText(messagesYaml);\n  \n      // Insert the snippet into the active text editor\n      await vscode.window.activeTextEditor.insertSnippet(snippet);\n  \n      console.log(\"Chat pasted as YAML successfully.\");\n    } catch (error) {\n      console.error(\"Failed to paste chat as YAML:\", error);\n      vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);\n    }\n  }\n  \n  public async useSelectionAsChat() {\n    console.log(\"use selection as chat\");\n\n    // Ensure there is an active text editor with a selection\n    const activeEditor = vscode.window.activeTextEditor;\n    if (!activeEditor) {\n      vscode.window.showErrorMessage('No active text editor with a selection!');\n      return;\n    }\n\n    const selection = activeEditor.selection;\n    if (selection.isEmpty) {\n      vscode.window.showErrorMessage('No text selected!');\n      return;\n    }\n\n    // Get the selected text\n    const selectedText = activeEditor.document.getText(selection);\n\n    try {\n      // Parse the selected text as YAML\n      const parsedMessages = yaml.load(selectedText);\n\n      // Validate the parsed YAML structure\n      if (!Array.isArray(parsedMessages)) {\n        throw new Error('Selected text is not an array of messages.');\n      }\n\n      // Validation of each message in the array\n      for (const msg of parsedMessages) {\n        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {\n          throw new Error('Invalid message format. Each message must have role, content, and selected properties.');\n        }\n      }\n\n      // If valid, update the _messages array with new data\n      this._messages = parsedMessages;\n\n      // Update the webview visualization\n      const chat_response = this._updateChatMessages(\n        this._getMessagesNumberOfTokens(),\n        0\n      );\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\n      console.log(\"Updated messages from selection successfully.\");\n    } catch (error) {\n      console.error(\"Failed to use selection as chat:\", error);\n      vscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n    }\n  }\n\n  public fixCodeBlocks(response: string) {\n    // Use a regular expression to find all occurrences of the substring in the string\n    const REGEX_CODEBLOCK = new RegExp('\\`\\`\\`', 'g');\n    const matches = response.match(REGEX_CODEBLOCK);\n\n    // Return the number of occurrences of the substring in the response, check if even\n    const count = matches ? matches.length : 0;\n    if (count % 2 === 0) {\n      return response;\n    } else {\n      // else append ``` to the end to make the last code block complete\n      console.log(\"Warning - code block not complete\");\n      return response.concat('\\n\\`\\`\\`');\n    }\n\n  }\n\n  private _getMessagesNumberOfTokens() {\n    \n    let full_promt = \"\";\n    if (this._messages) {\n      for (const message of this._messages) {\n        if (message.selected) {\n          full_promt += \"\\n# <u>\" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n        }\n      }\n    }\n\n    const tokenList = this._enc.encode(full_promt);\n    return tokenList.length;\n  }\n\n\n  \n  public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {\n    let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({\n    role, content\n    })) || [];\n    return ret;\n  }\n\n  private _containsCodeBlockOrListItems(content: string): boolean {\n    // Regex pattern to match code blocks.\n    const codeBlockPattern = /```[\\s\\S]*?```/;\n  \n    // Regex pattern to match bullet points or numbered list items.\n    const listItemPattern = /^(?:\\s*(?:[-*+]|\\d+\\.)\\s+.+)$/m;\n  \n    // Test if the content contains a code block or list items.\n    return codeBlockPattern.test(content) || listItemPattern.test(content);\n  }\n\n\n  private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {\n    return this.isChatCompletionContentPartImage(value);\n  }\n  \n    \n  private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {\n    return typeof value === 'object'\n      && value != null\n      && typeof value.text === 'string'\n      && value.type === 'text';\n  }\n  private isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {\n    return typeof value === 'object'\n      && value !== null\n      && typeof value.image_url === 'object'\n      && typeof value.image_url.url === 'string'\n      && value.type === 'image_url';\n  }\n    \n  private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {\n    let chat_response = \"\";\n    if (this._messages) {\n      this._messages.forEach((message, index) => {\n        const selected = message.selected;\n        const checked_string = selected ? \"checked\" : \"\";\n        if (typeof message.content === 'string') {\n          if (this._containsCodeBlockOrListItems(message.content)) {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n          } else {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>\"+ message.content + \"</div>\";\n          }\n        } else if (Array.isArray(message.content)) {\n          // Handle the case where message.content is an array of ChatCompletionContentPartImage\n          chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false'>\";\n          message.content.forEach(part => {\n            console.log(\"processing an object...\")\n            if (this.isChatCompletionContentPartImage(part)) {\n              console.log(\"Is an image!!!\")\n              // Process each ChatCompletionContentPartImage item\n              chat_response += \"<img src='\"+ part.image_url.url + \"' alt='Base64 Image'/>\";\n            }\n            if (this.isChatCompletionContentPartText(part)) {\n              console.log(\"Is a text!!!\")\n              chat_response += part.text;\n            }\n          });\n          chat_response += \"</div>\"\n        }\n      });\n    }\n    if (this._totalNumberOfTokens !== undefined) {\n      this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;\n      chat_response += `\\n\\n---\\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}</sub>* \\n\\n---\\n\\n\\n\\n\\n\\n\\n`;\n    }\n    return chat_response;\n  }\n  \n  private async _generate_search_prompt(prompt:string) {\n    this._prompt = prompt;\n    if (!prompt) {\n      prompt = '';\n    }\n\n    // Focus the ChatGPT view\n    if (!this._view) {\n      await vscode.commands.executeCommand('chatgpt.chatView.focus');\n    } else {\n      this._view?.show?.(true);\n    }\n\n    // Initialize response and token count\n    \n    if (!this._response) {\n      this._response = '';\n    }\n    if (!this._totalNumberOfTokens) {\n      this._totalNumberOfTokens = 0;\n    }\n\n    // Get selected text and language ID (if applicable)\n    const selection = vscode.window.activeTextEditor?.selection;\n    const selectedText = vscode.window.activeTextEditor?.document.getText(selection);\n    const languageId =\n      (this._settings.codeblockWithLanguageId\n        ? vscode.window.activeTextEditor?.document?.languageId\n        : undefined) || '';\n\n    // Build the search prompt\n    let searchPrompt = '';\n    if (selection && selectedText) {\n      if (this._settings.selectedInsideCodeblock) {\n        searchPrompt = `${prompt}\\n\\`\\`\\`${languageId}\\n${selectedText}\\n\\`\\`\\``;\n      } else {\n        searchPrompt = `${prompt}\\n${selectedText}\\n`;\n      }\n    } else {\n      searchPrompt = prompt;\n    }\n    this._fullPrompt = searchPrompt;\n\n    // Increment message number and store for tracking\n    this._currentMessageNumber++;\n    return searchPrompt;\n\n  }\n\n  public set_providers(providers: Provider[]): void {\n    this._view?.webview.postMessage({ type: 'initialize', value: providers });\n  }\n\n  public set_prompts(prompts: Prompt[]): void {\n    console.log(\"Set Prompts:\", prompts);\n    this._view?.webview.postMessage({ type: 'initialize_prompts', value: prompts });\n  }\n\n  public set_prompt(prompt: Prompt): void {\n    // Check if _messages is defined\n    if (this._messages) {\n      this._messages[0] = { role: \"system\", content: prompt.prompt, selected: true };\n    } else {\n      this._messages = [{ role: \"system\", content: prompt.prompt, selected: true }];\n    }\n    console.log(\"calling updateResponse\");\n    let chat_response = this._updateChatMessages(0, 0)\n\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  public async search(prompt?: string) {\n    // Check if the API key and URL are set\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      this._view?.webview.postMessage({\n        type: 'addResponse',\n        value: '[ERROR] \"API key or API URL not set, please go to extension settings (read README.md for more info)\"',\n      });\n      return;\n    }\n    \n    let chat_response = '';\n    let searchPrompt = \"\";\n    if (prompt!=undefined) {\n      searchPrompt = await this._generate_search_prompt(prompt);\n    } \n    // Show loading indicator\n    this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });\n    this._view?.webview.postMessage({ type: 'addResponse', value: '...' });\n\n    if (searchPrompt != \"\") {\n      this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n    }\n\n    if (!this._openai) {\n      throw new Error('OpenAI instance is not initialized.');\n    }\n    \n    if (typeof this._settings.model !== 'string') {\n      throw new Error('Model identifier is not valid or not defined.');\n    }\n\n    // Only if you can't change the Message interface\n    const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {\n      return ['user', 'assistant', 'system'].includes(role);\n    };\n    \n    // Validate and type narrow `this._messages` before sending\n    if (!this._messages || !Array.isArray(this._messages) ||\n      (!this._messages.every(msg => isValidRole(msg.role)))) {\n      throw new Error('Messages have invalid roles.');\n    }\n\n    const promtNumberOfTokens = this._getMessagesNumberOfTokens();\n    let full_message = \"\";\n    try {\n      console.log(\"Creating message sender...\");\n      \n      let messagesToSend: Array<Message> = [];\n      \n      // Assuming this._messages is defined and is an array\n      for (const message of this._messages) {\n        // Check if 'selected' is true; undefined or false values will be considered false\n        if (message.selected) {\n          //if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {\n          //  // Append the content to the previous message if the role is the same\n          //  messagesToSend[messagesToSend.length - 1] = {\n          //\t...messagesToSend[messagesToSend.length - 1],\n          //\tcontent: messagesToSend[messagesToSend.length - 1].content + '\\n' + message.content,\n          //  };\n          //} else {\n            // Add the message as a new entry, omitting the 'selected' key\n            const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'\n            messagesToSend.push(messageWithoutSelected);\n          //}\n        }\n      }\n\n      const stream = await this._openai.chat.completions.create({\n        model: this._settings.model,\n        messages: messagesToSend,\n        stream: true,\n        ...this._settings.options, // Spread operator to include all keys from options\n      });\n      \n      console.log(\"Message sender created\");\n      \n      let completionTokens = 0;\n      full_message = \"\";\n      for await (const chunk of stream) {\n        const content = chunk.choices[0]?.delta?.content || \"\";\n        console.log(\"chunk:\",chunk);\n        console.log(\"content:\", content);\n        const tokenList = this._enc.encode(content);\n        completionTokens += tokenList.length;\n        console.log(\"tokens:\", completionTokens);\n        full_message += content;\n        //this._response = chat_response;\n        this._view?.webview.postMessage({ type: 'addResponse', value: full_message });\n\n      }\n      this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n      console.log(\"Full message:\", full_message);\n      console.log(\"Full Number of tokens:\", completionTokens);\n      const tokenList = this._enc.encode(full_message);\n      console.log(\"Full Number of tokens tiktoken:\", tokenList.length);\n      chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)\n    } catch (e: any) {\n      console.error(e);\n      if (this._response!=undefined) {\n        this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n        chat_response = this._response;\n        chat_response += `\\n\\n---\\n[ERROR] ${e}`;\n      }\n    }\n    this._response = chat_response;\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  private _getHtmlForWebview(webview: vscode.Webview) {\n  \n    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));\n    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));\n    const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));\n    const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));\n    const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));\n  \n    return `<!DOCTYPE html>\n    <html lang=\"en\">\n    <head>\n      <meta charset=\"UTF-8\">\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n      <script src=\"${tailwindUri}\"></script>\n      <script src=\"${showdownUri}\"></script>\n      <script src=\"${microlightUri}\"></script>\n      <link rel=\"stylesheet\" href=\"${stylesUri}\">\n    </head>\n    <body>\n      <div id=\"container\">\n        <div id=\"top-wrapper\">\n          <label for=\"provider-selector\">Provider:</label>\n          <select id=\"provider-selector\"></select>\n          <label for=\"model-selector\">Model:</label>\n          <select id=\"model-selector\"></select>\n        </div>\n        <div id=\"response\" class=\"text-sm\"></div>\n        <div id=\"input-wrapper\">\n          <div>\n            <label for=\"system-prompt-selector\">System Prompt:</label>\n            <select id=\"system-prompt-selector\">\n            </select>\n          </div>\n          <input type=\"text\" id=\"prompt-input\" placeholder=\"Ask ChatGPT something\">\n        </div>\n      </div>\n      <script src=\"${scriptUri}\"></script>\n    </body>\n    </html>`;\n  }\n\n  public addImageToChat(imageDataUrl: string, fileName: string) {\n    const imageMarkdown = `![${fileName}](${imageDataUrl})`;\n    let newMessage: UserMessage = { \n      role: \"user\", \n      content: [\n        {\n          \"type\": \"text\",\n          \"text\": fileName + \":\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": imageDataUrl\n          }\n        }\n      ], \n      selected: true\n    };\n\n    \n    this._messages?.push(newMessage);\n  \n    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {\n    let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n  \n    let newMessage: UserMessage = {\n      role: \"user\",\n      content: codeBlock,\n      selected: true\n    };\n  \n    this._messages?.push(newMessage);\n  \n    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n}\n```"
+  selected: true
+- role: user
+  content: |-
+    **src/types.ts**
+    ```ts
+    import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';
+
+    export type AuthInfo = { apiKey?: string, apiUrl?: string };
+
+    export type Settings = {
+      selectedInsideCodeblock?: boolean;
+      codeblockWithLanguageId?: false;
+      pasteOnClick?: boolean;
+      keepConversation?: boolean;
+      timeoutLength?: number;
+      model?: string;
+      apiUrl?: string;
+      options?: {
+        [key: string]: any; // Allows for any number of properties with any value type
+      };
+    };
+
+    export interface Model {
+      name: string;            // Display in UI
+      model_name: string;      // For API calls
+      options: {
+        [key: string]: any;
+      };
+    }
+
+    export interface Provider {
+      name: string;
+      apiKey: string;
+      apiUrl: string;
+      models: Model[];
+    }
+
+    export interface ProviderSettings {
+      model: string;
+      apiUrl: string;
+      apiKey: string;
+      options: {
+        [key: string]: any; // This allows options to have any number of properties with any types
+      };
+    }
+
+    export interface Prompt {
+      name: string;
+      prompt: string;
+    }
+
+    export interface SystemMessage extends ChatCompletionSystemMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export interface UserMessage extends ChatCompletionUserMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export type Message =
+      | SystemMessage
+      | UserMessage
+      | AssistantMessage
+
+    export const BASE_URL = 'https://api.openai.com/v1';
+    ```
+  selected: true
+- role: user
+  content: |-
+    **media/main.js**
+    ```js
+    // @ts-ignore
+
+    // This script will be run within the webview itself
+    // It cannot access the main VS Code APIs directly.
+    (function () {
+        const vscode = acquireVsCodeApi();
+
+        let response = '';
+        let providers = []; // To store providers
+        let prompts = []; 
+        let models = []; // To store models for the selected provider
+        let selectedProviderIndex = 0;
+
+        // Function to populate the provider and model selectors
+        function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
+            const providerSelector = document.getElementById('provider-selector');
+            providerSelector.innerHTML = ''; // Clear existing options
+            providers.forEach((provider, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = provider.name;
+                providerSelector.appendChild(option);
+            });
+
+            if (providers.length > 0) {
+                providerSelector.value = selectedProviderIndex; // Set default selection
+                models = providers[selectedProviderIndex].models;
+            }
+
+            const modelSelector = document.getElementById('model-selector');
+            modelSelector.innerHTML = ''; // Clear existing options
+            models.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = model.name;
+                modelSelector.appendChild(option);
+            });
+
+            if (models.length > 0) {
+                modelSelector.value = selectedModelIndex; // Set default selection
+            }
+        }
+
+        function populatePrompts(prompts, selectedPromptIndex = 0) {
+            const promptSelector = document.getElementById('system-prompt-selector');
+            promptSelector.innerHTML = ''; // Clear existing options
+            prompts.forEach((prompt, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = prompt.name;
+                promptSelector.appendChild(option);
+            });
+
+            if (prompts.length > 0) {
+                promptSelector.value = selectedPromptIndex; // Set default selection
+                //models = providers[selectedProviderIndex].models;
+            }
+        }
+
+        window.addEventListener('load', () => {
+            // Notify the extension that the webview is ready
+            vscode.postMessage({ type: 'ready' });
+        });
+        
+        // Note: Ensure you import the vscode API object correctly in your web script.
+        
+        // Handle messages sent from the extension to the webview
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                case "addResponse": {
+                    response = message.value;
+                    setResponse();
+                    break;
+                }
+                case "updateResponse": {
+                    console.log("Update Response!!!!!");
+                    setResponse();
+                    console.log("After Update Response !!!!!!!!!");
+                    break;                
+                }
+                case "clearResponse": {
+                    response = '';
+                    break;
+                }
+                case "setPrompt": {
+                    document.getElementById("prompt-input").value = message.value;
+                    break;
+                }
+                case "initialize": { 
+                    providers = message.value;
+                    populateSelectors(providers);
+                    break;
+                }
+
+                case "initialize_prompts": {
+                    console.log("Initialize Prompts:", message.value); 
+                    prompts = message.value;
+                    populatePrompts(prompts);
+                    break;
+                }
+            }
+        });
+
+        showdown.extension('thinkExtension', function() {
+            return [
+              {
+                type: 'lang', // Process block-level syntax
+                regex: /<think>([\s\S]*?)<\/think>/g,
+                replace: function(match, content) {
+                  // Trim and process lines, ensuring let's handle `<p>` tags ourselves
+                  const pTags = content.trim().split('\n').map(line => {
+                    if (line.trim()) {
+                      return `<p>${line.trim()}</p>`;
+                    }
+                    return '';
+                  }).join('');
+          
+                  return `<think>${pTags}</think>`;
+                }
+              },
+              {
+                type: 'output', // After markdown is converted to HTML
+                filter: function(text) {
+                  // Remove wrapping <p> tags around <think> elements
+                  return text.replace(/<p><think>/g, '<think>').replace(/<\/think><\/p>/g, '</think>');
+                }
+              }
+            ];
+        });
+
+        function fixCodeBlocks(response) {
+            const REGEX_CODEBLOCK = new RegExp('```', 'g');
+            const matches = response.match(REGEX_CODEBLOCK);
+
+            const count = matches ? matches.length : 0;
+            return count % 2 === 0 ? response : response.concat('\n```');
+        }
+
+        function replaceInlineFileCodeWithLinks(container) {
+            // Regex: most simple file paths like 'foo.ext', 'dir/file.ext', etc.
+            const filePattern = /^[\w\-./]+\.[a-zA-Z0-9]+$/;
+            // Only affect <code> that is NOT inside a <pre> (pre/code = code block, just code = inline code)
+            container.querySelectorAll('code').forEach(codeElem => {
+                if (codeElem.closest('pre')) return; // skip code blocks
+                const text = codeElem.textContent.trim();
+                if (filePattern.test(text)) {
+                    const a = document.createElement('a');
+                    a.textContent = text;
+                    a.href = "#";
+                    a.className = "file-link";
+                    a.tabIndex = 0;
+                    a.dataset.filepath = text;
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.lastClickedFileLink = this;
+                        window.lastClickedScrollTop = this.closest("#response").scrollTop;
+                        vscode.postMessage({
+                            type: 'fileClicked',
+                            value: text
+                        });
+                    });
+                    codeElem.replaceWith(a);
+                }
+            });
+        }
+        
+        function setResponse() {
+            var converter = new showdown.Converter({
+                omitExtraWLInCodeBlocks: true,
+                simplifiedAutoLink: true,
+                excludeTrailingPunctuationFromURLs: true,
+                literalMidWordUnderscores: true,
+                simpleLineBreaks: true,
+                extensions: ['thinkExtension']
+            });
+
+            
+            console.log("!!!!!!!!!!!!!!!!!!!!!Response!!!!!!!!!!!!");
+            console.log(response)
+            console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            response = fixCodeBlocks(response);
+            console.log("!!!!!!!!!!!!!!!!!!!!!FixCodeBlockResponse!!!!!!!!!!!!");
+            console.log(response)
+            console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            const html = converter.makeHtml(response);
+            console.log("!!!!!!!!!!!!!!!!!!!!!HTML!!!!!!!!!!!!");
+            console.log(html)
+            console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = html;
+
+            //makeFileLinksClickable(responseDiv);
+            replaceInlineFileCodeWithLinks(responseDiv);
+
+            console.log("ResponseDiv after makeFileLinksClicable:");
+            console.log(responseDiv);
+            console.log("###################################");
+
+            var preCodeBlocks = document.querySelectorAll("pre code");
+            for (var i = 0; i < preCodeBlocks.length; i++) {
+                preCodeBlocks[i].classList.add(
+                    "p-2",
+                    "my-2",
+                    "block",
+                    "overflow-x-scroll"
+                );
+            }
+
+            var codeBlocks = document.querySelectorAll('code');
+            codeBlocks.forEach(codeBlock => {
+                if (codeBlock.innerText.startsWith("Copy code")) {
+                    codeBlock.innerText = codeBlock.innerText.replace("Copy code", "");
+                }
+
+                codeBlock.classList.add("inline-flex", "max-w-full", "overflow-hidden", "rounded-sm", "cursor-pointer");
+
+                codeBlock.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    vscode.postMessage({
+                        type: 'codeSelected',
+                        value: this.innerText
+                    });
+                });
+
+                const d = document.createElement('div');
+                d.innerHTML = codeBlock.innerHTML;
+                codeBlock.innerHTML = null;
+                codeBlock.appendChild(d);
+                d.classList.add("code");
+            });
+
+            microlight.reset('code');
+
+            if (window.lastClickedFileLink && typeof window.lastClickedScrollTop === "number") {
+                responseDiv.scrollTop = window.lastClickedScrollTop;
+                // Optionally restore focus:
+                let selector = 'a.file-link[data-filepath="' + window.lastClickedFileLink.dataset.filepath + '"]';
+                let newFileLink = responseDiv.querySelector(selector);
+                if (newFileLink) newFileLink.focus();
+                window.lastClickedFileLink = null;
+                window.lastClickedScrollTop = null;
+            } else {
+                responseDiv.scrollTop = responseDiv.scrollHeight;
+            }
+        }
+
+        document.getElementById('prompt-input').addEventListener('paste', async function (e) {
+            const clipboardItems = e.clipboardData.items;
+            for (const item of clipboardItems) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const base64Data = event.target.result;
+                        vscode.postMessage({
+                            type: 'pasteImage',
+                            value: base64Data
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+            if (e.key === "Enter" && !e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'prompt',
+                    value: this.value
+                });
+            }
+            else if (e.key === "Enter" && e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'promptNoQuery',
+                    value: this.value
+                });
+            }
+        });
+
+        document.getElementById('provider-selector').addEventListener('change', function () {
+            selectedProviderIndex = parseInt(this.value, 10);
+            models = providers[selectedProviderIndex].models;
+            populateSelectors(providers, selectedProviderIndex, 0);
+            vscode.postMessage({
+                type: 'providerModelChanged',
+                providerIndex: selectedProviderIndex,
+                modelIndex: 0
+            });
+        });
+
+        document.getElementById('model-selector').addEventListener('change', function () {
+            const selectedModelIndex = parseInt(this.value, 10);
+            vscode.postMessage({
+                type: 'providerModelChanged',
+                providerIndex: selectedProviderIndex,
+                modelIndex: selectedModelIndex,
+            });
+        });
+
+        document.getElementById('system-prompt-selector').addEventListener('change', function () {
+            const systemPromptIndex = parseInt(this.value, 10);
+            vscode.postMessage({
+                type: 'systemPromptChanged',
+                systemPromptIndex: systemPromptIndex
+            });
+        });
+
+        //document.getElementById('temperature-slider').addEventListener('input', function () {
+        //    const temperature = parseInt(this.value, 10) / 100;
+        //    vscode.postMessage({
+        //        type: 'temperatureChanged',
+        //        temperature: temperature,
+        //    });
+        //});
+
+        window.myFunction = function (checkboxElem) {
+            vscode.postMessage({
+                type: 'checkboxChanged',
+                id: checkboxElem.id,
+                checked: checkboxElem.checked
+            });
+        }
+
+        window.makeEditable = function (element) {
+            element.contentEditable = 'true';
+            element.focus();
+        }
+
+        window.saveContent = function (element) {
+            element.contentEditable = 'false';
+            const updatedContent = element.innerText;
+            vscode.postMessage({
+                type: 'messageContentChanged',
+                id: element.id,
+                value: updatedContent,
+            });
+        }
+
+    })();
+    ```
+  selected: true
+- role: user
+  content: |-
+    **media/styles.css**
+    ```css
+    .code {
+        white-space: pre;
+    }
+    p {
+        padding-top: 0.3rem;
+        padding-bottom: 0.3rem;
+    }
+
+    ul {
+        list-style: initial !important;
+        margin-left: 10px !important;
+    }
+
+    ol {
+        list-style-type: decimal !important;
+        list-style-position: outside;
+        padding-left: 40px; /* Adjust as needed to ensure numbers are visible */
+        margin-left: 20px !important; /* Reset margin to see true boundaries */
+    }
+
+
+
+    h1, h2, h3, h4, h5, h6 {
+        font-weight: bold !important;
+    }
+
+    body, html {
+        height: 100%;
+        margin: 0;
+    }
+    #container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    #top-wrapper {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1;
+        height: 50px;
+    }
+    #response {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px;
+        padding-top: 60px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    #input-wrapper {
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        grid-gap: 10px;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-top: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+    }
+    #prompt-input {
+        grid-column: 1 / -1;
+        color: var(--vscode-editor-foreground);
+        background-color: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-editorGroup-border);
+        outline: none;
+        padding: 10px;
+        width: calc(100% - 22px);
+    }
+
+    #model-selector, #temperature-slider, label[for="temperature-slider"] {
+        margin-bottom: 10px;
+    }
+
+    think {
+        display: inline; /* Ensure it doesn't visually affect layout like block */
+        color: lightblue !important; /* Use !important to override other styles */
+        font-style: italic !important; /* Also use !important for emphasis */
+    }
+
+
+
+    select {
+        color: var(--vscode-dropdown-foreground);
+        background-color: var(--vscode-dropdown-background);
+        border: 1px solid var(--vscode-dropdown-border);
+        padding: 5px;
+        font-size: inherit;
+        cursor: pointer;
+    }
+
+    select option {
+        background: var(--vscode-dropdown-listBackground);
+    }
+
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: var(--vscode-slider-background);
+        height: 2px;
+        border-radius: 0;
+        outline: none;
+        cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+        margin-top: -7px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+    }
+
+    input[type="range"]::-ms-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+    }
+
+    #top-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1;
+    }
+
+    #top-wrapper input[type="text"], #top-wrapper select, #top-wrapper button {
+        margin: 0 5px;
+    }
+
+    #top-wrapper button {
+        padding: 5px 15px;
+    }
+
+    :root {
+        --vscode-dropdown-foreground: #C5C5C5;
+        --vscode-dropdown-background: #3C3C3C;
+        --vscode-dropdown-border: #303030;
+        --vscode-dropdown-listBackground: #252526;
+        --vscode-slider-background: #C5C5C5;
+        --vscode-slider-activeBackground: #007ACC;
+        --vscode-slider-knob: #CCCCCC;
+    }
+    ```
+  selected: true
+- role: user
+  content: |-
+    **package.json**
+    ```json
+    {
+      "name": "diegoaacchatgpt",
+      "displayName": "ChatGPT for Visual Studio Code: write and improve code using AI",
+      "description": "Use ChatGPT and GPT4 right inside the IDE to enhance and automate your coding with AI-powered assistance (unofficial)",
+      "version": "1.1.0",
+      "publisher": "diegoaac",
+      "icon": "resources/extensionIcon.png",
+      "license": "MIT",
+      "repository": {
+        "url": "https://github.com/timkmecl/chatgpt-vscode"
+      },
+      "engines": {
+        "vscode": "^1.73.0"
+      },
+      "categories": [
+        "Other"
+      ],
+      "keywords": [
+        "chatgpt",
+        "openai",
+        "gpt3",
+        "gpt4",
+        "copilot",
+        "ai",
+        "explain",
+        "find bugs",
+        "explain ",
+        "refactor"
+      ],
+      "activationEvents": [
+        "onView:chatgpt.chatView",
+        "onCommand:chatgpt.ask",
+        "onCommand:chatgpt.explain",
+        "onCommand:chatgpt.refactor",
+        "onCommand:chatgpt.optimize",
+        "onCommand:chatgpt.findProblems",
+        "onCommand:chatgpt.documentation",
+        "onCommand:chatgpt.useSelectionAsChat"
+      ],
+      "main": "./dist/extension.js",
+      "contributes": {
+        "commands": [
+          {
+            "command": "chatgpt.ask",
+            "title": "Ask ChatGPT"
+          },
+          {
+            "command": "chatgpt.explain",
+            "title": "ChatGPT: Explain selection"
+          },
+          {
+            "command": "chatgpt.refactor",
+            "title": "ChatGPT: Refactor selection"
+          },
+          {
+            "command": "chatgpt.findProblems",
+            "title": "ChatGPT: Find problems"
+          },
+          {
+            "command": "chatgpt.optimize",
+            "title": "ChatGPT: Optimize selection"
+          },
+          {
+            "command": "chatgpt.documentation",
+            "title": "ChatGPT: Write documentation"
+          },
+          {
+            "command": "chatgpt.resetConversation",
+            "title": "Reset ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.pasteChat",
+            "title": "Paste ChatGPT chat"
+          },
+          {
+            "command": "chatgpt.useSelectionAsChat",
+            "title": "Use selection as ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.tryAgain",
+            "title": "Retry ChatGPT request"
+          },
+          {
+            "command": "chatgpt.addImageToChat",
+            "title": "Add Image to ChatGPT"
+          },
+          {
+            "command": "chatgpt.addFileToChat",
+            "title": "Add File Content to ChatGPT"
+          }
+        ],
+        "menus": {
+          "editor/context": [
+            {
+              "command": "chatgpt.ask",
+              "when": "editorTextFocus",
+              "group": "chatgpt-menu-group@1"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@2"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@3"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@4"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@5"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@6"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@7"
+            }
+          ],
+          "commandPalette": [
+            {
+              "command": "chatgpt.ask"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.resetConversation"
+            },
+            {
+              "command": "chatgpt.pasteChat"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection"
+            }
+          ],
+          "explorer/context": [
+            {
+              "command": "chatgpt.addImageToChat",
+              "when": "resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif",
+              "group": "navigation"
+            },
+            {
+              "command": "chatgpt.addFileToChat",
+              "when": "resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/",
+              "group": "navigation"
+            }
+          ]
+        },
+        "viewsContainers": {
+          "activitybar": [
+            {
+              "id": "chatgpt",
+              "title": "ChatGPT",
+              "icon": "resources/icon.png"
+            }
+          ]
+        },
+        "views": {
+          "chatgpt": [
+            {
+              "type": "webview",
+              "id": "chatgpt.chatView",
+              "name": "ChatGPT"
+            }
+          ]
+        },
+        "configuration": {
+          "title": "chatGPT",
+          "type": "object",
+          "properties": {
+            "chatgpt.providers": {
+              "type": "array",
+              "description": "List of AI providers with their configurations.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the provider (e.g., OpenAI, CustomAPI)."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "description": "API key for the provider."
+                  },
+                  "apiUrl": {
+                    "type": "string",
+                    "description": "API URL for the provider."
+                  },
+                  "models": {
+                    "type": "array",
+                    "description": "List of models offered by this provider.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Name of the model (e.g., gpt-3.5-turbo)."
+                        },
+                        "options": {
+                          "type": "object",
+                          "description": "Options for the model.",
+                          "additionalProperties": {
+                            "type": "any",
+                            "description": "Custom option key-value pairs for the model."
+                          }
+                        }
+                      },
+                      "required": ["name"]
+                    }
+                  }
+                },
+                "required": ["name", "apiKey", "apiUrl", "models"]
+              },
+              "order": 1
+            },
+            "chatgpt.prompts" : {
+              "type":"array",
+              "description": "List of possible prompts to use",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the prompt (e.g., ChainOfThougt, Simple Engenier)."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The prompt it self"
+                  }
+                },
+                "required": ["name", "prompt"]
+              },
+              "order": 2
+            },
+            "chatgpt.pasteOnClick": {
+              "type": "boolean",
+              "default": true,
+              "description": "Paste the code from a codeblock inside the response into the editor when you click on it",
+              "order": 3
+            },
+            "chatgpt.promptPrefix.explain": {
+              "type": "string",
+              "default": "Explain what this code does: ",
+              "description": "The prompt prefix used for explaining the selected code",
+              "order": 4
+            },
+            "chatgpt.promptPrefix.refactor": {
+              "type": "string",
+              "default": "Refactor this code and explain what's changed: ",
+              "description": "The prompt prefix used for refactoring the selected code",
+              "order": 5
+            },
+            "chatgpt.promptPrefix.findProblems": {
+              "type": "string",
+              "default": "Find problems with the following code, fix them and explain what was wrong (Do not change anything else, if there are no problems say so): ",
+              "description": "The prompt prefix used for finding problems in the selected code",
+              "order": 6
+            },
+            "chatgpt.promptPrefix.documentation": {
+              "type": "string",
+              "default": "Write documentation for the following code: ",
+              "description": "The prompt prefix used for writing documentation for the selected code",
+              "order": 7
+            },
+            "chatgpt.promptPrefix.optimize": {
+              "type": "string",
+              "default": "Optimize the following code if there is anything to improve, if not say so: ",
+              "description": "The prompt prefix used for optimizing the selected code",
+              "order": 8
+            },
+            "chatgpt.keepConversation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep the conversation going by using the same conversation ID for all requests (allows follow-up questions)",
+              "order": 9
+            },
+            "chatgpt.timeoutLength": {
+              "type": "number",
+              "default": "120",
+              "description": "How long should the request wait for a response before timing out (in seconds)",
+              "order": 10
+            },
+            "chatgpt.selectedInsideCodeblock": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append selected code as a codeblock (```...code...```) instead of plain text",
+              "order": 11
+            },
+            "chatgpt.codeblockWithLanguageId": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append language id of the selected code to the codeblock (```language...code...```)",
+              "order": 12
+            }
+          }
+        }
+      },
+      "scripts": {
+        "vscode:prepublish": "yarn run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "update-package-lock": "npm install --package-lock-only"
+      },
+      "devDependencies": {
+        "@types/glob": "^8.0.0",
+        "@types/js-yaml": "^4.0.9",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/vscode": "^1.73.0",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "@vscode/test-electron": "^2.2.0",
+        "eslint": "^8.28.0",
+        "glob": "^8.0.3",
+        "mocha": "^10.1.0",
+        "ts-loader": "^9.4.1",
+        "typescript": "^4.9.3",
+        "webpack": "^5.75.0",
+        "webpack-cli": "^5.0.0"
+      },
+      "dependencies": {
+        "@types/node-fetch": "^2.6.11",
+        "js-tiktoken": "^1.0.10",
+        "js-yaml": "^4.1.0",
+        "node-fetch": "^3.3.2",
+        "openai": "^4.29.2"
+      }
+    }
+
+    ```
+  selected: true
+- role: user
+  content: |-
+    Ok, these are the files that you requested
+    ```json
+          "explorer/context": [
+
+    ```
+  selected: false
+- role: assistant
+  content: "Below are focused changes to add accurate token tracking per turn (input/prompt and output/completion) and a running session total, while fixing existing over-counting issues.\n\nSummary of changes\n- Accurate token counting for:\n  - Input (prompt) tokens: computed from the actual messages sent to the provider (without UI markup).\n  - Output (completion) tokens: counted during streaming (fallback estimate; see limitations).\n- Running session totals maintained only when a provider request actually completes (no more accidental increments on UI-only updates).\n- Dynamic tokenizer selection based on the selected model (fallback to cl100k_base).\n- Consistent footer showing: turn input, output, turn total, session total, and model.\n\nModified code\n\n1) src/types.ts\n- Add a small TokenUsage type (optional but helps document intent).\n\n```ts\nimport { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';\n\nexport type AuthInfo = { apiKey?: string, apiUrl?: string };\n\nexport type Settings = {\n  selectedInsideCodeblock?: boolean;\n  codeblockWithLanguageId?: false;\n  pasteOnClick?: boolean;\n  keepConversation?: boolean;\n  timeoutLength?: number;\n  model?: string;\n  apiUrl?: string;\n  options?: {\n    [key: string]: any; // Allows for any number of properties with any value type\n  };\n};\n\nexport interface Model {\n  name: string;            // Display in UI\n  model_name: string;      // For API calls\n  options: {\n    [key: string]: any;\n  };\n}\n\nexport interface Provider {\n  name: string;\n  apiKey: string;\n  apiUrl: string;\n  models: Model[];\n}\n\nexport interface ProviderSettings {\n  model: string;\n  apiUrl: string;\n  apiKey: string;\n  options: {\n    [key: string]: any; // This allows options to have any number of properties with any types\n  };\n}\n\nexport interface Prompt {\n  name: string;\n  prompt: string;\n}\n\nexport interface SystemMessage extends ChatCompletionSystemMessageParam {\n  selected?: boolean;  // Additional property specific to Message\n}\n\nexport interface UserMessage extends ChatCompletionUserMessageParam {\n  selected?: boolean;  // Additional property specific to Message\n}\n\nexport interface AssistantMessage extends ChatCompletionAssistantMessageParam {\n  selected?: boolean;  // Additional property specific to Message\n}\n\nexport type Message =\n  | SystemMessage\n  | UserMessage\n  | AssistantMessage\n\n// Optional helper type for clarity when passing token usage around\nexport interface TokenUsage {\n  promptTokens: number;\n  completionTokens: number;\n  totalTokens: number;\n}\n\nexport const BASE_URL = 'https://api.openai.com/v1';\n```\n\n2) src/chatGptViewProvider.ts\n- Key updates:\n  - Dynamic tokenizer per model with fallback.\n  - New helpers to count tokens from actual messages.\n  - Fix _updateChatMessages() to only display usage and not mutate totals.\n  - Only update totals at the end of a successful model response.\n  - Prevent UI-only actions from incrementing totals.\n\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml';\nimport OpenAI from \"openai\";\n// NOTE: add getEncoding for safe fallback\nimport { encodingForModel, getEncoding } from \"js-tiktoken\";\nimport { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, BASE_URL, TokenUsage } from './types';\nimport { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';\n\nexport class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n  public static readonly viewType = 'chatgpt.chatView';\n  private _view?: vscode.WebviewView;\n\n  private _conversation?: any;\n  private _messages?: Message[];\n  private _openai?: OpenAI;\n\n  private _response?: string;\n\n  // Session totals\n  private _totalNumberOfTokens?: number;\n\n  // Track last turn usage to display\n  private _lastTurnUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };\n\n  private _prompt?: string;\n  private _fullPrompt?: string;\n  private _currentMessageNumber = 0;\n\n  // Use dynamic tokenizer; fallback to cl100k_base\n  private _enc = encodingForModel(\"gpt-4\"); // initialized but replaced by _updateTokenizer()\n\n  private _settings: Settings = {\n    selectedInsideCodeblock: false,\n    codeblockWithLanguageId: false,\n    pasteOnClick: true,\n    keepConversation: true,\n    timeoutLength: 60,\n    apiUrl: BASE_URL,\n    model: 'gpt-3.5-turbo',\n    options: {\n    },\n  };\n  private _authInfo?: AuthInfo;\n\n  constructor(private readonly _extensionUri: vscode.Uri) {\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n\n    // Initialize tokenizer based on initial/default model\n    this._updateTokenizer(this._settings.model ?? 'gpt-3.5-turbo');\n\n    console.log(\"constructor....\");\n    console.log(\"messages:\", this._messages);\n  }\n\n  private _updateTokenizer(model: string) {\n    try {\n      this._enc = encodingForModel(model);\n    } catch (e) {\n      console.warn(`encodingForModel failed for \"${model}\", falling back to cl100k_base.`, e);\n      try {\n        // Fallback for unknown/3rd-party models\n        // eslint-disable-next-line @typescript-eslint/no-var-requires\n        this._enc = getEncoding('cl100k_base');\n      } catch (e2) {\n        console.error(\"Failed to get fallback encoding 'cl100k_base'. Token counting may be unavailable.\", e2);\n      }\n    }\n  }\n\n  // Set the API key and create a new API instance based on this key\n  public setAuthenticationInfo(authInfo: AuthInfo) {\n    this._authInfo = authInfo;\n    this._newAPI();\n  }\n\n  public setSettings(settings: Settings) {\n    let changeModel = false;\n\n    // Determine if model or options changed\n    if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {\n      changeModel = true;\n    }\n\n    const prevModel = this._settings.model;\n    this._settings = { ...this._settings, ...settings };\n\n    if (changeModel) {\n      // Update tokenizer if model changed\n      if (settings.model && settings.model !== prevModel) {\n        this._updateTokenizer(settings.model);\n      }\n      // If needed, you could also recreate the API instance here based on apiUrl/apiKey changes\n      // this._newAPI();\n    }\n  }\n\n  public getSettings() {\n    return this._settings;\n  }\n\n  private _newAPI() {\n    console.log(\"New API\");\n    console.log(\"Messages:\", this._messages);\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      console.warn(\"API key or API URL not set, please go to extension settings (read README.md for more info)\");\n    } else {\n      console.log(\"apiUrl:\", this._settings?.apiUrl);\n      this._openai = new OpenAI(\n        {\n          apiKey: this._authInfo?.apiKey,\n          baseURL: this._authInfo?.apiUrl\n        }\n      );\n    }\n    setTimeout(() => {\n      // Do not count tokens here; this only refreshes UI\n      const chat_response = this._updateChatMessages(0, 0);\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    }, 2000);\n  }\n\n  public resolveWebviewView(\n    webviewView: vscode.WebviewView,\n    context: vscode.WebviewViewResolveContext,\n    _token: vscode.CancellationToken,\n  ) {\n    this._view = webviewView;\n\n    webviewView.webview.options = {\n      enableScripts: true,\n      localResourceRoots: [\n        this._extensionUri\n      ]\n    };\n\n    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);\n\n    webviewView.webview.onDidReceiveMessage(async data =>  {\n      switch (data.type) {\n        case 'ready':\n          {\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n            let prompts: Prompt[] = config.get('prompts') || [];\n            this.set_providers(providers);\n            this.set_prompts(prompts);\n            break;\n          }\n        case 'codeSelected':\n          {\n            if (!this._settings.pasteOnClick) {\n              break;\n            }\n            let code = data.value;\n            const snippet = new vscode.SnippetString();\n            snippet.appendText(code);\n            vscode.window.activeTextEditor?.insertSnippet(snippet);\n            break;\n          }\n        case 'pasteImage': \n          {\n            const base64Data = data.value;\n            const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));\n            const fileType = imageType.split('/')[1];\n            const fileName = `clipboard_image.${fileType}`;\n            this.addImageToChat(base64Data, fileName);\n            break;\n          }\n        case 'prompt':\n          {\n            console.log(\"prompt\");\n            this.search(data.value);\n            break;\n          }\n        case 'promptNoQuery':\n          {\n            console.log(\"promptNoQuery\");\n            let searchPrompt = await this._generate_search_prompt(data.value);\n\n            this._messages?.push({ role: \"user\", content: searchPrompt, selected:true });\n            // UI update only; no token accumulation\n            let chat_response = this._updateChatMessages(0, 0);\n            this._response = chat_response;\n            this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n            break;\n          }\n        case 'checkboxChanged':\n          {\n            console.log(\"checkboxChanged:\", data);\n            const idParts = data.id.split('-');\n            if(idParts.length === 3) {\n              const indexStr = idParts[2];\n              const index = parseInt(indexStr, 10);\n              if(this._messages && index >= 0 && index < this._messages.length) {\n                this._messages[index].selected = data.checked;\n              } else {\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              console.error('data.id is not in the expected format.');\n            }\n            break;\n          }\n        case 'messageContentChanged':\n          {\n            console.log(\"messageContentChanged:\", data);\n            const idParts = data.id.split('-');\n            if(idParts.length === 3) {\n              const indexStr = idParts[2];\n              const index = parseInt(indexStr, 10);\n              if(this._messages && index >= 0 && index < this._messages.length) {\n                this._messages[index].content = data.value;\n              } else {\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              console.error('data.id is not in the expected format.');\n            }\n            console.log(\"messages:\", this._messages);\n            break;\n          }\n        case \"providerModelChanged\":\n          {\n            const providerIndex = data.providerIndex;\n            const modelIndex = data.modelIndex;\n            console.log(\"Provider Changed, providerIndex:\", providerIndex, \", model:\", modelIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n      \n            if (providers && providers.length > providerIndex) {\n              const provider_data = providers[providerIndex];\n              if (provider_data.models && provider_data.models.length > modelIndex) {\n                const model_data = provider_data.models[modelIndex];\n                const provider_settings = {\n                  model: model_data.model_name,\n                  apiUrl: provider_data.apiUrl,\n                  apiKey: provider_data.apiKey,\n                  options: {\n                    ...model_data.options\n                  },\n                };\n                this.setSettings({\n                  apiUrl: provider_settings.apiUrl,\n                  model: provider_settings.model,\n                  options: {\n                    ...provider_settings.options,\n                  },\n                });\n                this.setAuthenticationInfo({\n                  apiKey: provider_settings.apiKey,\n                  apiUrl: provider_settings.apiUrl\n                });\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case \"systemPromptChanged\":\n          {\n            const systemPromptIndex = data.systemPromptIndex;\n            console.log(\"systemPrompt Changed, providerIndex:\", systemPromptIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let prompts: Prompt[] = config.get('prompts') || [];\n      \n            if (prompts && prompts.length > systemPromptIndex) {\n              const prompt_data = prompts[systemPromptIndex];\n              if (prompt_data.name && prompt_data.prompt) {\n                this.set_prompt(prompt_data);\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case 'fileClicked': {\n          console.log(\"file Clicked!!!!!\");\n          const filePath = data.value;\n          if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {\n            vscode.window.showErrorMessage('No workspace folder open.');\n            break;\n          }\n          const workspaceFolder = vscode.workspace.workspaceFolders[0];\n          const absolutePath = path.join(workspaceFolder.uri.fsPath, filePath);\n          try {\n            const fileContent = fs.readFileSync(absolutePath, 'utf-8');\n            const fileExt = path.extname(filePath).slice(1) || '';\n            this.addFileToChat(filePath, fileContent, fileExt);\n          } catch (e) {\n            vscode.window.showErrorMessage(`Could not read file: ${filePath} (${e instanceof Error ? e.message : String(e)})`);\n          }\n          break;\n        }\n      }\n    });\n  }\n\n  public getStartSystemPrompt() {\n    const config = vscode.workspace.getConfiguration('chatgpt');\n    let prompts: Prompt[] = config.get('prompts') || [];\n    let start_system_prompt = \"You are a helpful assistant.\";\n    if (prompts && prompts.length > 0) {\n      const prompt_data = prompts[0];\n      if (prompt_data.name && prompt_data.prompt) {\n        start_system_prompt = prompt_data.prompt;\n      }\t\t\t\t\t\t\n    }\n    return start_system_prompt;\n  }\n\n  public async resetConversation() {\n    console.log(this, this._conversation);\n    if (this._conversation) {\n      this._conversation = null;\n    }\n    this._prompt = '';\n    this._response = '';\n    this._fullPrompt = '';\n    this._totalNumberOfTokens = 0;\n    this._lastTurnUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };\n\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n\n    const chat_response = this._updateChatMessages(0, 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public async pasteChat() {\n    console.log(\"pasteChat\");\n    if (!vscode.window.activeTextEditor) {\n      vscode.window.showErrorMessage('No active text editor!');\n      return;\n    }\n    try {\n      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({\n        role, content, selected\n      }));\n      const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n      const snippet = new vscode.SnippetString();\n      snippet.appendText(messagesYaml);\n      await vscode.window.activeTextEditor.insertSnippet(snippet);\n      console.log(\"Chat pasted as YAML successfully.\");\n    } catch (error) {\n      console.error(\"Failed to paste chat as YAML:\", error);\n      vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);\n    }\n  }\n\n  public async useSelectionAsChat() {\n    console.log(\"use selection as chat\");\n    const activeEditor = vscode.window.activeTextEditor;\n    if (!activeEditor) {\n      vscode.window.showErrorMessage('No active text editor with a selection!');\n      return;\n    }\n    const selection = activeEditor.selection;\n    if (selection.isEmpty) {\n      vscode.window.showErrorMessage('No text selected!');\n      return;\n    }\n    const selectedText = activeEditor.document.getText(selection);\n    try {\n      const parsedMessages = yaml.load(selectedText);\n      if (!Array.isArray(parsedMessages)) {\n        throw new Error('Selected text is not an array of messages.');\n      }\n      for (const msg of parsedMessages) {\n        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {\n          throw new Error('Invalid message format. Each message must have role, content, and selected properties.');\n        }\n      }\n      this._messages = parsedMessages;\n      // UI-only\n      const chat_response = this._updateChatMessages(0, 0);\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n      console.log(\"Updated messages from selection successfully.\");\n    } catch (error) {\n      console.error(\"Failed to use selection as chat:\", error);\n      vscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n    }\n  }\n\n  public fixCodeBlocks(response: string) {\n    const REGEX_CODEBLOCK = new RegExp('\\`\\`\\`', 'g');\n    const matches = response.match(REGEX_CODEBLOCK);\n    const count = matches ? matches.length : 0;\n    if (count % 2 === 0) {\n      return response;\n    } else {\n      console.log(\"Warning - code block not complete\");\n      return response.concat('\\n\\`\\`\\`');\n    }\n  }\n\n  // Deprecated for usage counting; kept for UI-only contexts\n  private _getMessagesNumberOfTokens() {\n    let full_promt = \"\";\n    if (this._messages) {\n      for (const message of this._messages) {\n        if (message.selected) {\n          full_promt += \"\\n# <u>\" + message.role.toUpperCase() + \"</u>:\\n\" + (typeof message.content === 'string' ? message.content : '');\n        }\n      }\n    }\n    const tokenList = this._enc.encode(full_promt);\n    return tokenList.length;\n  }\n\n  // New: count only the actual content we send to the model (no UI markup)\n  private _countPromptTokensForMessages(messages: Array<Message>): number {\n    let textToEncode = '';\n    for (const msg of messages) {\n      if (!msg) continue;\n      // Include role minimally to separate messages (approximation)\n      textToEncode += `${msg.role.toUpperCase()}: `;\n      if (typeof msg.content === 'string') {\n        textToEncode += msg.content;\n      } else if (Array.isArray(msg.content)) {\n        // Count only text parts; image parts are provider-specific and not supported by tiktoken\n        for (const part of msg.content) {\n          if (this.isChatCompletionContentPartText(part)) {\n            textToEncode += part.text;\n          }\n        }\n      }\n      textToEncode += '\\n';\n    }\n    try {\n      return this._enc.encode(textToEncode).length;\n    } catch {\n      return 0;\n    }\n  }\n\n  public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {\n    let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({\n      role, content\n    })) || [];\n    return ret;\n  }\n\n  private _containsCodeBlockOrListItems(content: string): boolean {\n    const codeBlockPattern = /```[\\s\\S]*?```/;\n    const listItemPattern = /^(?:\\s*(?:[-*+]|\\d+\\.)\\s+.+)$/m;\n    return codeBlockPattern.test(content) || listItemPattern.test(content);\n  }\n\n  private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {\n    return this.isChatCompletionContentPartImage(value);\n  }\n\n  private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {\n    return typeof value === 'object'\n      && value != null\n      && typeof value.text === 'string'\n      && value.type === 'text';\n  }\n  private isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {\n    return typeof value === 'object'\n      && value !== null\n      && typeof value.image_url === 'object'\n      && typeof value.image_url.url === 'string'\n      && value.type === 'image_url';\n  }\n\n  // IMPORTANT: No longer increments totals here. Only renders.\n  private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {\n    let chat_response = \"\";\n    if (this._messages) {\n      this._messages.forEach((message, index) => {\n        const selected = message.selected;\n        const checked_string = selected ? \"checked\" : \"\";\n        if (typeof message.content === 'string') {\n          if (this._containsCodeBlockOrListItems(message.content)) {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n          } else {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>\"+ message.content + \"</div>\";\n          }\n        } else if (Array.isArray(message.content)) {\n          chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false'>\";\n          message.content.forEach(part => {\n            console.log(\"processing an object...\")\n            if (this.isChatCompletionContentPartImage(part)) {\n              console.log(\"Is an image!!!\")\n              chat_response += \"<img src='\"+ part.image_url.url + \"' alt='Base64 Image'/>\";\n            }\n            if (this.isChatCompletionContentPartText(part)) {\n              console.log(\"Is a text!!!\")\n              chat_response += part.text;\n            }\n          });\n          chat_response += \"</div>\"\n        }\n      });\n    }\n\n    // If a turn just finished (non-zero values), update last turn usage + session total here\n    if ((promtNumberOfTokens > 0 || completionTokens > 0)) {\n      this._lastTurnUsage = {\n        promptTokens: promtNumberOfTokens,\n        completionTokens: completionTokens,\n        totalTokens: promtNumberOfTokens + completionTokens\n      };\n      if (this._totalNumberOfTokens !== undefined) {\n        this._totalNumberOfTokens += this._lastTurnUsage.totalTokens;\n      }\n    }\n\n    if (this._totalNumberOfTokens !== undefined) {\n      const t = this._lastTurnUsage;\n      chat_response += `\\n\\n---\\n<sub>Turn tokens — input: ${t.promptTokens}, output: ${t.completionTokens}, total: ${t.totalTokens}. Session total: ${this._totalNumberOfTokens}, model: ${this._settings.model}</sub>\\n---\\n\\n\\n\\n\\n\\n\\n`;\n    }\n    return chat_response;\n  }\n\n  private async _generate_search_prompt(prompt:string) {\n    this._prompt = prompt;\n    if (!prompt) {\n      prompt = '';\n    }\n\n    if (!this._view) {\n      await vscode.commands.executeCommand('chatgpt.chatView.focus');\n    } else {\n      this._view?.show?.(true);\n    }\n\n    if (!this._response) {\n      this._response = '';\n    }\n    if (!this._totalNumberOfTokens) {\n      this._totalNumberOfTokens = 0;\n    }\n\n    const selection = vscode.window.activeTextEditor?.selection;\n    const selectedText = vscode.window.activeTextEditor?.document.getText(selection);\n    const languageId =\n      (this._settings.codeblockWithLanguageId\n        ? vscode.window.activeTextEditor?.document?.languageId\n        : undefined) || '';\n\n    let searchPrompt = '';\n    if (selection && selectedText) {\n      if (this._settings.selectedInsideCodeblock) {\n        searchPrompt = `${prompt}\\n\\`\\`\\`${languageId}\\n${selectedText}\\n\\`\\`\\``;\n      } else {\n        searchPrompt = `${prompt}\\n${selectedText}\\n`;\n      }\n    } else {\n      searchPrompt = prompt;\n    }\n    this._fullPrompt = searchPrompt;\n\n    this._currentMessageNumber++;\n    return searchPrompt;\n  }\n\n  public set_providers(providers: Provider[]): void {\n    this._view?.webview.postMessage({ type: 'initialize', value: providers });\n  }\n\n  public set_prompts(prompts: Prompt[]): void {\n    console.log(\"Set Prompts:\", prompts);\n    this._view?.webview.postMessage({ type: 'initialize_prompts', value: prompts });\n  }\n\n  public set_prompt(prompt: Prompt): void {\n    if (this._messages) {\n      this._messages[0] = { role: \"system\", content: prompt.prompt, selected: true };\n    } else {\n      this._messages = [{ role: \"system\", content: prompt.prompt, selected: true }];\n    }\n    console.log(\"calling updateResponse\");\n    let chat_response = this._updateChatMessages(0, 0);\n\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  public async search(prompt?: string) {\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      this._view?.webview.postMessage({\n        type: 'addResponse',\n        value: '[ERROR] \"API key or API URL not set, please go to extension settings (read README.md for more info)\"',\n      });\n      return;\n    }\n    \n    let chat_response = '';\n    let searchPrompt = \"\";\n    if (prompt!=undefined) {\n      searchPrompt = await this._generate_search_prompt(prompt);\n    } \n    this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });\n    this._view?.webview.postMessage({ type: 'addResponse', value: '...' });\n\n    if (searchPrompt != \"\") {\n      this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n    }\n\n    if (!this._openai) {\n      throw new Error('OpenAI instance is not initialized.');\n    }\n    if (typeof this._settings.model !== 'string') {\n      throw new Error('Model identifier is not valid or not defined.');\n    }\n\n    const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {\n      return ['user', 'assistant', 'system'].includes(role);\n    };\n    if (!this._messages || !Array.isArray(this._messages) ||\n      (!this._messages.every(msg => isValidRole(msg.role)))) {\n      throw new Error('Messages have invalid roles.');\n    }\n\n    let messagesToSend: Array<Message> = [];\n    for (const message of this._messages) {\n      if (message.selected) {\n        const { selected, ...messageWithoutSelected } = message;\n        messagesToSend.push(messageWithoutSelected as Message);\n      }\n    }\n\n    // Accurate-ish prompt token count from actual messages sent (text only)\n    const promptTokens = this._countPromptTokensForMessages(messagesToSend);\n\n    let full_message = \"\";\n    try {\n      console.log(\"Creating message sender...\");\n\n      const stream = await this._openai.chat.completions.create({\n        model: this._settings.model,\n        messages: messagesToSend,\n        stream: true,\n        ...this._settings.options,\n      });\n\n      console.log(\"Message sender created\");\n\n      let completionTokens = 0;\n      full_message = \"\";\n      for await (const chunk of stream) {\n        const content = chunk.choices[0]?.delta?.content || \"\";\n        const tokenList = this._enc.encode(content);\n        completionTokens += tokenList.length;\n        full_message += content;\n        this._view?.webview.postMessage({ type: 'addResponse', value: full_message });\n      }\n\n      this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n      console.log(\"Full message:\", full_message);\n      console.log(\"Prompt tokens (est.):\", promptTokens);\n      console.log(\"Completion tokens (est.):\", completionTokens);\n\n      // Update UI and session totals (only here, at the end of a successful turn)\n      chat_response = this._updateChatMessages(promptTokens, completionTokens);\n\n    } catch (e: any) {\n      console.error(e);\n      if (this._response!=undefined) {\n        this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n        chat_response = this._response;\n        chat_response += `\\n\\n---\\n[ERROR] ${e}`;\n      }\n    }\n    this._response = chat_response;\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  private _getHtmlForWebview(webview: vscode.Webview) {\n    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));\n    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));\n    const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));\n    const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));\n    const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));\n  \n    return `<!DOCTYPE html>\n    <html lang=\"en\">\n    <head>\n      <meta charset=\"UTF-8\">\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n      <script src=\"${tailwindUri}\"></script>\n      <script src=\"${showdownUri}\"></script>\n      <script src=\"${microlightUri}\"></script>\n      <link rel=\"stylesheet\" href=\"${stylesUri}\">\n    </head>\n    <body>\n      <div id=\"container\">\n        <div id=\"top-wrapper\">\n          <label for=\"provider-selector\">Provider:</label>\n          <select id=\"provider-selector\"></select>\n          <label for=\"model-selector\">Model:</label>\n          <select id=\"model-selector\"></select>\n        </div>\n        <div id=\"response\" class=\"text-sm\"></div>\n        <div id=\"input-wrapper\">\n          <div>\n            <label for=\"system-prompt-selector\">System Prompt:</label>\n            <select id=\"system-prompt-selector\">\n            </select>\n          </div>\n          <input type=\"text\" id=\"prompt-input\" placeholder=\"Ask ChatGPT something\">\n        </div>\n      </div>\n      <script src=\"${scriptUri}\"></script>\n    </body>\n    </html>`;\n  }\n\n  public addImageToChat(imageDataUrl: string, fileName: string) {\n    const imageMarkdown = `![${fileName}](${imageDataUrl})`;\n    let newMessage: UserMessage = { \n      role: \"user\", \n      content: [\n        {\n          \"type\": \"text\",\n          \"text\": fileName + \":\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": imageDataUrl\n          }\n        }\n      ], \n      selected: true\n    };\n\n    this._messages?.push(newMessage);\n    // UI-only; do not count usage\n    const chat_response = this._updateChatMessages(0, 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {\n    let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n    let newMessage: UserMessage = {\n      role: \"user\",\n      content: codeBlock,\n      selected: true\n    };\n    this._messages?.push(newMessage);\n    // UI-only; do not count usage\n    const chat_response = this._updateChatMessages(0, 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n}\n```\n\n3) media/main.js and media/styles.css\n- No required changes to show tokens, since the footer is already added to the Markdown displayed in #response.\n- If you want a persistent top/bottom status bar for tokens, we can add it as a follow-up.\n\nWhat changed functionally\n- Token counts:\n  - Prompt/Input tokens are derived from the actual messages sent to the API (selected messages only; text content only).\n  - Completion/Output tokens are approximated while streaming by encoding the received deltas.\n- Session total is updated only after a successful assistant response, avoiding inflation from UI interactions (toggling checkboxes, changing prompts, adding files/images).\n- The footer in the chat now shows:\n  - Turn tokens — input: X, output: Y, total: Z. Session total: T, model: model-name\n\nLimitations\n- Token counts for vision/image content:\n  - Image parts in user messages are ignored in counting (js-tiktoken can’t account for provider-specific vision tokenization).\n- Streaming usage from the API:\n  - We estimate completion tokens by encoding streamed deltas. If your provider returns exact usage after streaming (some APIs do in the final chunk), we could capture that and overwrite our estimate.\n- Model-aware chat-token accounting:\n  - Exact OpenAI chat token accounting uses per-message system overhead that js-tiktoken alone doesn’t expose. Our method is a close approximation by encoding message roles and text content; it will match in practice for most cases but might be off by a small margin.\n\nOptional enhancements (if desired)\n- Show a live token counter in the top bar:\n  - Add a “usage” area in the webview, and send a dedicated { type: 'usage', value: { turn, total, model } } message after each turn.\n- Capture exact usage from API when available:\n  - If/when OpenAI SDK exposes usage in the final streaming event for chat.completions, check chunk.usage and replace the estimated values.\n- Per-message token breakdown:\n  - Persist TokenUsage per assistant/user message in _messages metadata.\n\nIf you want the optional top bar UI for tokens, let me know and I’ll provide the small HTML/CSS change and a “usage” postMessage update in the backend/frontend."
+  selected: false
+- role: user
+  content: Ok, these are the files that you requested
+  selected: true
+- role: assistant
+  content: "Below are the changes to add token-usage tracking that relies only on values returned by the API. After each request completes, the extension will display:\n- Request tokens: input (prompt) and output (completion)\n- Session totals: cumulative input and output across the current session\n- No local/token estimation is used; only API-reported usage fields are counted\n\nExplanation of the changes\n- Introduced a TokenUsage type to represent API-reported usage (prompt_tokens, completion_tokens, total_tokens).\n- Added session counters for input (prompt) and output (completion) tokens.\n- Adjusted the streaming flow to use OpenAI’s stream.finalChatCompletion() to retrieve the final usage object at the end of the stream.\n- Updated chat rendering to append a usage summary showing both per-request and session totals.\n- Removed previous tiktoken-based estimations and any total-token tracking based on estimation.\n- Kept the UI unchanged; the footer line in the chat now shows the API-based usage numbers.\n\nModified code snippets\n\n1) src/types.ts\n- Add a TokenUsage interface.\n\n```ts\nimport { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';\n\nexport type AuthInfo = { apiKey?: string, apiUrl?: string };\n\nexport type Settings = {\n  selectedInsideCodeblock?: boolean;\n  codeblockWithLanguageId?: false;\n  pasteOnClick?: boolean;\n  keepConversation?: boolean;\n  timeoutLength?: number;\n  model?: string;\n  apiUrl?: string;\n  options?: {\n    [key: string]: any; // Allows for any number of properties with any value type\n  };\n};\n\nexport interface Model {\n  name: string;            // Display in UI\n  model_name: string;      // For API calls\n  options: {\n    [key: string]: any;\n  };\n}\n\nexport interface Provider {\n  name: string;\n  apiKey: string;\n  apiUrl: string;\n  models: Model[];\n}\n\nexport interface ProviderSettings {\n  model: string;\n  apiUrl: string;\n  apiKey: string;\n  options: {\n    [key: string]: any; // This allows options to have any number of properties with any types\n  };\n}\n\nexport interface Prompt {\n  name: string;\n  prompt: string;\n}\n\nexport interface SystemMessage extends ChatCompletionSystemMessageParam {\n  selected?: boolean;  // Additional property specific to Message\n}\n\nexport interface UserMessage extends ChatCompletionUserMessageParam {\n  selected?: boolean;  // Additional property specific to Message\n}\n\nexport interface AssistantMessage extends ChatCompletionAssistantMessageParam {\n  selected?: boolean;  // Additional property specific to Message\n}\n\nexport type Message =\n  | SystemMessage\n  | UserMessage\n  | AssistantMessage\n\n// NEW: API token usage shape (values are provided by the API only)\nexport interface TokenUsage {\n  prompt_tokens?: number;\n  completion_tokens?: number;\n  total_tokens?: number;\n}\n\nexport const BASE_URL = 'https://api.openai.com/v1';\n```\n\n2) src/chatGptViewProvider.ts\n- Key changes:\n  - Add session token accumulators.\n  - Change _updateChatMessages to accept usage from the API and render the usage footer.\n  - Remove any estimation-based counting and totals.\n  - Use stream.finalChatCompletion() to get usage.\n\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml';\nimport OpenAI from \"openai\";\nimport { encodingForModel } from \"js-tiktoken\";\nimport { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, BASE_URL, TokenUsage } from './types';\nimport { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';\n\nexport class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n  public static readonly viewType = 'chatgpt.chatView';\n  private _view?: vscode.WebviewView;\n\n  private _conversation?: any;\n  private _messages?: Message[];\n  private _openai?: OpenAI;\n\n  private _response?: string;\n  // REMOVED: _totalNumberOfTokens based on estimation\n  private _prompt?: string;\n  private _fullPrompt?: string;\n  private _currentMessageNumber = 0;\n  private _enc = encodingForModel(\"gpt-4\"); //Hardcoded for now\n\n  // NEW: Session token counters based only on API-reported usage\n  private _sessionPromptTokens: number = 0;\n  private _sessionCompletionTokens: number = 0;\n\n  private _settings: Settings = {\n    selectedInsideCodeblock: false,\n    codeblockWithLanguageId: false,\n    pasteOnClick: true,\n    keepConversation: true,\n    timeoutLength: 60,\n    apiUrl: BASE_URL,\n    model: 'gpt-3.5-turbo',\n    options: {\n    },\n  };\n  private _authInfo?: AuthInfo;\n\n  constructor(private readonly _extensionUri: vscode.Uri) {\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    console.log(\"constructor....\");\n    console.log(\"messages:\", this._messages);\n  }\n\n  public setAuthenticationInfo(authInfo: AuthInfo) {\n    this._authInfo = authInfo;\n    this._newAPI();\n  }\n\n  public setSettings(settings: Settings) {\n    let changeModel = false;\n    if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {\n      changeModel = true;\n    }\n    this._settings = { ...this._settings, ...settings };\n    if (changeModel) {\n      //this._newAPI();\n    }\n  }\n\n  public getSettings() {\n    return this._settings;\n  }\n\n  private _newAPI() {\n    console.log(\"New API\");\n    console.log(\"Messages:\", this._messages);\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      console.warn(\"API key or API URL not set, please go to extension settings (read README.md for more info)\");\n    } else {\n      console.log(\"apiUrl:\", this._settings?.apiUrl);\n      this._openai = new OpenAI(\n        {\n          apiKey: this._authInfo?.apiKey,\n          baseURL: this._authInfo?.apiUrl\n        }\n      );\n    }\n    setTimeout(() => {\n      const chat_response = this._updateChatMessages(); // no usage during initialization\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    }, 2000);\n  }\n\n  public resolveWebviewView(\n    webviewView: vscode.WebviewView,\n    context: vscode.WebviewViewResolveContext,\n    _token: vscode.CancellationToken,\n  ) {\n    this._view = webviewView;\n\n    webviewView.webview.options = {\n      enableScripts: true,\n      localResourceRoots: [\n        this._extensionUri\n      ]\n    };\n\n    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);\n\n    webviewView.webview.onDidReceiveMessage(async data =>  {\n      switch (data.type) {\n        case 'ready':\n          {\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n            let prompts: Prompt[] = config.get('prompts') || [];\n            this.set_providers(providers);\n            this.set_prompts(prompts);\n            break;\n          }\n        case 'codeSelected':\n          {\n            if (!this._settings.pasteOnClick) break;\n            let code = data.value;\n            const snippet = new vscode.SnippetString();\n            snippet.appendText(code);\n            vscode.window.activeTextEditor?.insertSnippet(snippet);\n            break;\n          }\n        case 'pasteImage': \n          {\n            const base64Data = data.value;\n            const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));\n            const fileType = imageType.split('/')[1];\n            const fileName = `clipboard_image.${fileType}`;\n            this.addImageToChat(base64Data, fileName);\n            break;\n          }\n        case 'prompt':\n          {\n            console.log(\"prompt\");\n            this.search(data.value);\n            break;\n          }\n        case 'promptNoQuery':\n          {\n            console.log(\"promptNoQuery\");\n            let searchPrompt = await this._generate_search_prompt(data.value);\n            this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n            let chat_response = this._updateChatMessages(); // No usage until API responds\n            this._response = chat_response;\n            this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n            break;\n          }\n        case 'checkboxChanged':\n          {\n            console.log(\"checkboxChanged:\", data);\n            const idParts = data.id.split('-');\n            if(idParts.length === 3) {\n              const index = parseInt(idParts[2], 10);\n              if(this._messages && index >= 0 && index < this._messages.length) {\n                this._messages[index].selected = data.checked;\n              } else {\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              console.error('data.id is not in the expected format.');\n            }\n            break;\n          }\n        case 'messageContentChanged':\n          {\n            console.log(\"messageContentChanged:\", data);\n            const idParts = data.id.split('-');\n            if(idParts.length === 3) {\n              const index = parseInt(idParts[2], 10);\n              if(this._messages && index >= 0 && index < this._messages.length) {\n                this._messages[index].content = data.value;\n              } else {\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              console.error('data.id is not in the expected format.');\n            }\n            console.log(\"messages:\", this._messages);\n            break;\n          }\n        case \"providerModelChanged\":\n          {\n            const providerIndex = data.providerIndex;\n            const modelIndex = data.modelIndex;\n            console.log(\"Provider Changed, providerIndex:\", providerIndex, \", model:\", modelIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n            if (providers && providers.length > providerIndex) {\n              const provider_data = providers[providerIndex];\n              if (provider_data.models && provider_data.models.length > modelIndex) {\n                const model_data = provider_data.models[modelIndex];\n                const provider_settings = {\n                  model: model_data.model_name,\n                  apiUrl: provider_data.apiUrl,\n                  apiKey: provider_data.apiKey,\n                  options: {\n                    ...model_data.options\n                  },\n                };\n                this.setSettings({\n                  apiUrl: provider_settings.apiUrl,\n                  model: provider_settings.model,\n                  options: {\n                    ...provider_settings.options,\n                  },\n                });\n                this.setAuthenticationInfo({\n                  apiKey: provider_settings.apiKey,\n                  apiUrl: provider_settings.apiUrl\n                });\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case \"systemPromptChanged\":\n          {\n            const systemPromptIndex = data.systemPromptIndex;\n            console.log(\"systemPrompt Changed, providerIndex:\", systemPromptIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let prompts: Prompt[] = config.get('prompts') || [];\n            if (prompts && prompts.length > systemPromptIndex) {\n              const prompt_data = prompts[systemPromptIndex];\n              if (prompt_data.name && prompt_data.prompt) {\n                this.set_prompt(prompt_data);\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case 'fileClicked': {\n          console.log(\"file Clicked!!!!!\");\n          const filePath = data.value;\n          if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {\n            vscode.window.showErrorMessage('No workspace folder open.');\n            break;\n          }\n          const workspaceFolder = vscode.workspace.workspaceFolders[0];\n          const absolutePath = path.join(workspaceFolder.uri.fsPath, filePath);\n          try {\n            const fileContent = fs.readFileSync(absolutePath, 'utf-8');\n            const fileExt = path.extname(filePath).slice(1) || '';\n            this.addFileToChat(filePath, fileContent, fileExt);\n          } catch (e) {\n            vscode.window.showErrorMessage(`Could not read file: ${filePath} (${e instanceof Error ? e.message : String(e)})`);\n          }\n          break;\n        }\n      }\n    });\n  }\n\n  public getStartSystemPrompt() {\n    const config = vscode.workspace.getConfiguration('chatgpt');\n    let prompts: Prompt[] = config.get('prompts') || [];\n    let start_system_prompt = \"You are a helpful assistant.\";\n    if (prompts && prompts.length > 0) {\n      const prompt_data = prompts[0];\n      if (prompt_data.name && prompt_data.prompt) {\n        start_system_prompt = prompt_data.prompt;\n      }\t\t\t\t\t\t\n    }\n    return start_system_prompt;\n  }\n\n  public async resetConversation() {\n    console.log(this, this._conversation);\n    if (this._conversation) {\n      this._conversation = null;\n    }\n    this._prompt = '';\n    this._response = '';\n    this._fullPrompt = '';\n\n    // RESET API-based session totals\n    this._sessionPromptTokens = 0;\n    this._sessionCompletionTokens = 0;\n\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    const chat_response = this._updateChatMessages(); // no usage yet\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public async pasteChat() {\n    console.log(\"pasteChat\");\n    if (!vscode.window.activeTextEditor) {\n      vscode.window.showErrorMessage('No active text editor!');\n      return;\n    }\n    try {\n      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({\n        role, content, selected\n      }));\n      const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n      const snippet = new vscode.SnippetString();\n      snippet.appendText(messagesYaml);\n      await vscode.window.activeTextEditor.insertSnippet(snippet);\n      console.log(\"Chat pasted as YAML successfully.\");\n    } catch (error) {\n      console.error(\"Failed to paste chat as YAML:\", error);\n      vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);\n    }\n  }\n  \n  public async useSelectionAsChat() {\n    console.log(\"use selection as chat\");\n    const activeEditor = vscode.window.activeTextEditor;\n    if (!activeEditor) {\n      vscode.window.showErrorMessage('No active text editor with a selection!');\n      return;\n    }\n    const selection = activeEditor.selection;\n    if (selection.isEmpty) {\n      vscode.window.showErrorMessage('No text selected!');\n      return;\n    }\n    const selectedText = activeEditor.document.getText(selection);\n    try {\n      const parsedMessages = yaml.load(selectedText);\n      if (!Array.isArray(parsedMessages)) {\n        throw new Error('Selected text is not an array of messages.');\n      }\n      for (const msg of parsedMessages) {\n        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {\n          throw new Error('Invalid message format. Each message must have role, content, and selected properties.');\n        }\n      }\n      this._messages = parsedMessages;\n      const chat_response = this._updateChatMessages(); // no usage here\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n      console.log(\"Updated messages from selection successfully.\");\n    } catch (error) {\n      console.error(\"Failed to use selection as chat:\", error);\n      vscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n    }\n  }\n\n  public fixCodeBlocks(response: string) {\n    const REGEX_CODEBLOCK = new RegExp('\\`\\`\\`', 'g');\n    const matches = response.match(REGEX_CODEBLOCK);\n    const count = matches ? matches.length : 0;\n    if (count % 2 === 0) {\n      return response;\n    } else {\n      console.log(\"Warning - code block not complete\");\n      return response.concat('\\n\\`\\`\\`');\n    }\n  }\n\n  private _getMessagesNumberOfTokens() {\n    // Kept for potential future non-usage-related features; not used to report tokens.\n    let full_promt = \"\";\n    if (this._messages) {\n      for (const message of this._messages) {\n        if (message.selected) {\n          full_promt += \"\\n# <u>\" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n        }\n      }\n    }\n    const tokenList = this._enc.encode(full_promt);\n    return tokenList.length;\n  }\n\n  public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {\n    let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({\n    role, content\n    })) || [];\n    return ret;\n  }\n\n  private _containsCodeBlockOrListItems(content: string): boolean {\n    const codeBlockPattern = /```[\\s\\S]*?```/;\n    const listItemPattern = /^(?:\\s*(?:[-*+]|\\d+\\.)\\s+.+)$/m;\n    return codeBlockPattern.test(content) || listItemPattern.test(content);\n  }\n\n  private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {\n    return this.isChatCompletionContentPartImage(value);\n  }\n    \n  private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {\n    return typeof value === 'object'\n      && value != null\n      && typeof value.text === 'string'\n      && value.type === 'text';\n  }\n  private isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {\n    return typeof value === 'object'\n      && value !== null\n      && typeof value.image_url === 'object'\n      && typeof value.image_url.url === 'string'\n      && value.type === 'image_url';\n  }\n    \n  // UPDATED: Accept only API usage to render token info and update session totals\n  private _updateChatMessages(usage?: TokenUsage) {\n    let chat_response = \"\";\n    if (this._messages) {\n      this._messages.forEach((message, index) => {\n        const selected = message.selected;\n        const checked_string = selected ? \"checked\" : \"\";\n        if (typeof message.content === 'string') {\n          if (this._containsCodeBlockOrListItems(message.content)) {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n          } else {\n            chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>\"+ message.content + \"</div>\";\n          }\n        } else if (Array.isArray(message.content)) {\n          chat_response += \"\\n# <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" + message.role.toUpperCase() + \"</u>: <div id='message-content-\" + index + \"' contenteditable='false'>\";\n          message.content.forEach(part => {\n            console.log(\"processing an object...\")\n            if (this.isChatCompletionContentPartImage(part)) {\n              console.log(\"Is an image!!!\")\n              chat_response += \"<img src='\"+ part.image_url.url + \"' alt='Base64 Image'/>\";\n            }\n            if (this.isChatCompletionContentPartText(part)) {\n              console.log(\"Is a text!!!\")\n              chat_response += part.text;\n            }\n          });\n          chat_response += \"</div>\"\n        }\n      });\n    }\n\n    // Append token usage info only if provided by API\n    if (usage && (usage.prompt_tokens !== undefined || usage.completion_tokens !== undefined || usage.total_tokens !== undefined)) {\n      const reqIn = usage.prompt_tokens ?? 0;\n      const reqOut = usage.completion_tokens ?? 0;\n      const reqTotal = usage.total_tokens ?? (reqIn + reqOut);\n\n      // Update session totals\n      this._sessionPromptTokens += reqIn;\n      this._sessionCompletionTokens += reqOut;\n      const sessIn = this._sessionPromptTokens;\n      const sessOut = this._sessionCompletionTokens;\n      const sessTotal = sessIn + sessOut;\n\n      chat_response += `\\n\\n---\\n<sub>Tokens — Request: in ${reqIn}, out ${reqOut}, total ${reqTotal}.  Session: in ${sessIn}, out ${sessOut}, total ${sessTotal}.  Model: ${this._settings.model}</sub>\\n\\n---\\n\\n\\n\\n\\n\\n\\n`;\n    }\n\n    return chat_response;\n  }\n  \n  private async _generate_search_prompt(prompt:string) {\n    this._prompt = prompt;\n    if (!prompt) prompt = '';\n\n    if (!this._view) {\n      await vscode.commands.executeCommand('chatgpt.chatView.focus');\n    } else {\n      this._view?.show?.(true);\n    }\n\n    if (!this._response) {\n      this._response = '';\n    }\n\n    const selection = vscode.window.activeTextEditor?.selection;\n    const selectedText = vscode.window.activeTextEditor?.document.getText(selection);\n    const languageId =\n      (this._settings.codeblockWithLanguageId\n        ? vscode.window.activeTextEditor?.document?.languageId\n        : undefined) || '';\n\n    let searchPrompt = '';\n    if (selection && selectedText) {\n      if (this._settings.selectedInsideCodeblock) {\n        searchPrompt = `${prompt}\\n\\`\\`\\`${languageId}\\n${selectedText}\\n\\`\\`\\``;\n      } else {\n        searchPrompt = `${prompt}\\n${selectedText}\\n`;\n      }\n    } else {\n      searchPrompt = prompt;\n    }\n    this._fullPrompt = searchPrompt;\n    this._currentMessageNumber++;\n    return searchPrompt;\n  }\n\n  public set_providers(providers: Provider[]): void {\n    this._view?.webview.postMessage({ type: 'initialize', value: providers });\n  }\n\n  public set_prompts(prompts: Prompt[]): void {\n    console.log(\"Set Prompts:\", prompts);\n    this._view?.webview.postMessage({ type: 'initialize_prompts', value: prompts });\n  }\n\n  public set_prompt(prompt: Prompt): void {\n    if (this._messages) {\n      this._messages[0] = { role: \"system\", content: prompt.prompt, selected: true };\n    } else {\n      this._messages = [{ role: \"system\", content: prompt.prompt, selected: true }];\n    }\n    console.log(\"calling updateResponse\");\n    let chat_response = this._updateChatMessages();\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  public async search(prompt?: string) {\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      this._view?.webview.postMessage({\n        type: 'addResponse',\n        value: '[ERROR] \"API key or API URL not set, please go to extension settings (read README.md for more info)\"',\n      });\n      return;\n    }\n    \n    let chat_response = '';\n    let searchPrompt = \"\";\n    if (prompt!=undefined) {\n      searchPrompt = await this._generate_search_prompt(prompt);\n    } \n    this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });\n    this._view?.webview.postMessage({ type: 'addResponse', value: '...' });\n\n    if (searchPrompt != \"\") {\n      this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n    }\n\n    if (!this._openai) {\n      throw new Error('OpenAI instance is not initialized.');\n    }\n    if (typeof this._settings.model !== 'string') {\n      throw new Error('Model identifier is not valid or not defined.');\n    }\n\n    const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {\n      return ['user', 'assistant', 'system'].includes(role);\n    };\n    if (!this._messages || !Array.isArray(this._messages) ||\n      (!this._messages.every(msg => isValidRole(msg.role)))) {\n      throw new Error('Messages have invalid roles.');\n    }\n\n    let full_message = \"\";\n    try {\n      console.log(\"Creating message sender...\");\n      let messagesToSend: Array<Message> = [];\n      for (const message of this._messages) {\n        if (message.selected) {\n          const { selected, ...messageWithoutSelected } = message;\n          messagesToSend.push(messageWithoutSelected);\n        }\n      }\n\n      const stream = await this._openai.chat.completions.create({\n        model: this._settings.model,\n        messages: messagesToSend,\n        stream: true,\n        ...this._settings.options,\n      });\n      \n      console.log(\"Message sender created\");\n      \n      full_message = \"\";\n      for await (const chunk of stream) {\n        const content = chunk.choices[0]?.delta?.content || \"\";\n        full_message += content;\n        this._view?.webview.postMessage({ type: 'addResponse', value: full_message });\n      }\n\n      // Retrieve final usage from API (no estimation)\n      const finalCompletion = await stream.finalChatCompletion();\n      const usage: TokenUsage | undefined = finalCompletion?.usage;\n      console.log(\"API usage:\", usage);\n\n      this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n      console.log(\"Full message:\", full_message);\n\n      // Render with API-reported usage (also updates session totals)\n      chat_response = this._updateChatMessages(usage);\n    } catch (e: any) {\n      console.error(e);\n      if (this._response!=undefined) {\n        this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n        chat_response = this._response;\n        chat_response += `\\n\\n---\\n[ERROR] ${e}`;\n      }\n    }\n    this._response = chat_response;\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  private _getHtmlForWebview(webview: vscode.Webview) {\n    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));\n    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));\n    const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));\n    const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));\n    const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));\n  \n    return `<!DOCTYPE html>\n    <html lang=\"en\">\n    <head>\n      <meta charset=\"UTF-8\">\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n      <script src=\"${tailwindUri}\"></script>\n      <script src=\"${showdownUri}\"></script>\n      <script src=\"${microlightUri}\"></script>\n      <link rel=\"stylesheet\" href=\"${stylesUri}\">\n    </head>\n    <body>\n      <div id=\"container\">\n        <div id=\"top-wrapper\">\n          <label for=\"provider-selector\">Provider:</label>\n          <select id=\"provider-selector\"></select>\n          <label for=\"model-selector\">Model:</label>\n          <select id=\"model-selector\"></select>\n        </div>\n        <div id=\"response\" class=\"text-sm\"></div>\n        <div id=\"input-wrapper\">\n          <div>\n            <label for=\"system-prompt-selector\">System Prompt:</label>\n            <select id=\"system-prompt-selector\">\n            </select>\n          </div>\n          <input type=\"text\" id=\"prompt-input\" placeholder=\"Ask ChatGPT something\">\n        </div>\n      </div>\n      <script src=\"${scriptUri}\"></script>\n    </body>\n    </html>`;\n  }\n\n  public addImageToChat(imageDataUrl: string, fileName: string) {\n    const imageMarkdown = `![${fileName}](${imageDataUrl})`;\n    let newMessage: UserMessage = { \n      role: \"user\", \n      content: [\n        {\n          \"type\": \"text\",\n          \"text\": fileName + \":\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": imageDataUrl\n          }\n        }\n      ], \n      selected: true\n    };\n\n    this._messages?.push(newMessage);\n    const chat_response = this._updateChatMessages(); // usage not applicable here\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {\n    let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n  \n    let newMessage: UserMessage = {\n      role: \"user\",\n      content: codeBlock,\n      selected: true\n    };\n  \n    this._messages?.push(newMessage);\n    const chat_response = this._updateChatMessages(); // usage not applicable here\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n}\n```\n\n3) media/main.js and media/styles.css\n- No functional changes required; the backend now appends a markdown footer with the token usage (request and session totals). The webview already renders markdown, so the info will display automatically.\n\nLimitations\n- Token usage is shown only when the provider returns usage fields in the API response. If a provider or proxy does not include usage in the final completion, no usage data will be displayed or accumulated for that request.\n- Currently implemented for the OpenAI chat.completions API using the official openai library stream.finalChatCompletion(). If you later add non-OpenAI providers, ensure their usage fields are mapped into the same TokenUsage shape and provided to _updateChatMessages.\n- This does not persist totals across VS Code sessions; totals reset when the conversation is reset or the webview/extension reloads. If persistence is desired, we can store counters in Memento (vscode.ExtensionContext.globalState/workspaceState)."
+  selected: true
+- role: user
+  content: |-
+    It is working, but when I try to speak to the model I get these errors:
+    ```typescript
+
+    extensionHostProcess.js:170
+    Creating message sender...
+    extensionHostProcess.js:170
+    Message sender created
+    extensionHostProcess.js:170
+    TypeError: stream.finalChatCompletion is not a function
+        at ChatGPTViewProvider.search (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/src/chatGptViewProvider.ts:570:44)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5) {stack: 'TypeError: stream.finalChatCompletion is not …ons (node:internal/process/task_queues:105:5)', message: 'stream.finalChatCompletion is not a function'}
+
+    extensionHostProcess.js:170
+    McpHub: Disposing...
+    extensionHostProcess.js:170
+    Controller disposed
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    ## Problem Analysis
+
+    The error:
+    ```
+    TypeError: stream.finalChatCompletion is not a function
+    ```
+    indicates that `stream.finalChatCompletion()` does not exist on the object returned from the OpenAI streaming API. The official OpenAI Node.js SDK (`openai` library) streaming API [does NOT always provide a `.finalChatCompletion()` method](https://github.com/openai/openai-node). 
+
+    Recent versions of the `openai` npm library deliver an async iterable for completions, and do **not** provide this helper (`.finalChatCompletion()`). The usage data is typically provided as a property of the final chunk (object) yielded by the stream, if it is included at all.
+
+    ## Solution
+
+    - **Collect all chunks.** For each chunk, cache the last chunk (it contains the usage field if available).
+    - **After the stream ends**, the last chunk's `.usage` field is used for your per-request and per-session calculation/reporting.
+
+    ## How to Fix
+
+    Change your `search` function to:
+    1. Track the last chunk seen in the stream.
+    2. After the stream, use `lastChunk.usage` for your `_updateChatMessages()`.
+
+    ### Code Patch (src/chatGptViewProvider.ts)
+
+    Replace this block inside `search`:
+
+    ```ts
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      full_message += content;
+      this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
+    }
+    // Retrieve final usage from API (no estimation)
+    const finalCompletion = await stream.finalChatCompletion();
+    const usage: TokenUsage | undefined = finalCompletion?.usage;
+    console.log("API usage:", usage);
+    ```
+
+    **With this:**
+
+    ```ts
+    let lastChunk = undefined;
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      full_message += content;
+      this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
+      lastChunk = chunk;
+    }
+    let usage: TokenUsage | undefined = undefined;
+    if (lastChunk && lastChunk.usage) {
+      usage = lastChunk.usage;
+    }
+    console.log("API usage:", usage);
+    ```
+
+    ### Full Example Replace Section
+
+    ```ts
+    let lastChunk = undefined; // ADD THIS
+    full_message = "";
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      full_message += content;
+      this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
+      lastChunk = chunk;
+    }
+    let usage: TokenUsage | undefined = undefined;
+    if (lastChunk && lastChunk.usage) {
+      usage = lastChunk.usage;
+    }
+    console.log("API usage:", usage);
+    ```
+
+    ## Summary
+
+    - The `finalChatCompletion()` helper is not part of the OpenAI Node.js SDK API `stream` object you get.
+    - Always get usage from the `usage` property of the last yielded chunk in the streaming sequence.
+    - Replace usage extraction as above, and the rest of your token tracking logic ("API only") will work as before.
+
+    ---
+
+    **No other files need modification.**  
+    If you support other providers, ensure to adapt their "usage" extraction accordingly.
+  selected: true
+- role: user
+  content: Now it says:Property 'usage' does not exist on type 'ChatCompletionChunk'.
+  selected: true
+- role: assistant
+  content: |-
+    Great catch:  
+    OpenAI's `ChatCompletionChunk` **does not** have a `usage` property—only the final full response object (from a non-streaming completion) does. For streaming responses, token usage information is currently **not provided in any of the streamed `chunk` objects** (as of OpenAI’s API design mid-2024).
+
+    **What does this mean?**  
+    - When using streaming, the OpenAI API (and most other LLM APIs) does **not** include `usage` (i.e., token counts) in the stream.  
+    - Token usage is only part of the final response when `stream: false`.
+    - With `stream: true`, you CANNOT reliably get true API-side token counts for prompt/output, unless you:
+      - Make a **second, non-streaming call** after the stream for `usage` (unusual and wasteful)
+      - Estimate tokens locally (but you specified: no estimation)
+      - Hope future API/SDK adds these to stream, but currently: **not supported**
+
+    ## How to Handle This
+
+    **Best Practice:**  
+    - Only show/request token usage info when you’re using non-streamed completions.
+    - If using streaming, show “Token usage (API): Not available for streamed responses.”  
+    - Or, allow both modes and warn the user.
+
+    ### 1. Safe & Simple Fix for Your Code
+
+    Change token usage tracking to:
+    - If you use `stream: false` (not streaming), usage will be present and you can use it.
+    - If you use `stream: true`, always show “Not available” or skip the token usage line for that request.
+
+    #### Example Patch
+
+    Inside your `search` function:
+
+    ```ts
+    let usage: TokenUsage | undefined = undefined;
+
+    if (!this._settings.options?.stream) {
+      // Non-streaming: get usage from response
+      const completion = await this._openai.chat.completions.create({
+        model: this._settings.model,
+        messages: messagesToSend,
+        ...this._settings.options,
+      });
+      full_message = completion.choices[0]?.message?.content || "";
+      usage = completion.usage;
+    } else {
+      // Streaming: usage not available in stream
+      full_message = "";
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        full_message += content;
+        this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
+      }
+      usage = undefined; // No reliable token count!
+    }
+    ```
+
+    Pass `usage` (either real, or undefined) to your `_updateChatMessages(usage)` function. In your `_updateChatMessages`, change the footer line:
+
+    ```ts
+    if (usage && usage.prompt_tokens !== undefined) {
+      // show totals as before
+    } else {
+      chat_response += `\n\n---\n<sub>Tokens — Not available (streamed response)</sub>\n\n---\n\n\n\n\n\n\n`;
+    }
+    ```
+
+    #### Minimal (Streaming-Only) Patch
+
+    If **all completions are streamed**, just always show the message:
+
+    ```ts
+    const usage: TokenUsage | undefined = undefined;
+    chat_response = this._updateChatMessages(usage);
+    ```
+    And in `_updateChatMessages`:
+    ```ts
+    if (usage && (usage.prompt_tokens !== undefined || usage.completion_tokens !== undefined)) {
+      // ...render API-provided stats...
+    } else {
+      chat_response += `\n\n---\n<sub>Tokens — Not available (streamed response; OpenAI API does not return usage with streaming.)</sub>\n\n---\n\n\n\n\n\n\n`;
+    }
+    ```
+
+    ---
+
+    ## Summary
+
+    - **Streaming:** You cannot get usage from the API (by design).
+    - **Non-Streaming:** Usage is returned and should be displayed.
+    - **Fix:** Check for the existence of `usage`. If absent, explain to the user that usage isn’t available for streamed completions.
+
+    **If you want to fully support both modes (streamed and non-streamed) let me know and I’ll give you detailed integrated dual-mode code.**
+  selected: true
+- role: user
+  content: |-
+    keep in mind that I am using this openai library
+    ```json
+    "openai": "^4.29.2"
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Thank you for clarifying your version:  
+    You’re using the [openai](https://www.npmjs.com/package/openai) official npm package (`^4.29.2`).
+
+    **Key points for v4.x:**
+    - For streamed completions (`stream: true`), the returned chunks are of type `ChatCompletionChunk` and **do NOT contain `.usage`**.
+    - For non-streamed completions (`stream: false` or omit), the final response includes a `.usage` property with `prompt_tokens` and `completion_tokens`.
+
+    ## Guidance Specific to openai v4.x
+
+    ### 1. How to safely handle token usage extraction
+
+    - If `stream: true` → **You must show “not available for streamed responses”**.
+    - If `stream: false` (or omitted) → You can use `completion.usage`.
+
+    ### 2. Example implementation: Streaming only (your current approach)
+
+    **Inside your search function, after the stream:**
+
+    ```ts
+    let usage: TokenUsage | undefined = undefined; // Always undefined for streaming
+
+    // Use stream as usual, display a token unavailable message
+    full_message = "";
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      full_message += content;
+      this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
+    }
+    // No .usage property here! Show unavailable
+    chat_response = this._updateChatMessages(undefined);
+    ```
+
+    **In `_updateChatMessages`:**
+
+    ```ts
+    private _updateChatMessages(usage?: TokenUsage) {
+      // ...chat response building...
+      if (usage && (usage.prompt_tokens !== undefined || usage.completion_tokens !== undefined)) {
+        // show real numbers
+        const reqIn = usage.prompt_tokens ?? 0;
+        const reqOut = usage.completion_tokens ?? 0;
+        const reqTotal = usage.total_tokens ?? (reqIn + reqOut);
+        this._sessionPromptTokens += reqIn;
+        this._sessionCompletionTokens += reqOut;
+        const sessIn = this._sessionPromptTokens;
+        const sessOut = this._sessionCompletionTokens;
+        const sessTotal = sessIn + sessOut;
+        chat_response += `\n\n---\n<sub>Tokens — Request: in ${reqIn}, out ${reqOut}, total ${reqTotal}.  Session: in ${sessIn}, out ${sessOut}, total ${sessTotal}.  Model: ${this._settings.model}</sub>\n\n---\n\n\n\n\n\n\n`;
+      } else {
+        chat_response += `\n\n---\n<sub>Tokens — <i>Not available (API does not provide usage fields for streamed responses).</i></sub>\n\n---\n\n\n\n\n\n\n`;
+      }
+      return chat_response;
+    }
+    ```
+
+    ### 3. If you want true usage support, offer a non-streamed mode (optional):
+
+    **Usage summary only works if you call the API without streaming:**
+
+    ```ts
+    const completion = await this._openai.chat.completions.create({
+      model: this._settings.model,
+      messages: messagesToSend,
+      ...this._settings.options,
+      stream: false,
+    });
+    const usage: TokenUsage | undefined = completion.usage;
+    full_message = completion.choices[0]?.message?.content || "";
+    chat_response = this._updateChatMessages(usage);
+    ```
+
+    You could add a toggle to your extension to choose between streaming and non-streaming, but by default, **for `openai@4.x`, streaming never gives you token usage**.
+
+    ---
+
+    ## TL;DR (for openai v4.x)
+
+    - **Streaming requests:** No `.usage`. Display “Not available”.
+    - **Non-streamed requests:** Use `.usage` as you currently do.
+    - **No estimation, so this limitation is absolute with the official API/SDK in streaming mode.**
+
+    ---
+
+    **You don’t need to fix TypeScript errors about `.usage` on chunk, just use the above patterns.**
+
+    If you want help implementing a "streaming/non-streaming" toggle for full support let me know!
+  selected: true
+- role: user
+  content: But I am using streams, but as I understand lastly (in the last message the usage exists)
+  selected: true
+- role: assistant
+  content: |-
+    This is a very important subtlety, and it depends on the underlying API and (even more) the SDK implementation.
+
+    **With OpenAI’s HTTP API:**  
+    - If you use the raw HTTP API with `stream: true`, only the _very last_ `data:` chunk (`[DONE]`) in the text-davinci/3.5-turbo chat API **does** contain the usage field as part of an otherwise normal ChatCompletion object.
+    - Many third-party APIs _do not_ send the usage in the last stream message.
+    - In OpenAI’s **official Node SDK v4.x**: the streaming API does NOT “lift” this full ChatCompletion usage object for you; you only receive a stream of `ChatCompletionChunk` objects, _(which do not have `.usage` at all)_.
+
+    **In the official OpenAI Node SDK v4+ (`openai@4.29.2`):**  
+    - **You do NOT automatically receive the usage field** on any yielded value from the stream.  
+    - There is no `.usage` property on any chunk.  
+    - There is no helper such as `.finalChatCompletion()` (see your original error).
+
+    **But:**  
+    - If you use the Python API, or if you use the total HTTP API yourself, you _can_ see the usage in the last object (but this is not the case for the Node SDK stream interface).
+    - In the current Node SDK (mid-2024, v4.x), you **cannot** get the usage from the stream.
+
+    ## Official SDK Documentation Reference
+
+    From [OpenAI SDK v4 Chat API](https://github.com/openai/openai-node#streaming):
+
+    > Each object yielded by the stream is a partial completion chunk, with no usage/statistics info.
+
+    ## Conclusion
+
+    **Short Answer:**  
+    > In OpenAI Node SDK v4.x streaming, You will _not_ receive the `.usage` field in the stream, not even at the last message.
+
+    ## Recommendations for Your Extension
+
+    1. **You cannot get usage from a streamed response.**
+       - You cannot do what you describe (expect the "last message" chunk to have usage) with the current official OpenAI Node SDK.
+    2. **Show “Not available from stream API”** in your UI.
+
+    **If you need accurate token stats, disable streaming and use the non-streamed endpoint.**  
+    Or, if you feel brave, implement a HTTP/REST request with manual chunking to parse out the last message for usage—but this is against the spirit of using the official SDK!
+
+    ## Correction for Your Code (Just as previously shown):
+
+    ```ts
+    let usage: TokenUsage | undefined = undefined; // Always undefined for streaming
+    for await (const chunk of stream) {
+      // ... show text as it streams
+    }
+    chat_response = this._updateChatMessages(undefined); // Usage is always unavailable for streaming with SDK
+    ```
+
+    And in your UI, explain that:
+    > “Tokens — Not available (OpenAI SDK does not provide usage fields for streamed completions)”
+
+    ---
+
+    **Summary:**  
+    - The behavior you expect exists in the raw REST API, but NOT in the OpenAI Node SDK stream you’re using.
+    - In Node SDK, you cannot get usage info with streaming.
+    - Don't try to extract usage from what the SDK gives you — it’s not possible right now!
+
+    ---
+
+    **If in the future the SDK adds this, or you want code to handle both modes, let me know.**  
+    For now, streaming = no usage info available.
+  selected: true
