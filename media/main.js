@@ -11,6 +11,54 @@
     let models = []; // To store models for the selected provider
     let selectedProviderIndex = 0;
 
+    // Streaming state and lightweight renderer
+    let isStreaming = false;
+    let streamBuffer = '';
+    let pendingDelta = '';
+    let renderScheduled = false;
+    const MAX_STREAM_LINES = 50;
+
+    function scheduleStreamRender() {
+        if (renderScheduled) return;
+        renderScheduled = true;
+        requestAnimationFrame(() => {
+            renderScheduled = false;
+            if (pendingDelta) {
+                streamBuffer += pendingDelta;
+                pendingDelta = '';
+            }
+            renderTruncatedStream(streamBuffer);
+        });
+    }
+
+    function renderTruncatedStream(fullText) {
+        const lines = fullText.split(/\r?\n/);
+        const over = lines.length > MAX_STREAM_LINES;
+        const prefixLines = over ? lines.slice(0, lines.length - MAX_STREAM_LINES) : [];
+        const tailLines = over ? lines.slice(-MAX_STREAM_LINES) : lines;
+
+        // If the tail starts inside a code fence, open a fence to keep rendering consistent
+        const backticksInPrefix = (prefixLines.join('\n').match(/```/g) || []).length;
+        const needsOpenFence = backticksInPrefix % 2 === 1;
+
+        let snippet = (over ? '...\n' : '') + (needsOpenFence ? '```\n' : '') + tailLines.join('\n');
+        snippet = fixCodeBlocks(snippet);
+
+        const converter = new showdown.Converter({
+            omitExtraWLInCodeBlocks: true,
+            simplifiedAutoLink: true,
+            excludeTrailingPunctuationFromURLs: true,
+            literalMidWordUnderscores: true,
+            simpleLineBreaks: true,
+            extensions: ['thinkExtension']
+        });
+
+        const html = converter.makeHtml(snippet);
+        const responseDiv = document.getElementById("response");
+        responseDiv.innerHTML = html;
+        responseDiv.scrollTop = responseDiv.scrollHeight;
+    }    
+
     // Function to populate the provider and model selectors
     function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
         const providerSelector = document.getElementById('provider-selector');
@@ -99,6 +147,25 @@
                 populatePrompts(prompts);
                 break;
             }
+
+            case "streamStart": {
+                isStreaming = true;
+                streamBuffer = '';
+                pendingDelta = '';
+                const responseDiv = document.getElementById("response");
+                if (responseDiv) responseDiv.innerHTML = '...';
+                break;
+            }
+            case "appendDelta": {
+                if (!isStreaming) break;
+                pendingDelta += message.value || '';
+                scheduleStreamRender();
+                break;
+            }
+            case "streamEnd": {
+                isStreaming = false;
+                break;
+            }            
         }
     });
 

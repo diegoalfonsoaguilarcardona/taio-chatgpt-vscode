@@ -660,21 +660,45 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       });
       
       console.log("Message sender created");
-      
+
+      this._view?.webview.postMessage({ type: 'streamStart' });
+
       let completionTokens = 0;
       full_message = "";
+
+      // Throttled delta accumulator to reduce IPC messages
+      let deltaAccumulator = "";
+      let lastSend = 0;
+      const flushDelta = (force = false) => {
+        if (!deltaAccumulator) return;
+        const now = Date.now();
+        if (force || now - lastSend > 50) { // ~20 fps
+          this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });
+          deltaAccumulator = "";
+          lastSend = now;
+        }
+      };
+
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || "";
-        console.log("chunk:",chunk);
+        console.log("chunk:", chunk);
         console.log("content:", content);
+        if (!content) continue;
+
         const tokenList = this._enc.encode(content);
         completionTokens += tokenList.length;
         console.log("tokens:", completionTokens);
         full_message += content;
-        //this._response = chat_response;
-        this._view?.webview.postMessage({ type: 'addResponse', value: full_message });
 
+        // stream delta (throttled)
+        deltaAccumulator += content;
+        flushDelta(false);
       }
+
+      // Ensure last delta is flushed and end the stream
+      flushDelta(true);
+      this._view?.webview.postMessage({ type: 'streamEnd' });
+
       this._messages?.push({ role: "assistant", content: full_message, selected:true })
       console.log("Full message:", full_message);
       console.log("Full Number of tokens:", completionTokens);
