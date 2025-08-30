@@ -44,20 +44,17 @@
         let snippet = (over ? '...\n' : '') + (needsOpenFence ? '```\n' : '') + tailLines.join('\n');
         snippet = fixCodeBlocks(snippet);
 
-        const converter = new showdown.Converter({
-            omitExtraWLInCodeBlocks: true,
-            simplifiedAutoLink: true,
-            excludeTrailingPunctuationFromURLs: true,
-            literalMidWordUnderscores: true,
-            simpleLineBreaks: true,
-            extensions: ['thinkExtension']
-        });
-
-        const html = converter.makeHtml(snippet);
+        // Plain text render (no Markdown conversion, no event handlers)
         const responseDiv = document.getElementById("response");
-        responseDiv.innerHTML = html;
+        if (!responseDiv) return;
+        responseDiv.innerHTML = '';
+        const pre = document.createElement('pre');
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.textContent = snippet;
+        responseDiv.appendChild(pre);
+
         responseDiv.scrollTop = responseDiv.scrollHeight;
-    }    
+    }
 
     // Function to populate the provider and model selectors
     function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
