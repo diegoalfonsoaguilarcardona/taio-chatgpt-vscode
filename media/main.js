@@ -18,6 +18,32 @@
     let renderScheduled = false;
     const MAX_STREAM_LINES = 50;
 
+    // Remember per-message collapse state (keyed by message index)
+    const collapseState = new Map(); // key: "messageIndex", value: boolean (true = collapsed)
+    
+    /**
+     * Build a short preview from the message content's text
+     */
+    function makePreviewText(contentEl, maxLines = 3, maxChars = 300) {
+        const text = (contentEl.innerText || '').trim();
+        if (!text) return '[empty]';
+    
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        let out = '';
+        let usedLines = 0;
+    
+        for (const l of lines) {
+            const candidate = out ? out + '\n' + l : l;
+            if (candidate.length > maxChars || usedLines >= maxLines) break;
+            out = candidate;
+            usedLines++;
+        }
+        out = out.trim();
+        if (out.length < text.length) out += ' …';
+        return out || '[empty]';
+    }
+    
+    
     function scheduleStreamRender() {
         if (renderScheduled) return;
         renderScheduled = true;
@@ -288,9 +314,9 @@
         const host = document.createElement('div');
         host.className = 'message-host';
         container.appendChild(host);
-
+    
         const shadow = host.attachShadow({ mode: 'open' });
-
+    
         const baseStyles = `
             :host {
                 color: var(--vscode-editor-foreground);
@@ -308,13 +334,15 @@
                 display: block; padding: .5rem; margin: .5rem 0; overflow-x: auto; background: rgba(127,127,127,.08);
             }
             .chat-content a { color: var(--vscode-textLink-foreground); text-decoration: underline; }
-
-            /* Smaller, consistent headings for message titles */
+    
             .chat-content h1, .chat-content h2, .chat-content h3,
             .chat-content h4, .chat-content h5, .chat-content h6 {
                 font-weight: 700;
                 margin: 0 0 6px 0;
                 line-height: 1.2;
+                display: flex;
+                align-items: center;
+                gap: .5rem;
             }
             .chat-content h1 { font-size: 0.95rem; }
             .chat-content h2 { font-size: 0.92rem; }
@@ -322,11 +350,33 @@
             .chat-content h4 { font-size: 0.88rem; }
             .chat-content h5 { font-size: 0.86rem; }
             .chat-content h6 { font-size: 0.84rem; }
-            `;
-
+    
+            .collapse-toggle {
+                margin-left: auto;
+                font-size: 0.8rem;
+                width: 1.5rem;
+                height: 1.5rem;
+                line-height: 1.3rem;
+                text-align: center;
+                border: 1px solid var(--vscode-editorGroup-border);
+                border-radius: 3px;
+                background: transparent;
+                color: inherit;
+                cursor: pointer;
+            }
+    
+            .message-preview {
+                color: var(--vscode-descriptionForeground);
+                white-space: pre-wrap;
+                border-left: 2px solid var(--vscode-editorGroup-border);
+                padding-left: .5rem;
+                margin: .25rem 0 .5rem .25rem;
+            }
+        `;
+    
         shadow.innerHTML = `<style>${baseStyles}</style><div class="chat-content">${blockHtml}</div>`;
         const root = shadow.querySelector('.chat-content');
-
+    
         // Re-bind checkbox changes (onchange attribute was stripped by sanitizer)
         root.querySelectorAll("input[type='checkbox'][id^='message-checkbox-']").forEach(cb => {
             cb.addEventListener('change', function () {
@@ -337,7 +387,7 @@
                 });
             });
         });
-
+    
         // Re-bind editable content (onclick/onblur attributes were stripped)
         root.querySelectorAll("[id^='message-content-']").forEach(el => {
             el.addEventListener('click', function () {
@@ -353,10 +403,10 @@
                 });
             });
         });
-
+    
         // Turn inline `code` that looks like file paths into clickable links
         replaceInlineFileCodeWithLinks(root);
-
+    
         // Click-to-paste code (same message back to the extension)
         root.querySelectorAll('code').forEach(codeBlock => {
             if (codeBlock.innerText.startsWith("Copy code")) {
@@ -369,14 +419,14 @@
                     value: this.innerText
                 });
             });
-
+    
             const d = document.createElement('div');
             d.innerHTML = codeBlock.innerHTML;
             codeBlock.innerHTML = '';
             codeBlock.appendChild(d);
             d.classList.add("code");
         });
-
+    
         // Optional: syntax highlight inside Shadow DOM (best-effort)
         try {
             if (window.microlight && typeof window.microlight.reset === 'function') {
@@ -384,6 +434,83 @@
                 window.microlight.reset(codes);
             }
         } catch (_) {}
+    
+        // ---- New: Collapse/Expand per message block ----
+        const headingEl = root.querySelector('h1, h2, h3, h4, h5, h6');
+        if (headingEl) {
+            // Collect all siblings after the heading as the message content
+            const contentNodes = [];
+            let n = headingEl.nextSibling;
+            while (n) {
+                const next = n.nextSibling;
+                contentNodes.push(n);
+                root.removeChild(n);
+                n = next;
+            }
+    
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-body';
+            contentNodes.forEach(node => contentDiv.appendChild(node));
+            root.appendChild(contentDiv);
+    
+            // Figure out a stable-ish key for this message (use the checkbox id index)
+            const check = headingEl.querySelector("input[id^='message-checkbox-']");
+            let msgKey = null;
+            if (check && check.id) {
+                const m = check.id.match(/message-checkbox-(\d+)/);
+                if (m) msgKey = m[1]; // a string index
+            }
+    
+            // Create preview when collapsed
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'message-preview';
+            previewDiv.textContent = makePreviewText(contentDiv, 3, 300);
+            root.insertBefore(previewDiv, contentDiv);
+    
+            // Toggle button
+            const btn = document.createElement('button');
+            btn.className = 'collapse-toggle';
+            btn.title = 'Collapse/Expand';
+            btn.setAttribute('aria-expanded', 'true');
+            btn.textContent = '−';
+            headingEl.appendChild(btn);
+    
+            // Restore previous state or default to expanded
+            let collapsed = msgKey ? !!collapseState.get(msgKey) : false;
+            applyCollapsed(collapsed);
+    
+            function applyCollapsed(c) {
+                if (c) {
+                    contentDiv.style.display = 'none';
+                    previewDiv.style.display = 'block';
+                    btn.textContent = '+';
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    contentDiv.style.display = 'block';
+                    previewDiv.style.display = 'none';
+                    btn.textContent = '−';
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            }
+    
+            // Button toggles
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                collapsed = !collapsed;
+                applyCollapsed(collapsed);
+                if (msgKey) collapseState.set(msgKey, collapsed);
+            });
+    
+            // Optional: clicking the header (not on the checkbox) toggles as well
+            headingEl.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target && target.tagName === 'INPUT') return; // don't toggle when clicking the checkbox
+                if (target === btn) return; // already handled
+                collapsed = !collapsed;
+                applyCollapsed(collapsed);
+                if (msgKey) collapseState.set(msgKey, collapsed);
+            });
+        }
     }
 
     // Recognize our generated header line
