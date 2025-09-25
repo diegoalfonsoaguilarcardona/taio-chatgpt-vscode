@@ -150,6 +150,23 @@
                 console.log("After Update Response !!!!!!!!!");
                 break;                
             }
+            case "updateStats": {
+                const v = message.value || {};
+                const total = v.totalTokens ?? 0;
+                const used = v.usedTokens ?? 0;
+                const p = v.promptTokens ?? 0;
+                const c = v.completionTokens ?? 0;
+                const model = v.model ?? '-';
+            
+                const elTotal = document.getElementById('stats-total');
+                const elUsed = document.getElementById('stats-used');
+                const elModel = document.getElementById('stats-model');
+            
+                if (elTotal) elTotal.textContent = `Total Tokens: ${total}`;
+                if (elUsed) elUsed.textContent = `Used: ${used} (${p}+${c})`;
+                if (elModel) elModel.textContent = `Model: ${model}`;
+                break;
+            }
             case "clearResponse": {
                 response = '';
                 break;

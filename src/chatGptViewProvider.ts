@@ -483,12 +483,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         const checked_string = selected ? "checked" : "";
         if (typeof message.content === 'string') {
           if (this._containsCodeBlockOrListItems(message.content)) {
-            // Code blocks or lists already go on the next line
             chat_response +=
               "\n### <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " +
               message.role.toUpperCase() + "</u>:\n" + message.content;
           } else {
-            // Plain text: put content on a new line so it’s not inside the heading
             chat_response +=
               "\n### <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " +
               message.role.toUpperCase() + "</u>:\n" +
@@ -496,7 +494,6 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               message.content + "</div>";
           }
         } else if (Array.isArray(message.content)) {
-          // Also move array content (images/text parts) to a new line after the heading
           chat_response +=
             "\n### <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " +
             message.role.toUpperCase() + "</u>:\n" +
@@ -513,10 +510,23 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
       });
     }
+  
     if (this._totalNumberOfTokens !== undefined) {
       this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
-      chat_response += `\n\n---\n*<sub>Total Tokens: ${this._totalNumberOfTokens},  Tokens used: ${promtNumberOfTokens + completionTokens} (${promtNumberOfTokens}+${completionTokens}), model: ${this._settings.model}</sub>* \n\n---\n\n\n\n\n\n\n`;
+  
+      // NEW: send stats to the webview (always visible status row)
+      this._view?.webview.postMessage({
+        type: 'updateStats',
+        value: {
+          totalTokens: this._totalNumberOfTokens,
+          usedTokens: promtNumberOfTokens + completionTokens,
+          promptTokens: promtNumberOfTokens,
+          completionTokens,
+          model: this._settings.model
+        }
+      });
     }
+  
     return chat_response;
   }
   
@@ -731,9 +741,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
     const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
     const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
-    // NOTE: use purify.min.js (your actual filename)
     const dompurifyUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'purify.min.js'));
-
+  
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -753,7 +762,18 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           <label for="model-selector">Model:</label>
           <select id="model-selector"></select>
         </div>
+  
         <div id="response" class="text-sm"></div>
+  
+        <!-- NEW: always-visible stats bar -->
+        <div id="stats-bar">
+          <span id="stats-total">Total Tokens: 0</span>
+          <span class="stats-sep">|</span>
+          <span id="stats-used">Used: 0 (0+0)</span>
+          <span class="stats-sep">|</span>
+          <span id="stats-model">Model: -</span>
+        </div>
+  
         <div id="input-wrapper">
           <div>
             <label for="system-prompt-selector">System Prompt:</label>

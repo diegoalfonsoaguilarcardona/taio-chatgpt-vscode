@@ -177,3 +177,19 @@ input[type="range"]::-ms-thumb {
     padding: 8px;
     background: transparent;
 }
+
+#stats-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    background-color: var(--vscode-editor-background);
+    border-top: 1px solid var(--vscode-editorGroup-border);
+    padding: 6px 10px;
+    box-sizing: border-box;
+}
+#stats-bar .stats-sep {
+    opacity: 0.6;
+}
