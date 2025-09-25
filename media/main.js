@@ -386,6 +386,46 @@
         } catch (_) {}
     }
 
+    // Recognize our generated header line
+    function isHeaderMarkdownLine(line) {
+      // e.g.: "### <u> <input id='message-checkbox-0' ...> SYSTEM </u>:"
+      return /^#{1,6}\s*<u>\s*<input[^>]*id=['"]message-checkbox-/.test(line);
+    }
+
+    // Escape only literal <style>...</style> occurrences outside code fences/inline code,
+    // but keep our header lines intact.
+    function escapeLiteralStyleTagsOutsideCodeExceptHeader(md) {
+      let inFence = false;
+      const lines = md.split(/\r?\n/);
+
+      // Replace <style ...> -> &lt;style ...&gt; and </style> -> &lt;/style&gt;
+      const escapeStyleTagsInPlain = (text) => {
+        return text
+          .replace(/<\s*style\b([^>]*)>/gi, (m, attrs) => `&lt;style${attrs || ''}&gt;`)
+          .replace(/<\s*\/\s*style\s*>/gi, '&lt;/style&gt;');
+      };
+
+      // Preserve inline code (`...`) segments as-is; escape only the rest of the line
+      const escapeOutsideInlineCode = (line) => {
+        const parts = line.split(/(`[^`]*`)/g);
+        return parts
+          .map((part, idx) => (idx % 2 === 1 ? part : escapeStyleTagsInPlain(part)))
+          .join('');
+      };
+
+      const processed = lines.map((line) => {
+        if (/^\s*```/.test(line)) {
+          inFence = !inFence;
+          return line; // leave fence markers unchanged
+        }
+        if (inFence) return line; // leave fenced code unchanged
+        if (isHeaderMarkdownLine(line)) return line; // keep header line intact
+        return escapeOutsideInlineCode(line);
+      });
+
+      return processed.join('\n');
+    }
+
     function setResponse() {
         var converter = new showdown.Converter({
             omitExtraWLInCodeBlocks: true,
@@ -398,11 +438,12 @@
 
         // 1) Convert markdown to HTML for the entire chat content
         const fixed = fixCodeBlocks(response);
-        const rawHtml = converter.makeHtml(fixed);
+        // Escape only literal <style> tags in prose (not in code / header)
+        const escapedMd = escapeLiteralStyleTagsOutsideCodeExceptHeader(fixed);
 
-        // 2) Sanitize (blocks scripts and inline event handlers)
+        const rawHtml = converter.makeHtml(escapedMd);
         const safeHtml = sanitizeHtml(rawHtml);
-
+        
         // 3) Split into per-message chunks and render each in its own Shadow DOM
         const responseDiv = document.getElementById("response");
         responseDiv.innerHTML = '';
