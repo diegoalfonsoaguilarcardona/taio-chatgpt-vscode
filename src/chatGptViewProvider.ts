@@ -483,26 +483,33 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         const checked_string = selected ? "checked" : "";
         if (typeof message.content === 'string') {
           if (this._containsCodeBlockOrListItems(message.content)) {
-            chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>:\n" + message.content;
+            // Code blocks or lists already go on the next line
+            chat_response +=
+              "\n### <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " +
+              message.role.toUpperCase() + "</u>:\n" + message.content;
           } else {
-            chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>"+ message.content + "</div>";
+            // Plain text: put content on a new line so it’s not inside the heading
+            chat_response +=
+              "\n### <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " +
+              message.role.toUpperCase() + "</u>:\n" +
+              "<div id='message-content-" + index + "' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>" +
+              message.content + "</div>";
           }
         } else if (Array.isArray(message.content)) {
-          // Handle the case where message.content is an array of ChatCompletionContentPartImage
-          chat_response += "\n# <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " + message.role.toUpperCase() + "</u>: <div id='message-content-" + index + "' contenteditable='false'>";
+          // Also move array content (images/text parts) to a new line after the heading
+          chat_response +=
+            "\n### <u> <input id='message-checkbox-" + index + "' type='checkbox' " + checked_string + " onchange='myFunction(this)'> " +
+            message.role.toUpperCase() + "</u>:\n" +
+            "<div id='message-content-" + index + "' contenteditable='false'>";
           message.content.forEach(part => {
-            console.log("processing an object...")
             if (this.isChatCompletionContentPartImage(part)) {
-              console.log("Is an image!!!")
-              // Process each ChatCompletionContentPartImage item
-              chat_response += "<img src='"+ part.image_url.url + "' alt='Base64 Image'/>";
+              chat_response += "<img src='" + part.image_url.url + "' alt='Base64 Image'/>";
             }
             if (this.isChatCompletionContentPartText(part)) {
-              console.log("Is a text!!!")
               chat_response += part.text;
             }
           });
-          chat_response += "</div>"
+          chat_response += "</div>";
         }
       });
     }
@@ -719,13 +726,14 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
-  
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
     const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));
     const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));
     const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
     const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
-  
+    // NOTE: use purify.min.js (your actual filename)
+    const dompurifyUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'purify.min.js'));
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -734,6 +742,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       <script src="${tailwindUri}"></script>
       <script src="${showdownUri}"></script>
       <script src="${microlightUri}"></script>
+      <script src="${dompurifyUri}"></script>
       <link rel="stylesheet" href="${stylesUri}">
     </head>
     <body>
@@ -748,8 +757,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         <div id="input-wrapper">
           <div>
             <label for="system-prompt-selector">System Prompt:</label>
-            <select id="system-prompt-selector">
-            </select>
+            <select id="system-prompt-selector"></select>
           </div>
           <input type="text" id="prompt-input" placeholder="Ask ChatGPT something">
         </div>

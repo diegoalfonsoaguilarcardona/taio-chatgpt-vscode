@@ -167,3 +167,13 @@ input[type="range"]::-ms-thumb {
     --vscode-slider-activeBackground: #007ACC;
     --vscode-slider-knob: #CCCCCC;
 }
+
+/* Container for each message (outside Shadow DOM) */
+#response .message-host {
+    display: block;
+    margin: 12px 0;
+    border: 1px solid var(--vscode-editorGroup-border);
+    border-radius: 6px;
+    padding: 8px;
+    background: transparent;
+}
