@@ -1,0 +1,98 @@
+- role: system
+  content: You are a helpfull assistant. Remember to diferenciate the codes with Triple backticks.
+  selected: true
+- role: user
+  content: Hello
+  selected: true
+- role: assistant
+  content: Hi! How can I help you today?
+  selected: true
+- role: user
+  content: Can you write me a python code that calculate the first 100 prime numbers?
+  selected: true
+- role: assistant
+  content: |-
+    Por supuesto, aquí tienes todo el texto anterior dentro de un bloque de código markdown:
+
+    ```markdown
+    # Cálculo de Números Primos en Python y HTML
+
+    ## Cálculo de Números Primos en Python
+
+    Para determinar si un número es primo, revisamos si sólo es divisible por 1 y por sí mismo.  
+    Aquí tienes un ejemplo simple de código en Python para imprimir todos los números primos hasta un límite dado (por ejemplo, 100):
+
+    ```python
+    def es_primo(n):
+        if n < 2:
+            return False
+        for i in range(2, int(n**0.5)+1):
+            if n % i == 0:
+                return False
+        return True
+
+    # Mostrar los números primos hasta 100
+    for num in range(2, 101):
+        if es_primo(num):
+            print(num)
+    ```
+
+    **Explicación:**
+    - La función `es_primo(n)` devuelve `True` si `n` es primo y `False` en caso contrario.
+    - El bucle principal recorre todos los números entre 2 y 100 y los imprime solo si son primos.
+
+    ---
+
+    ## Cálculo de Números Primos en HTML con JavaScript
+
+    Podemos crear una página sencilla en HTML donde un usuario puede ingresar un límite y ver los números primos hasta ese número.  
+    Aquí tienes un ejemplo:
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Números Primos</title>
+    </head>
+    <body>
+        <h1>Cálculo de Números Primos</h1>
+        <label for="limite">Hasta qué número:</label>
+        <input id="limite" type="number" min="2" value="100">
+        <button onclick="calcularPrimos()">Calcular</button>
+        <pre id="resultado"></pre>
+
+        <script>
+            function esPrimo(n) {
+                if (n < 2) return false;
+                for (let i = 2; i <= Math.sqrt(n); i++) {
+                    if (n % i === 0) return false;
+                }
+                return true;
+            }
+
+            function calcularPrimos() {
+                const limite = parseInt(document.getElementById('limite').value);
+                let resultado = '';
+                for (let num = 2; num <= limite; num++) {
+                    if (esPrimo(num)) {
+                        resultado += num + ' ';
+                    }
+                }
+                document.getElementById('resultado').textContent = resultado;
+            }
+        </script>
+    </body>
+    </html>
+    ```
+
+    **Explicación:**
+    - El usuario puede introducir hasta dónde desea calcular los números primos.
+    - Al tocar el botón "Calcular", se ejecuta la función que muestra todos los números primos hasta el límite indicado.
+
+    ---
+
+    ¿Te gustaría que profundice en alguna de las versiones o agregue algo más?
+    ```
+    Recuerda quitar estas comillas para usar el markdown, o puedes copiarlo tal cual si tu editor lo soporta. ¿Necesitas otro ejemplo o alguna explicación adicional?
+  selected: true
