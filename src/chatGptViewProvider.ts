@@ -530,7 +530,61 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   
     return chat_response;
   }
-  
+
+  // Expand file reference markers in strings to current file contents.
+  // Supported markers:
+  //   [[FILE:relative/path.ext]]
+  //   <!--FILE:relative/path.ext-->
+  private expandFileReferencesInString(input: string): string {
+    const regex = /(?:\[\[FILE:([^\]]+)\]\])|(?:<!--\s*FILE:([^>]+?)\s*-->)/g;
+    const replaced = input.replace(regex, (_m, g1, g2) => {
+      const relPath = (g1 || g2 || '').trim();
+      if (!relPath) return _m;
+      const fileContent = this.readWorkspaceFile(relPath);
+      if (fileContent == null) {
+        // If file not found, keep the original marker
+        return _m;
+      }
+      const ext = path.extname(relPath).slice(1);
+      return `**${relPath}**\n\`\`\`${ext}\n${fileContent}\n\`\`\``;
+    });
+    return replaced;
+  }
+
+  // Read a file from any workspace folder by relative path.
+  private readWorkspaceFile(relPath: string): string | null {
+    const folders = vscode.workspace.workspaceFolders || [];
+    for (const f of folders) {
+      try {
+        const abs = path.join(f.uri.fsPath, relPath);
+        if (fs.existsSync(abs)) {
+          return fs.readFileSync(abs, 'utf8');
+        }
+      } catch (_e) {
+        // ignore and try next folder
+      }
+    }
+    return null;
+  }
+
+  // Produce a deep-copied messages array with references expanded in string/text parts.
+  private expandFileReferencesInMessages(msgs: Array<Message>): Array<Message> {
+    return msgs.map((msg) => {
+      if (typeof msg.content === 'string') {
+        return { ...msg, content: this.expandFileReferencesInString(msg.content) };
+      } else if (Array.isArray(msg.content)) {
+        const newParts = msg.content.map((part) => {
+          if (this.isChatCompletionContentPartText(part)) {
+            return { ...part, text: this.expandFileReferencesInString(part.text) };
+          }
+          return part;
+        });
+        return { ...msg, content: newParts };
+      }
+      return msg;
+    });
+  }
+
   private async _generate_search_prompt(prompt:string) {
     this._prompt = prompt;
     if (!prompt) {
@@ -669,6 +723,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           //}
         }
       }
+
+      // Expand any file reference markers to current file contents
+      messagesToSend = this.expandFileReferencesInMessages(messagesToSend);
 
       const stream = await this._openai.chat.completions.create({
         model: this._settings.model,
@@ -827,6 +884,25 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     const idx = this._messages ? this._messages.length - 1 : 0;
     this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });    
   
+    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
+    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+  }
+
+  // Adds a lightweight reference to a file; the actual content is injected only when sending.
+  public addFileReferenceToChat(relativePath: string, _fileExtension: string) {
+    // Show a readable reference and embed a hidden marker for later expansion.
+    const content =
+      `File reference: \`${relativePath}\`\n` +
+      `<!--FILE:${relativePath}-->`;
+
+    let newMessage: UserMessage = {
+      role: "user",
+      content,
+      selected: true
+    };
+    this._messages?.push(newMessage);
+    const idx = this._messages ? this._messages.length - 1 : 0;
+    this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });
     const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
   }

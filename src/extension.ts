@@ -100,6 +100,28 @@ export function activate(context: vscode.ExtensionContext) {
 	  })
 	);
 
+    context.subscriptions.push(
+      vscode.commands.registerCommand('chatgpt.addFileReferenceToChat', async (uri: vscode.Uri) => {
+        if (!uri || !uri.fsPath) {
+          vscode.window.showErrorMessage('No file selected!');
+          return;
+        }
+        try {
+          const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+          let relativePath: string;
+          if (workspaceFolder) {
+            relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+          } else {
+            relativePath = path.basename(uri.fsPath);
+          }
+          const fileExtension = path.extname(relativePath).substring(1);
+          provider.addFileReferenceToChat(relativePath, fileExtension);
+        } catch (err) {
+          vscode.window.showErrorMessage(`Failed to add file reference: ${err}`);
+        }
+      })
+    );	
+
 	const commandHandler = (command: string) => {
 		const config = vscode.workspace.getConfiguration('chatgpt');
 		const prompt = config.get(command) as string;
