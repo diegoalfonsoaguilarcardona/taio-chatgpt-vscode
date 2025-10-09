@@ -188,6 +188,20 @@
                 break;
             }
 
+            case "resetCollapseState": {
+                // Clear remembered collapse/expand states (e.g., on chat reset)
+                collapseState.clear();
+                break;
+            }
+            case "setCollapsedForIndex": {
+                // Mark a specific message index as collapsed by default
+                const idx = message.index;
+                if (idx !== undefined && idx !== null) {
+                    collapseState.set(String(idx), true);
+                }
+                break;
+            }
+
             case "streamStart": {
                 isStreaming = true;
                 streamBuffer = '';

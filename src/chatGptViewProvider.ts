@@ -315,6 +315,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       this._getMessagesNumberOfTokens(),
       0
     );
+    this._view?.webview.postMessage({ type: 'resetCollapseState' });
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
   }
 
@@ -823,6 +824,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     };
   
     this._messages?.push(newMessage);
+    const idx = this._messages ? this._messages.length - 1 : 0;
+    this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });    
   
     const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
