@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import OpenAI from "openai";
 import { encodingForModel } from "js-tiktoken";
-import { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, BASE_URL } from './types';
+import { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, SystemMessage, AssistantMessage, BASE_URL } from './types';
 import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';
 
 export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
@@ -568,19 +568,41 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   }
 
   // Produce a deep-copied messages array with references expanded in string/text parts.
-  private expandFileReferencesInMessages(msgs: Array<Message>): Array<Message> {
+  private expandFileReferencesInMessages(msgs: ReadonlyArray<Message>): Message[] {
     return msgs.map((msg) => {
+      // If content is a string, we can safely expand for any role (system/user/assistant)
       if (typeof msg.content === 'string') {
-        return { ...msg, content: this.expandFileReferencesInString(msg.content) };
-      } else if (Array.isArray(msg.content)) {
-        const newParts = msg.content.map((part) => {
-          if (this.isChatCompletionContentPartText(part)) {
-            return { ...part, text: this.expandFileReferencesInString(part.text) };
-          }
-          return part;
-        });
-        return { ...msg, content: newParts };
+        const newContent = this.expandFileReferencesInString(msg.content);
+        if (msg.role === 'system') {
+          const sys: SystemMessage = { ...msg, content: newContent };
+          return sys;
+        }
+        if (msg.role === 'assistant') {
+          const asst: AssistantMessage = { ...msg, content: newContent };
+          return asst;
+        }
+        // user
+        const user: UserMessage = { ...msg, content: newContent };
+        return user;
       }
+
+      // If content is an array, only user messages are allowed to have array content
+      if (Array.isArray(msg.content)) {
+        if (msg.role === 'user') {
+          const newParts = msg.content.map((part) => {
+            if (this.isChatCompletionContentPartText(part)) {
+              return { ...part, text: this.expandFileReferencesInString(part.text) };
+            }
+            return part;
+          });
+          const user: UserMessage = { ...msg, content: newParts };
+          return user;
+        }
+        // For system/assistant, array content is not valid per Chat Completions params; keep as-is
+        return msg as Message;
+      }
+
+      // Fallback: unchanged
       return msg;
     });
   }

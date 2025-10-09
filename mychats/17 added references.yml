@@ -1,0 +1,1517 @@
+- role: system
+  content: You are a helpfull assistant. Remember to diferenciate the codes with Triple backticks.
+  selected: true
+- role: user
+  content: |-
+    **package.json**
+    ```json
+    {
+      "name": "diegoaacchatgpt",
+      "displayName": "ChatGPT for Visual Studio Code: write and improve code using AI",
+      "description": "Use ChatGPT and GPT4 right inside the IDE to enhance and automate your coding with AI-powered assistance (unofficial)",
+      "version": "1.1.0",
+      "publisher": "diegoaac",
+      "icon": "resources/extensionIcon.png",
+      "license": "MIT",
+      "repository": {
+        "url": "https://github.com/timkmecl/chatgpt-vscode"
+      },
+      "engines": {
+        "vscode": "^1.73.0"
+      },
+      "categories": [
+        "Other"
+      ],
+      "keywords": [
+        "chatgpt",
+        "openai",
+        "gpt3",
+        "gpt4",
+        "copilot",
+        "ai",
+        "explain",
+        "find bugs",
+        "explain ",
+        "refactor"
+      ],
+      "activationEvents": [
+        "onView:chatgpt.chatView",
+        "onCommand:chatgpt.ask",
+        "onCommand:chatgpt.explain",
+        "onCommand:chatgpt.refactor",
+        "onCommand:chatgpt.optimize",
+        "onCommand:chatgpt.findProblems",
+        "onCommand:chatgpt.documentation",
+        "onCommand:chatgpt.useSelectionAsChat"
+      ],
+      "main": "./dist/extension.js",
+      "contributes": {
+        "commands": [
+          {
+            "command": "chatgpt.ask",
+            "title": "Ask ChatGPT"
+          },
+          {
+            "command": "chatgpt.explain",
+            "title": "ChatGPT: Explain selection"
+          },
+          {
+            "command": "chatgpt.refactor",
+            "title": "ChatGPT: Refactor selection"
+          },
+          {
+            "command": "chatgpt.findProblems",
+            "title": "ChatGPT: Find problems"
+          },
+          {
+            "command": "chatgpt.optimize",
+            "title": "ChatGPT: Optimize selection"
+          },
+          {
+            "command": "chatgpt.documentation",
+            "title": "ChatGPT: Write documentation"
+          },
+          {
+            "command": "chatgpt.resetConversation",
+            "title": "Reset ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.pasteChat",
+            "title": "Paste ChatGPT chat"
+          },
+          {
+            "command": "chatgpt.useSelectionAsChat",
+            "title": "Use selection as ChatGPT conversation"
+          },
+          {
+            "command": "chatgpt.tryAgain",
+            "title": "Retry ChatGPT request"
+          },
+          {
+            "command": "chatgpt.addImageToChat",
+            "title": "Add Image to ChatGPT"
+          },
+          {
+            "command": "chatgpt.addFileToChat",
+            "title": "Add File Content to ChatGPT"
+          }
+        ],
+        "menus": {
+          "editor/context": [
+            {
+              "command": "chatgpt.ask",
+              "when": "editorTextFocus",
+              "group": "chatgpt-menu-group@1"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@2"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@3"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@4"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@5"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@6"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection",
+              "group": "chatgpt-menu-group@7"
+            }
+          ],
+          "commandPalette": [
+            {
+              "command": "chatgpt.ask"
+            },
+            {
+              "command": "chatgpt.explain",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.refactor",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.findProblems",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.optimize",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.documentation",
+              "when": "editorHasSelection"
+            },
+            {
+              "command": "chatgpt.resetConversation"
+            },
+            {
+              "command": "chatgpt.pasteChat"
+            },
+            {
+              "command": "chatgpt.useSelectionAsChat",
+              "when": "editorHasSelection"
+            }
+          ],
+          "explorer/context": [
+            {
+              "command": "chatgpt.addImageToChat",
+              "when": "resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif",
+              "group": "navigation"
+            },
+            {
+              "command": "chatgpt.addFileToChat",
+              "when": "resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/",
+              "group": "navigation"
+            }
+          ]
+        },
+        "viewsContainers": {
+          "activitybar": [
+            {
+              "id": "chatgpt",
+              "title": "ChatGPT",
+              "icon": "resources/icon.png"
+            }
+          ]
+        },
+        "views": {
+          "chatgpt": [
+            {
+              "type": "webview",
+              "id": "chatgpt.chatView",
+              "name": "ChatGPT"
+            }
+          ]
+        },
+        "configuration": {
+          "title": "chatGPT",
+          "type": "object",
+          "properties": {
+            "chatgpt.providers": {
+              "type": "array",
+              "description": "List of AI providers with their configurations.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the provider (e.g., OpenAI, CustomAPI)."
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "description": "API key for the provider."
+                  },
+                  "apiUrl": {
+                    "type": "string",
+                    "description": "API URL for the provider."
+                  },
+                  "models": {
+                    "type": "array",
+                    "description": "List of models offered by this provider.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Name of the model (e.g., gpt-3.5-turbo)."
+                        },
+                        "options": {
+                          "type": "object",
+                          "description": "Options for the model.",
+                          "additionalProperties": {
+                            "type": "any",
+                            "description": "Custom option key-value pairs for the model."
+                          }
+                        }
+                      },
+                      "required": ["name"]
+                    }
+                  }
+                },
+                "required": ["name", "apiKey", "apiUrl", "models"]
+              },
+              "order": 1
+            },
+            "chatgpt.prompts" : {
+              "type":"array",
+              "description": "List of possible prompts to use",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the prompt (e.g., ChainOfThougt, Simple Engenier)."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The prompt it self"
+                  }
+                },
+                "required": ["name", "prompt"]
+              },
+              "order": 2
+            },
+            "chatgpt.pasteOnClick": {
+              "type": "boolean",
+              "default": true,
+              "description": "Paste the code from a codeblock inside the response into the editor when you click on it",
+              "order": 3
+            },
+            "chatgpt.promptPrefix.explain": {
+              "type": "string",
+              "default": "Explain what this code does: ",
+              "description": "The prompt prefix used for explaining the selected code",
+              "order": 4
+            },
+            "chatgpt.promptPrefix.refactor": {
+              "type": "string",
+              "default": "Refactor this code and explain what's changed: ",
+              "description": "The prompt prefix used for refactoring the selected code",
+              "order": 5
+            },
+            "chatgpt.promptPrefix.findProblems": {
+              "type": "string",
+              "default": "Find problems with the following code, fix them and explain what was wrong (Do not change anything else, if there are no problems say so): ",
+              "description": "The prompt prefix used for finding problems in the selected code",
+              "order": 6
+            },
+            "chatgpt.promptPrefix.documentation": {
+              "type": "string",
+              "default": "Write documentation for the following code: ",
+              "description": "The prompt prefix used for writing documentation for the selected code",
+              "order": 7
+            },
+            "chatgpt.promptPrefix.optimize": {
+              "type": "string",
+              "default": "Optimize the following code if there is anything to improve, if not say so: ",
+              "description": "The prompt prefix used for optimizing the selected code",
+              "order": 8
+            },
+            "chatgpt.keepConversation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep the conversation going by using the same conversation ID for all requests (allows follow-up questions)",
+              "order": 9
+            },
+            "chatgpt.timeoutLength": {
+              "type": "number",
+              "default": "120",
+              "description": "How long should the request wait for a response before timing out (in seconds)",
+              "order": 10
+            },
+            "chatgpt.selectedInsideCodeblock": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append selected code as a codeblock (```...code...```) instead of plain text",
+              "order": 11
+            },
+            "chatgpt.codeblockWithLanguageId": {
+              "type": "boolean",
+              "default": true,
+              "description": "Append language id of the selected code to the codeblock (```language...code...```)",
+              "order": 12
+            }
+          }
+        }
+      },
+      "scripts": {
+        "vscode:prepublish": "yarn run package",
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production --devtool hidden-source-map",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js",
+        "update-package-lock": "npm install --package-lock-only"
+      },
+      "devDependencies": {
+        "@types/glob": "^8.0.0",
+        "@types/js-yaml": "^4.0.9",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/vscode": "^1.73.0",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "@vscode/test-electron": "^2.2.0",
+        "eslint": "^8.28.0",
+        "glob": "^8.0.3",
+        "mocha": "^10.1.0",
+        "ts-loader": "^9.4.1",
+        "typescript": "^4.9.3",
+        "webpack": "^5.75.0",
+        "webpack-cli": "^5.0.0"
+      },
+      "dependencies": {
+        "@types/node-fetch": "^2.6.11",
+        "js-tiktoken": "^1.0.10",
+        "js-yaml": "^4.1.0",
+        "node-fetch": "^3.3.2",
+        "openai": "^4.29.2"
+      }
+    }
+
+    ```
+  selected: true
+- role: user
+  content: "**src/chatGptViewProvider.ts**\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml';\nimport OpenAI from \"openai\";\nimport { encodingForModel } from \"js-tiktoken\";\nimport { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, BASE_URL } from './types';\nimport { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';\n\nexport class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n  public static readonly viewType = 'chatgpt.chatView';\n  private _view?: vscode.WebviewView;\n\n  private _conversation?: any;\n  private _messages?: Message[];\n  private _openai?: OpenAI;\n\n  private _response?: string;\n  private _totalNumberOfTokens?: number;\n  private _prompt?: string;\n  private _fullPrompt?: string;\n  private _currentMessageNumber = 0;\n  private _enc = encodingForModel(\"gpt-4\"); //Hardcoded for now\n\n  private _settings: Settings = {\n    selectedInsideCodeblock: false,\n    codeblockWithLanguageId: false,\n    pasteOnClick: true,\n    keepConversation: true,\n    timeoutLength: 60,\n    apiUrl: BASE_URL,\n    model: 'gpt-3.5-turbo',\n    options: {\n    },\n  };\n  private _authInfo?: AuthInfo;\n\n  // In the constructor, we store the URI of the extension\n  constructor(private readonly _extensionUri: vscode.Uri) {\n    this._messages = [];\n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    console.log(\"constructor....\");\n    console.log(\"messages:\", this._messages);\n  }\n\n  // Set the API key and create a new API instance based on this key\n  public setAuthenticationInfo(authInfo: AuthInfo) {\n    this._authInfo = authInfo;\n    this._newAPI();\n  }\n\n  public setSettings(settings: Settings) {\n    let changeModel = false;\n  \n    // Check if there are any keys in the options object of the settings\n    if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {\n      changeModel = true;\n    }\n  \n    // Update settings with the new values\n    this._settings = { ...this._settings, ...settings };\n  \n    if (changeModel) {\n      //this._newAPI();\n    }\n  }\n\n  public getSettings() {\n    return this._settings;\n  }\n\n  // This private method initializes a new ChatGPTAPI instance\n  private _newAPI() {\n    console.log(\"New API\");\n    console.log(\"Messages:\", this._messages);\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      console.warn(\"API key or API URL not set, please go to extension settings (read README.md for more info)\");\n    } else {\n      console.log(\"apiUrl:\", this._settings?.apiUrl);\n      this._openai = new OpenAI(\n        {\n          apiKey: this._authInfo?.apiKey,\n          baseURL: this._authInfo?.apiUrl\n        }\n      );\n    }\n    setTimeout(() => {\n      const chat_response = this._updateChatMessages(\n        this._getMessagesNumberOfTokens(),\n        0\n      );\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    }, 2000);\n  }\n\n  public resolveWebviewView(\n    webviewView: vscode.WebviewView,\n    context: vscode.WebviewViewResolveContext,\n    _token: vscode.CancellationToken,\n  ) {\n    this._view = webviewView;\n\n    // set options for the webview, allow scripts\n    webviewView.webview.options = {\n      enableScripts: true,\n      localResourceRoots: [\n        this._extensionUri\n      ]\n    };\n\n    // set the HTML for the webview\n    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);\n\n    // add an event listener for messages received by the webview\n    webviewView.webview.onDidReceiveMessage(async data =>  {\n      switch (data.type) {\n        case 'ready':\n          {\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n            let prompts: Prompt[] = config.get('prompts') || [];\n            this.set_providers(providers);\n            this.set_prompts(prompts);\n            break;\n          }\n        case 'codeSelected':\n          {\n            // do nothing if the pasteOnClick option is disabled\n            if (!this._settings.pasteOnClick) {\n              break;\n            }\n            let code = data.value;\n            const snippet = new vscode.SnippetString();\n            snippet.appendText(code);\n            // insert the code as a snippet into the active text editor\n            vscode.window.activeTextEditor?.insertSnippet(snippet);\n            break;\n          }\n        case 'pasteImage': \n          {\n            const base64Data = data.value;\n            const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));\n            const fileType = imageType.split('/')[1];\n            const fileName = `clipboard_image.${fileType}`;\n            this.addImageToChat(base64Data, fileName);\n            break;\n          }\n        case 'prompt':\n          {\n            console.log(\"prompt\");\n            this.search(data.value);\n            break;\n          }\n        case 'promptNoQuery':\n          {\n            console.log(\"promptNoQuery\");\n\n            let searchPrompt = await this._generate_search_prompt(data.value);\n            \n            this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n            let chat_response = this._updateChatMessages(\n              this._getMessagesNumberOfTokens(),\n              0\n            );\n            this._response = chat_response;\n            this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n            break;\n          }\n        case 'checkboxChanged':\n          {\n            console.log(\"checkboxChanged:\", data);\n            const idParts = data.id.split('-'); // Split the id into parts\n            if(idParts.length === 3) {\n              const indexStr = idParts[2]; // Grab the last part, which should contain the index\n              const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n            \n              if(this._messages && index >= 0 && index < this._messages.length) {\n                // If the index is within the bounds of the array, update the checked status\n                this._messages[index].selected = data.checked;\n              } else {\n                // Handle cases where index is out of bounds or _messages is not an array\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              // Handle cases where data.id does not follow the expected format\n              console.error('data.id is not in the expected format.');\n            }\n            break;\n          }\n        case 'messageContentChanged':\n          {\n            console.log(\"messageContentChanged:\", data);\n            const idParts = data.id.split('-'); // Split the id into parts\n            if(idParts.length === 3) {\n              const indexStr = idParts[2]; // Grab the last part, which should contain the index\n              const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary\n            \n              if(this._messages && index >= 0 && index < this._messages.length) {\n                // If the index is within the bounds of the array, update the checked status\n                this._messages[index].content = data.value;\n              } else {\n                // Handle cases where index is out of bounds or _messages is not an array\n                console.error('Index is out of bounds or _messages is not properly defined.');\n              }\n            } else {\n              // Handle cases where data.id does not follow the expected format\n              console.error('data.id is not in the expected format.');\n            }\n            console.log(\"messages:\", this._messages);\n            break;\n          }\n        case \"providerModelChanged\":\n          {\n            const providerIndex = data.providerIndex;\n            const modelIndex = data.modelIndex;\n            console.log(\"Provider Changed, providerIndex:\", providerIndex, \", model:\", modelIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let providers: Provider[] = config.get('providers') || [];\n      \n            if (providers && providers.length > providerIndex) {\n              const provider_data = providers[providerIndex];\n              if (provider_data.models && provider_data.models.length > modelIndex) {\n                const model_data = provider_data.models[modelIndex];\n                const provider_settings = {\n                  model: model_data.model_name,\n                  apiUrl: provider_data.apiUrl,\n                  apiKey: provider_data.apiKey,\n                  options: {\n                  ...model_data.options // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature\n                  },\n                };\n                this.setSettings({\n                  apiUrl: provider_settings.apiUrl,\n                  model: provider_settings.model,\n                  options: {\n                  ...provider_settings.options, // Spread operator to include all keys from options\n                  },\n                });\n                // Put configuration settings into the provider\n                this.setAuthenticationInfo({\n                  apiKey: provider_settings.apiKey,\n                  apiUrl: provider_settings.apiUrl\n                });\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case \"systemPromptChanged\":\n          {\n            const systemPromptIndex = data.systemPromptIndex;\n            console.log(\"systemPrompt Changed, providerIndex:\", systemPromptIndex);\n\n            const config = vscode.workspace.getConfiguration('chatgpt');\n            let prompts: Prompt[] = config.get('prompts') || [];\n      \n            if (prompts && prompts.length > systemPromptIndex) {\n              const prompt_data = prompts[systemPromptIndex];\n              if (prompt_data.name && prompt_data.prompt) {\n                this.set_prompt(prompt_data);\n              }\t\t\t\t\t\t\n            }\n            break;\n          }\n        case 'fileClicked': {\n          console.log(\"file Clicked!!!!!\");\n          const filePath = data.value; // e.g., 'src/extension.ts' (relative to workspace)\n          if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {\n            vscode.window.showErrorMessage('No workspace folder open.');\n            break;\n          }\n          const workspaceFolder = vscode.workspace.workspaceFolders[0];\n          const absolutePath = path.join(workspaceFolder.uri.fsPath, filePath);\n          try {\n            const fileContent = fs.readFileSync(absolutePath, 'utf-8');\n            const fileExt = path.extname(filePath).slice(1) || '';\n            this.addFileToChat(filePath, fileContent, fileExt);\n          } catch (e) {\n            vscode.window.showErrorMessage(`Could not read file: ${filePath} (${e instanceof Error ? e.message : String(e)})`);\n          }\n          break;\n        }\n      }\n    });\n  }\n\n  public getStartSystemPrompt() {\n    const config = vscode.workspace.getConfiguration('chatgpt');\n    let prompts: Prompt[] = config.get('prompts') || [];\n    let start_system_prompt = \"You are a helpful assistant.\";\n    if (prompts && prompts.length > 0) {\n      const prompt_data = prompts[0];\n      if (prompt_data.name && prompt_data.prompt) {\n        start_system_prompt = prompt_data.prompt;\n      }\t\t\t\t\t\t\n    }\n    return start_system_prompt;\n  }\n\n\n  public async resetConversation() {\n    console.log(this, this._conversation);\n    if (this._conversation) {\n      this._conversation = null;\n    }\n    this._prompt = '';\n    this._response = '';\n    this._fullPrompt = '';\n    this._totalNumberOfTokens = 0;\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n    this._messages = [];\n    \n    this._messages?.push({ role: \"system\", content: this.getStartSystemPrompt(), selected:true });\n    const chat_response = this._updateChatMessages(\n      this._getMessagesNumberOfTokens(),\n      0\n    );\n    this._view?.webview.postMessage({ type: 'resetCollapseState' });\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public async pasteChat() {\n    console.log(\"pasteChat\");\n  \n    // Ensure there is an active text editor where we can paste the YAML\n    if (!vscode.window.activeTextEditor) {\n      vscode.window.showErrorMessage('No active text editor!');\n      return;\n    }\n  \n    try {\n      // Get the original _messages object\n      // If you want to exclude any other properties from the YAML, you can map and remove them here\n      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({\n        role, content, selected\n      }));\n  \n      // Convert messages to a YAML string\n      const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n  \n      // Create a new snippet and append the YAML string\n      const snippet = new vscode.SnippetString();\n      snippet.appendText(messagesYaml);\n  \n      // Insert the snippet into the active text editor\n      await vscode.window.activeTextEditor.insertSnippet(snippet);\n  \n      console.log(\"Chat pasted as YAML successfully.\");\n    } catch (error) {\n      console.error(\"Failed to paste chat as YAML:\", error);\n      vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);\n    }\n  }\n  \n  public async useSelectionAsChat() {\n    console.log(\"use selection as chat\");\n\n    // Ensure there is an active text editor with a selection\n    const activeEditor = vscode.window.activeTextEditor;\n    if (!activeEditor) {\n      vscode.window.showErrorMessage('No active text editor with a selection!');\n      return;\n    }\n\n    const selection = activeEditor.selection;\n    if (selection.isEmpty) {\n      vscode.window.showErrorMessage('No text selected!');\n      return;\n    }\n\n    // Get the selected text\n    const selectedText = activeEditor.document.getText(selection);\n\n    try {\n      // Parse the selected text as YAML\n      const parsedMessages = yaml.load(selectedText);\n\n      // Validate the parsed YAML structure\n      if (!Array.isArray(parsedMessages)) {\n        throw new Error('Selected text is not an array of messages.');\n      }\n\n      // Validation of each message in the array\n      for (const msg of parsedMessages) {\n        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {\n          throw new Error('Invalid message format. Each message must have role, content, and selected properties.');\n        }\n      }\n\n      // If valid, update the _messages array with new data\n      this._messages = parsedMessages;\n\n      // Update the webview visualization\n      const chat_response = this._updateChatMessages(\n        this._getMessagesNumberOfTokens(),\n        0\n      );\n      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n\n      console.log(\"Updated messages from selection successfully.\");\n    } catch (error) {\n      console.error(\"Failed to use selection as chat:\", error);\n      vscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n    }\n  }\n\n  public fixCodeBlocks(response: string) {\n    // Use a regular expression to find all occurrences of the substring in the string\n    const REGEX_CODEBLOCK = new RegExp('\\`\\`\\`', 'g');\n    const matches = response.match(REGEX_CODEBLOCK);\n\n    // Return the number of occurrences of the substring in the response, check if even\n    const count = matches ? matches.length : 0;\n    if (count % 2 === 0) {\n      return response;\n    } else {\n      // else append ``` to the end to make the last code block complete\n      console.log(\"Warning - code block not complete\");\n      return response.concat('\\n\\`\\`\\`');\n    }\n\n  }\n\n  private _getMessagesNumberOfTokens() {\n    \n    let full_promt = \"\";\n    if (this._messages) {\n      for (const message of this._messages) {\n        if (message.selected) {\n          full_promt += \"\\n# <u>\" + message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n        }\n      }\n    }\n\n    const tokenList = this._enc.encode(full_promt);\n    return tokenList.length;\n  }\n\n\n  \n  public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {\n    let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({\n    role, content\n    })) || [];\n    return ret;\n  }\n\n  private _containsCodeBlockOrListItems(content: string): boolean {\n    // Regex pattern to match code blocks.\n    const codeBlockPattern = /```[\\s\\S]*?```/;\n  \n    // Regex pattern to match bullet points or numbered list items.\n    const listItemPattern = /^(?:\\s*(?:[-*+]|\\d+\\.)\\s+.+)$/m;\n  \n    // Test if the content contains a code block or list items.\n    return codeBlockPattern.test(content) || listItemPattern.test(content);\n  }\n\n\n  private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {\n    return this.isChatCompletionContentPartImage(value);\n  }\n  \n    \n  private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {\n    return typeof value === 'object'\n      && value != null\n      && typeof value.text === 'string'\n      && value.type === 'text';\n  }\n  private isChatCompletionContentPartImage(value: any): value is ChatCompletionContentPartImage {\n    return typeof value === 'object'\n      && value !== null\n      && typeof value.image_url === 'object'\n      && typeof value.image_url.url === 'string'\n      && value.type === 'image_url';\n  }\n    \n  private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {\n    let chat_response = \"\";\n    if (this._messages) {\n      this._messages.forEach((message, index) => {\n        const selected = message.selected;\n        const checked_string = selected ? \"checked\" : \"\";\n        if (typeof message.content === 'string') {\n          if (this._containsCodeBlockOrListItems(message.content)) {\n            chat_response +=\n              \"\\n### <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" +\n              message.role.toUpperCase() + \"</u>:\\n\" + message.content;\n          } else {\n            chat_response +=\n              \"\\n### <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" +\n              message.role.toUpperCase() + \"</u>:\\n\" +\n              \"<div id='message-content-\" + index + \"' contenteditable='false' onclick='makeEditable(this)' onblur='saveContent(this)'>\" +\n              message.content + \"</div>\";\n          }\n        } else if (Array.isArray(message.content)) {\n          chat_response +=\n            \"\\n### <u> <input id='message-checkbox-\" + index + \"' type='checkbox' \" + checked_string + \" onchange='myFunction(this)'> \" +\n            message.role.toUpperCase() + \"</u>:\\n\" +\n            \"<div id='message-content-\" + index + \"' contenteditable='false'>\";\n          message.content.forEach(part => {\n            if (this.isChatCompletionContentPartImage(part)) {\n              chat_response += \"<img src='\" + part.image_url.url + \"' alt='Base64 Image'/>\";\n            }\n            if (this.isChatCompletionContentPartText(part)) {\n              chat_response += part.text;\n            }\n          });\n          chat_response += \"</div>\";\n        }\n      });\n    }\n  \n    if (this._totalNumberOfTokens !== undefined) {\n      this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;\n  \n      // NEW: send stats to the webview (always visible status row)\n      this._view?.webview.postMessage({\n        type: 'updateStats',\n        value: {\n          totalTokens: this._totalNumberOfTokens,\n          usedTokens: promtNumberOfTokens + completionTokens,\n          promptTokens: promtNumberOfTokens,\n          completionTokens,\n          model: this._settings.model\n        }\n      });\n    }\n  \n    return chat_response;\n  }\n  \n  private async _generate_search_prompt(prompt:string) {\n    this._prompt = prompt;\n    if (!prompt) {\n      prompt = '';\n    }\n\n    // Focus the ChatGPT view\n    if (!this._view) {\n      await vscode.commands.executeCommand('chatgpt.chatView.focus');\n    } else {\n      this._view?.show?.(true);\n    }\n\n    // Initialize response and token count\n    \n    if (!this._response) {\n      this._response = '';\n    }\n    if (!this._totalNumberOfTokens) {\n      this._totalNumberOfTokens = 0;\n    }\n\n    // Get selected text and language ID (if applicable)\n    const selection = vscode.window.activeTextEditor?.selection;\n    const selectedText = vscode.window.activeTextEditor?.document.getText(selection);\n    const languageId =\n      (this._settings.codeblockWithLanguageId\n        ? vscode.window.activeTextEditor?.document?.languageId\n        : undefined) || '';\n\n    // Build the search prompt\n    let searchPrompt = '';\n    if (selection && selectedText) {\n      if (this._settings.selectedInsideCodeblock) {\n        searchPrompt = `${prompt}\\n\\`\\`\\`${languageId}\\n${selectedText}\\n\\`\\`\\``;\n      } else {\n        searchPrompt = `${prompt}\\n${selectedText}\\n`;\n      }\n    } else {\n      searchPrompt = prompt;\n    }\n    this._fullPrompt = searchPrompt;\n\n    // Increment message number and store for tracking\n    this._currentMessageNumber++;\n    return searchPrompt;\n\n  }\n\n  public set_providers(providers: Provider[]): void {\n    this._view?.webview.postMessage({ type: 'initialize', value: providers });\n  }\n\n  public set_prompts(prompts: Prompt[]): void {\n    console.log(\"Set Prompts:\", prompts);\n    this._view?.webview.postMessage({ type: 'initialize_prompts', value: prompts });\n  }\n\n  public set_prompt(prompt: Prompt): void {\n    // Check if _messages is defined\n    if (this._messages) {\n      this._messages[0] = { role: \"system\", content: prompt.prompt, selected: true };\n    } else {\n      this._messages = [{ role: \"system\", content: prompt.prompt, selected: true }];\n    }\n    console.log(\"calling updateResponse\");\n    let chat_response = this._updateChatMessages(0, 0)\n\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  public async search(prompt?: string) {\n    // Check if the API key and URL are set\n    if (!this._authInfo || !this._settings?.apiUrl) {\n      this._view?.webview.postMessage({\n        type: 'addResponse',\n        value: '[ERROR] \"API key or API URL not set, please go to extension settings (read README.md for more info)\"',\n      });\n      return;\n    }\n    \n    let chat_response = '';\n    let searchPrompt = \"\";\n    if (prompt!=undefined) {\n      searchPrompt = await this._generate_search_prompt(prompt);\n    } \n    // Show loading indicator\n    this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });\n    this._view?.webview.postMessage({ type: 'addResponse', value: '...' });\n\n    if (searchPrompt != \"\") {\n      this._messages?.push({ role: \"user\", content: searchPrompt, selected:true })\n    }\n\n    if (!this._openai) {\n      throw new Error('OpenAI instance is not initialized.');\n    }\n    \n    if (typeof this._settings.model !== 'string') {\n      throw new Error('Model identifier is not valid or not defined.');\n    }\n\n    // Only if you can't change the Message interface\n    const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {\n      return ['user', 'assistant', 'system'].includes(role);\n    };\n    \n    // Validate and type narrow `this._messages` before sending\n    if (!this._messages || !Array.isArray(this._messages) ||\n      (!this._messages.every(msg => isValidRole(msg.role)))) {\n      throw new Error('Messages have invalid roles.');\n    }\n\n    const promtNumberOfTokens = this._getMessagesNumberOfTokens();\n    let full_message = \"\";\n    try {\n      console.log(\"Creating message sender...\");\n      \n      let messagesToSend: Array<Message> = [];\n      \n      // Assuming this._messages is defined and is an array\n      for (const message of this._messages) {\n        // Check if 'selected' is true; undefined or false values will be considered false\n        if (message.selected) {\n          //if (messagesToSend.length > 0 && messagesToSend[messagesToSend.length - 1].role === message.role) {\n          //  // Append the content to the previous message if the role is the same\n          //  messagesToSend[messagesToSend.length - 1] = {\n          //\t...messagesToSend[messagesToSend.length - 1],\n          //\tcontent: messagesToSend[messagesToSend.length - 1].content + '\\n' + message.content,\n          //  };\n          //} else {\n            // Add the message as a new entry, omitting the 'selected' key\n            const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'\n            messagesToSend.push(messageWithoutSelected);\n          //}\n        }\n      }\n\n      const stream = await this._openai.chat.completions.create({\n        model: this._settings.model,\n        messages: messagesToSend,\n        stream: true,\n        ...this._settings.options, // Spread operator to include all keys from options\n      });\n      \n      console.log(\"Message sender created\");\n\n      this._view?.webview.postMessage({ type: 'streamStart' });\n\n      let completionTokens = 0;\n      full_message = \"\";\n\n      // Throttled delta accumulator to reduce IPC messages\n      let deltaAccumulator = \"\";\n      let lastSend = 0;\n      const flushDelta = (force = false) => {\n        if (!deltaAccumulator) return;\n        const now = Date.now();\n        if (force || now - lastSend > 50) { // ~20 fps\n          this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });\n          deltaAccumulator = \"\";\n          lastSend = now;\n        }\n      };\n\n      for await (const chunk of stream) {\n        const content = chunk.choices[0]?.delta?.content || \"\";\n        console.log(\"chunk:\", chunk);\n        console.log(\"content:\", content);\n        if (!content) continue;\n\n        const tokenList = this._enc.encode(content);\n        completionTokens += tokenList.length;\n        console.log(\"tokens:\", completionTokens);\n        full_message += content;\n\n        // stream delta (throttled)\n        deltaAccumulator += content;\n        flushDelta(false);\n      }\n\n      // Ensure last delta is flushed and end the stream\n      flushDelta(true);\n      this._view?.webview.postMessage({ type: 'streamEnd' });\n\n      this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n      console.log(\"Full message:\", full_message);\n      console.log(\"Full Number of tokens:\", completionTokens);\n      const tokenList = this._enc.encode(full_message);\n      console.log(\"Full Number of tokens tiktoken:\", tokenList.length);\n      chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)\n    } catch (e: any) {\n      console.error(e);\n      if (this._response!=undefined) {\n        this._messages?.push({ role: \"assistant\", content: full_message, selected:true })\n        chat_response = this._response;\n        chat_response += `\\n\\n---\\n[ERROR] ${e}`;\n      }\n    }\n    this._response = chat_response;\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n    this._view?.webview.postMessage({ type: 'setPrompt', value: '' });\n  }\n\n  private _getHtmlForWebview(webview: vscode.Webview) {\n    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));\n    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'styles.css'));\n    const microlightUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'microlight.min.js'));\n    const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));\n    const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));\n    const dompurifyUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'purify.min.js'));\n  \n    return `<!DOCTYPE html>\n    <html lang=\"en\">\n    <head>\n      <meta charset=\"UTF-8\">\n      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n      <script src=\"${tailwindUri}\"></script>\n      <script src=\"${showdownUri}\"></script>\n      <script src=\"${microlightUri}\"></script>\n      <script src=\"${dompurifyUri}\"></script>\n      <link rel=\"stylesheet\" href=\"${stylesUri}\">\n    </head>\n    <body>\n      <div id=\"container\">\n        <div id=\"top-wrapper\">\n          <label for=\"provider-selector\">Provider:</label>\n          <select id=\"provider-selector\"></select>\n          <label for=\"model-selector\">Model:</label>\n          <select id=\"model-selector\"></select>\n        </div>\n  \n        <div id=\"response\" class=\"text-sm\"></div>\n  \n        <!-- NEW: always-visible stats bar -->\n        <div id=\"stats-bar\">\n          <span id=\"stats-total\">Total Tokens: 0</span>\n          <span class=\"stats-sep\">|</span>\n          <span id=\"stats-used\">Used: 0 (0+0)</span>\n          <span class=\"stats-sep\">|</span>\n          <span id=\"stats-model\">Model: -</span>\n        </div>\n  \n        <div id=\"input-wrapper\">\n          <div>\n            <label for=\"system-prompt-selector\">System Prompt:</label>\n            <select id=\"system-prompt-selector\"></select>\n          </div>\n          <input type=\"text\" id=\"prompt-input\" placeholder=\"Ask ChatGPT something\">\n        </div>\n      </div>\n      <script src=\"${scriptUri}\"></script>\n    </body>\n    </html>`;\n  }\n\n  public addImageToChat(imageDataUrl: string, fileName: string) {\n    const imageMarkdown = `![${fileName}](${imageDataUrl})`;\n    let newMessage: UserMessage = { \n      role: \"user\", \n      content: [\n        {\n          \"type\": \"text\",\n          \"text\": fileName + \":\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": imageDataUrl\n          }\n        }\n      ], \n      selected: true\n    };\n\n    \n    this._messages?.push(newMessage);\n  \n    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n\n  public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {\n    let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n  \n    let newMessage: UserMessage = {\n      role: \"user\",\n      content: codeBlock,\n      selected: true\n    };\n  \n    this._messages?.push(newMessage);\n    const idx = this._messages ? this._messages.length - 1 : 0;\n    this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });    \n  \n    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n  }\n}\n```"
+  selected: true
+- role: user
+  content: "**src/extension.ts**\n```ts\nimport * as vscode from 'vscode';\nimport * as path from 'path';\nimport * as fs from 'fs';\nimport { Provider, Prompt, ProviderSettings } from './types';\nimport { ChatGPTViewProvider } from './chatGptViewProvider';\n\n// Base URL for OpenAI API\nconst BASE_URL = 'https://api.openai.com/v1';\n\nexport function activate(context: vscode.ExtensionContext) {\n\tconsole.log('activating extension \"chatgpt\"');\n\t// Get the settings from the extension's configuration\n\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\n\t// Create a new ChatGPTViewProvider instance and register it with the extension's context\n\tconst provider = new ChatGPTViewProvider(context.extensionUri);\n\n\tlet providers: Provider[] = config.get('providers') || [];\n\tconsole.log(\"Providers:\", providers);\n\n\tlet prompts: Prompt[] = config.get('prompts') || [];\n\tconsole.log(\"prompts:\", prompts);\n\n\tlet activate_provider_settings: ProviderSettings = {\n\t  model: \"none\",\n\t  apiUrl: BASE_URL,\n\t  apiKey: \"none\",\n\t  options: {\n\t\tmaxModelTokens: 1000,\n\t\tmaxResponseTokens: 1000,\n\t\ttemperature: 1.0,\n\t  },\n\t};\n\n\tif (providers && providers.length > 0) {\n\t\tconst firstProvider = providers[0];\n\t\tif (firstProvider.models && firstProvider.models.length > 0) {\n\t\t\tconst firstModel = firstProvider.models[0];\n\t\t\t// Assuming firstModel and firstProvider are already defined based on your JSON structure:\n\t\t\tactivate_provider_settings = {\n\t\t\t  model: firstModel.model_name,\n\t\t\t  apiUrl: firstProvider.apiUrl,\n\t\t\t  apiKey: firstProvider.apiKey,\n\t\t\t  options: {\n\t\t\t\t...firstModel.options, // Spread operator to include all keys from options\n\t\t\t  },\n\t\t\t};\n\t\t}\n\t}\n\t\n\tprovider.setSettings({\n\t  selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,\n\t  codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,\n\t  pasteOnClick: config.get('pasteOnClick') || false,\n\t  keepConversation: config.get('keepConversation') || false,\n\t  timeoutLength: config.get('timeoutLength') || 60,\n\t  apiUrl: activate_provider_settings.apiUrl,\n\t  model: activate_provider_settings.model,\n\t  options: {\n\t\t...activate_provider_settings.options, // Use spread operator to include all options\n\t  },\n\t});\n\n\t// Put configuration settings into the provider\n\tprovider.setAuthenticationInfo({\n\t\tapiKey: activate_provider_settings.apiKey,\n\t\tapiUrl: activate_provider_settings.apiUrl\n\t});\n\t\n\t// Register the provider with the extension's context\n\tcontext.subscriptions.push(\n\t\tvscode.window.registerWebviewViewProvider(ChatGPTViewProvider.viewType, provider, {\n\t\t\twebviewOptions: { retainContextWhenHidden: true }\n\t\t})\n\t);\n\n\tcontext.subscriptions.push(\n\t  vscode.commands.registerCommand('chatgpt.addFileToChat', async (uri: vscode.Uri) => {\n\t\tif (!uri || !uri.fsPath) {\n\t\t  vscode.window.showErrorMessage('No file selected!');\n\t\t  return;\n\t\t}\n\t\ttry {\n\t\t  const fileContent = await fs.promises.readFile(uri.fsPath, 'utf8');\n\t\t  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);\n\t\t  let relativePath: string;\n\t\n\t\t  if (workspaceFolder) {\n\t\t\trelativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);\n\t\t  } else {\n\t\t\trelativePath = path.basename(uri.fsPath);\n\t\t  }\n\t\t  let fileExtension = path.extname(relativePath).substring(1);\n\t\n\t\t  let codeBlock = `**${relativePath}**\\n\\`\\`\\`${fileExtension}\\n${fileContent}\\n\\`\\`\\``;\n\t\t  provider.addFileToChat(relativePath, fileContent, fileExtension);  // Adjust method if desired\n\t\t} catch (err) {\n\t\t  vscode.window.showErrorMessage(`Failed to read file: ${err}`);\n\t\t}\n\t  })\n\t);\n\n\tconst commandHandler = (command: string) => {\n\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\tconst prompt = config.get(command) as string;\n\t\tprovider.search(prompt);\n\t};\n\n\t// Register the commands that can be called from the extension's package.json\n\tcontext.subscriptions.push(\n\t\tvscode.commands.registerCommand('chatgpt.ask', () =>\n\t\t\tvscode.window.showInputBox({ prompt: 'What do you want to do?' })\n\t\t\t\t.then((value) => provider.search(value))\n\t\t),\n\t\tvscode.commands.registerCommand('chatgpt.explain', () => commandHandler('promptPrefix.explain')),\n\t\tvscode.commands.registerCommand('chatgpt.refactor', () => commandHandler('promptPrefix.refactor')),\n\t\tvscode.commands.registerCommand('chatgpt.optimize', () => commandHandler('promptPrefix.optimize')),\n\t\tvscode.commands.registerCommand('chatgpt.findProblems', () => commandHandler('promptPrefix.findProblems')),\n\t\tvscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),\n\t\tvscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),\n\t\tvscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),\n\t\tvscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())\n\n\t\t\n\t);\n\n\n\t// Change the extension's session token or settings when configuration is changed\n\tvscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {\n\t\tif (event.affectsConfiguration('chatgpt.providers')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tlet providers: Provider[] = config.get('providers') || [];\n\n\t\t\tif (providers && providers.length > 0) {\n\t\t\t\tconst firstProvider = providers[0];\n\t\t\t\tif (firstProvider.models && firstProvider.models.length > 0) {\n\t\t\t\t\tconst firstModel = firstProvider.models[0];\n\t\t\t\t\tactivate_provider_settings = {\n\t\t\t\t\t  model: firstModel.model_name,\n\t\t\t\t\t  apiUrl: firstProvider.apiUrl,\n\t\t\t\t\t  apiKey: firstProvider.apiKey,\n\t\t\t\t\t  options: {\n\t\t\t\t\t\t...firstModel.options, // Use spread operator to include all options\n\t\t\t\t\t  },\n\t\t\t\t\t};\n\t\t\t\t}\n\t\t\t\tprovider.setSettings({\n\t\t\t\t  apiUrl: activate_provider_settings.apiUrl,\n\t\t\t\t  model: activate_provider_settings.model,\n\t\t\t\t  options: {\n\t\t\t\t\t...activate_provider_settings.options, // Use spread operator to include all options\n\t\t\t\t  },\n\t\t\t\t});\n\t\t\t\n\t\t\t\t// Put configuration settings into the provider\n\t\t\t\tprovider.setAuthenticationInfo({\n\t\t\t\t\tapiKey: activate_provider_settings.apiKey,\n\t\t\t\t\tapiUrl: activate_provider_settings.apiUrl\n\t\t\t\t});\n\t\t\t\t\n\t\t\t\tprovider.set_providers(providers);//Update the selectors\n\t\t\t}\n\t\t} else if (event.affectsConfiguration('chatgpt.prompts')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tlet prompts: Prompt[] = config.get('prompts') || [];\n\n\t\t\tif (prompts && prompts.length > 0) {\n\t\t\t\tconst firstPrompt = prompts[0];\n\t\t\t\tprovider.set_prompt(firstPrompt);\n\t\t\t}\n\t\t\tprovider.set_prompts(prompts);\n\t\t} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.codeblockWithLanguageId')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.pasteOnClick')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ pasteOnClick: config.get('pasteOnClick') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.keepConversation')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ keepConversation: config.get('keepConversation') || false });\n\t\t} else if (event.affectsConfiguration('chatgpt.timeoutLength')) {\n\t\t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n\t\t\tprovider.setSettings({ timeoutLength: config.get('timeoutLength') || 60 });\n\t\t}\n\t});\n\n\n\tcontext.subscriptions.push(\n\t\tvscode.commands.registerCommand('chatgpt.addImageToChat', async (uri: vscode.Uri) => {\n\t\t  if (uri && uri.fsPath) {\n\t\t\tconst filePath = uri.fsPath;\n\t\t\tconst fileName = path.basename(filePath);\n\t\t\tconst fileData = await fs.promises.readFile(filePath, { encoding: 'base64' });\n\t\t\tconst fileType = path.extname(filePath).substring(1); // get file extension without dot\n\t\t\tconst imageDataUrl = `data:image/${fileType};base64,${fileData}`;\n\t\n\t\t\t// Post a message to the webview to add the image\n\t\t\tprovider.addImageToChat(imageDataUrl, fileName);\n\t\t  }\n\t\t})\n\t  );\n}\n\n// This method is called when your extension is deactivated\nexport function deactivate() { }\n```"
+  selected: true
+- role: user
+  content: |-
+    **src/types.ts**
+    ```ts
+    import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';
+
+    export type AuthInfo = { apiKey?: string, apiUrl?: string };
+
+    export type Settings = {
+      selectedInsideCodeblock?: boolean;
+      codeblockWithLanguageId?: false;
+      pasteOnClick?: boolean;
+      keepConversation?: boolean;
+      timeoutLength?: number;
+      model?: string;
+      apiUrl?: string;
+      options?: {
+        [key: string]: any; // Allows for any number of properties with any value type
+      };
+    };
+
+    export interface Model {
+      name: string;            // Display in UI
+      model_name: string;      // For API calls
+      options: {
+        [key: string]: any;
+      };
+    }
+
+    export interface Provider {
+      name: string;
+      apiKey: string;
+      apiUrl: string;
+      models: Model[];
+    }
+
+    export interface ProviderSettings {
+      model: string;
+      apiUrl: string;
+      apiKey: string;
+      options: {
+        [key: string]: any; // This allows options to have any number of properties with any types
+      };
+    }
+
+    export interface Prompt {
+      name: string;
+      prompt: string;
+    }
+
+    export interface SystemMessage extends ChatCompletionSystemMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export interface UserMessage extends ChatCompletionUserMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
+      selected?: boolean;  // Additional property specific to Message
+    }
+
+    export type Message =
+      | SystemMessage
+      | UserMessage
+      | AssistantMessage
+
+    export const BASE_URL = 'https://api.openai.com/v1';
+    ```
+  selected: true
+- role: user
+  content: |-
+    **media/main.js**
+    ```js
+    // @ts-ignore
+
+    // This script will be run within the webview itself
+    // It cannot access the main VS Code APIs directly.
+    (function () {
+        const vscode = acquireVsCodeApi();
+
+        let response = '';
+        let providers = []; // To store providers
+        let prompts = []; 
+        let models = []; // To store models for the selected provider
+        let selectedProviderIndex = 0;
+
+        // Streaming state and lightweight renderer
+        let isStreaming = false;
+        let streamBuffer = '';
+        let pendingDelta = '';
+        let renderScheduled = false;
+        const MAX_STREAM_LINES = 50;
+
+        // Remember per-message collapse state (keyed by message index)
+        const collapseState = new Map(); // key: "messageIndex", value: boolean (true = collapsed)
+        
+        /**
+         * Build a short preview from the message content's text
+         */
+        function makePreviewText(contentEl, maxLines = 3, maxChars = 300) {
+            const text = (contentEl.innerText || '').trim();
+            if (!text) return '[empty]';
+        
+            const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+            let out = '';
+            let usedLines = 0;
+        
+            for (const l of lines) {
+                const candidate = out ? out + '\n' + l : l;
+                if (candidate.length > maxChars || usedLines >= maxLines) break;
+                out = candidate;
+                usedLines++;
+            }
+            out = out.trim();
+            if (out.length < text.length) out += ' …';
+            return out || '[empty]';
+        }
+        
+        
+        function scheduleStreamRender() {
+            if (renderScheduled) return;
+            renderScheduled = true;
+            requestAnimationFrame(() => {
+                renderScheduled = false;
+                if (pendingDelta) {
+                    streamBuffer += pendingDelta;
+                    pendingDelta = '';
+                }
+                renderTruncatedStream(streamBuffer);
+            });
+        }
+
+        function renderTruncatedStream(fullText) {
+            const lines = fullText.split(/\r?\n/);
+            const over = lines.length > MAX_STREAM_LINES;
+            const prefixLines = over ? lines.slice(0, lines.length - MAX_STREAM_LINES) : [];
+            const tailLines = over ? lines.slice(-MAX_STREAM_LINES) : lines;
+
+            // If the tail starts inside a code fence, open a fence to keep rendering consistent
+            const backticksInPrefix = (prefixLines.join('\n').match(/```/g) || []).length;
+            const needsOpenFence = backticksInPrefix % 2 === 1;
+
+            let snippet = (over ? '...\n' : '') + (needsOpenFence ? '```\n' : '') + tailLines.join('\n');
+            snippet = fixCodeBlocks(snippet);
+
+            // Plain text render (no Markdown conversion, no event handlers)
+            const responseDiv = document.getElementById("response");
+            if (!responseDiv) return;
+            responseDiv.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.textContent = snippet;
+            responseDiv.appendChild(pre);
+
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+        }
+
+        // Function to populate the provider and model selectors
+        function populateSelectors(providers, selectedProviderIndex = 0, selectedModelIndex = 0) {
+            const providerSelector = document.getElementById('provider-selector');
+            providerSelector.innerHTML = ''; // Clear existing options
+            providers.forEach((provider, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = provider.name;
+                providerSelector.appendChild(option);
+            });
+
+            if (providers.length > 0) {
+                providerSelector.value = selectedProviderIndex; // Set default selection
+                models = providers[selectedProviderIndex].models;
+            }
+
+            const modelSelector = document.getElementById('model-selector');
+            modelSelector.innerHTML = ''; // Clear existing options
+            models.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = model.name;
+                modelSelector.appendChild(option);
+            });
+
+            if (models.length > 0) {
+                modelSelector.value = selectedModelIndex; // Set default selection
+            }
+        }
+
+        function populatePrompts(prompts, selectedPromptIndex = 0) {
+            const promptSelector = document.getElementById('system-prompt-selector');
+            promptSelector.innerHTML = ''; // Clear existing options
+            prompts.forEach((prompt, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = prompt.name;
+                promptSelector.appendChild(option);
+            });
+
+            if (prompts.length > 0) {
+                promptSelector.value = selectedPromptIndex; // Set default selection
+                //models = providers[selectedProviderIndex].models;
+            }
+        }
+
+        window.addEventListener('load', () => {
+            // Notify the extension that the webview is ready
+            vscode.postMessage({ type: 'ready' });
+        });
+        
+        // Note: Ensure you import the vscode API object correctly in your web script.
+        
+        // Handle messages sent from the extension to the webview
+        window.addEventListener("message", (event) => {
+            const message = event.data;
+            switch (message.type) {
+                case "addResponse": {
+                    response = message.value;
+                    setResponse();
+                    break;
+                }
+                case "updateResponse": {
+                    console.log("Update Response!!!!!");
+                    setResponse();
+                    console.log("After Update Response !!!!!!!!!");
+                    break;                
+                }
+                case "updateStats": {
+                    const v = message.value || {};
+                    const total = v.totalTokens ?? 0;
+                    const used = v.usedTokens ?? 0;
+                    const p = v.promptTokens ?? 0;
+                    const c = v.completionTokens ?? 0;
+                    const model = v.model ?? '-';
+                
+                    const elTotal = document.getElementById('stats-total');
+                    const elUsed = document.getElementById('stats-used');
+                    const elModel = document.getElementById('stats-model');
+                
+                    if (elTotal) elTotal.textContent = `Total Tokens: ${total}`;
+                    if (elUsed) elUsed.textContent = `Used: ${used} (${p}+${c})`;
+                    if (elModel) elModel.textContent = `Model: ${model}`;
+                    break;
+                }
+                case "clearResponse": {
+                    response = '';
+                    break;
+                }
+                case "setPrompt": {
+                    document.getElementById("prompt-input").value = message.value;
+                    break;
+                }
+                case "initialize": { 
+                    providers = message.value;
+                    populateSelectors(providers);
+                    break;
+                }
+
+                case "initialize_prompts": {
+                    console.log("Initialize Prompts:", message.value); 
+                    prompts = message.value;
+                    populatePrompts(prompts);
+                    break;
+                }
+
+                case "resetCollapseState": {
+                    // Clear remembered collapse/expand states (e.g., on chat reset)
+                    collapseState.clear();
+                    break;
+                }
+                case "setCollapsedForIndex": {
+                    // Mark a specific message index as collapsed by default
+                    const idx = message.index;
+                    if (idx !== undefined && idx !== null) {
+                        collapseState.set(String(idx), true);
+                    }
+                    break;
+                }
+
+                case "streamStart": {
+                    isStreaming = true;
+                    streamBuffer = '';
+                    pendingDelta = '';
+                    const responseDiv = document.getElementById("response");
+                    if (responseDiv) responseDiv.innerHTML = '...';
+                    break;
+                }
+                case "appendDelta": {
+                    if (!isStreaming) break;
+                    pendingDelta += message.value || '';
+                    scheduleStreamRender();
+                    break;
+                }
+                case "streamEnd": {
+                    isStreaming = false;
+                    break;
+                }            
+            }
+        });
+
+        showdown.extension('thinkExtension', function() {
+            return [
+              {
+                type: 'lang', // Process block-level syntax
+                regex: /<think>([\s\S]*?)<\/think>/g,
+                replace: function(match, content) {
+                  // Trim and process lines, ensuring let's handle `<p>` tags ourselves
+                  const pTags = content.trim().split('\n').map(line => {
+                    if (line.trim()) {
+                      return `<p>${line.trim()}</p>`;
+                    }
+                    return '';
+                  }).join('');
+          
+                  return `<think>${pTags}</think>`;
+                }
+              },
+              {
+                type: 'output', // After markdown is converted to HTML
+                filter: function(text) {
+                  // Remove wrapping <p> tags around <think> elements
+                  return text.replace(/<p><think>/g, '<think>').replace(/<\/think><\/p>/g, '</think>');
+                }
+              }
+            ];
+        });
+
+        function fixCodeBlocks(response) {
+            const REGEX_CODEBLOCK = new RegExp('```', 'g');
+            const matches = response.match(REGEX_CODEBLOCK);
+
+            const count = matches ? matches.length : 0;
+            return count % 2 === 0 ? response : response.concat('\n```');
+        }
+
+        function replaceInlineFileCodeWithLinks(container) {
+            // Regex: most simple file paths like 'foo.ext', 'dir/file.ext', etc.
+            const filePattern = /^[\w\-./]+\.[a-zA-Z0-9]+$/;
+            // Only affect <code> that is NOT inside a <pre> (pre/code = code block, just code = inline code)
+            container.querySelectorAll('code').forEach(codeElem => {
+                if (codeElem.closest('pre')) return; // skip code blocks
+                const text = codeElem.textContent.trim();
+                if (filePattern.test(text)) {
+                    const a = document.createElement('a');
+                    a.textContent = text;
+                    a.href = "#";
+                    a.className = "file-link";
+                    a.tabIndex = 0;
+                    a.dataset.filepath = text;
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.lastClickedFileLink = this;
+                        window.lastClickedScrollTop = this.closest("#response").scrollTop;
+                        vscode.postMessage({
+                            type: 'fileClicked',
+                            value: text
+                        });
+                    });
+                    codeElem.replaceWith(a);
+                }
+            });
+        }
+        
+        function sanitizeHtml(html) {
+            const purifier = window.DOMPurify; // global from purify.min.js
+            if (!purifier) {
+                console.warn('DOMPurify not found. Rendering without sanitization.');
+                return html; // fallback so the chat still renders
+            }
+            return purifier.sanitize(html, {
+                FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'link', 'meta'],
+                FORBID_ATTR: [
+                    'onerror','onload','onclick','onfocus','onblur','onmouseover','onmouseenter',
+                    'onmouseleave','onmouseup','onmousedown','onkeypress','onkeydown','onkeyup'
+                ],
+                ALLOW_UNKNOWN_PROTOCOLS: false
+            });
+        }
+        
+        // Detect nested code fences and neutralize inner ``` so they render as plain text
+        // within the outer fenced block (prevents prematurely closing the outer fence).
+        // Improved logic:
+        // - Track we are inside an outer fence and its length.
+        // - Maintain an innerDepth counter for any inner "opening" we neutralize (e.g., ```python).
+        // - When we encounter a pure backtick fence line while innerDepth > 0, neutralize it
+        //   as the inner closing and decrement. Only close the outer fence when innerDepth == 0.
+        // - Also neutralize any stray runs of >=3 backticks within lines to avoid accidental closures.
+        function preprocessNestedCodeFences(md) {
+            const ZWSP = "\u200B";
+            const lines = md.split(/\r?\n/);
+            let inFence = false;
+            let fenceLen = 0;
+            let innerDepth = 0;
+        
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+        
+                if (!inFence) {
+                    // Opening outer fence: ```lang or ````lang (captures fence length)
+                    const open = line.match(/^\s*(`{3,})([^`]*)$/);
+                    if (open) {
+                        inFence = true;
+                        fenceLen = open[1].length;
+                    }
+                    continue;
+                }
+        
+                // Inside an outer fence:
+                // 1) Inner "opening" like ```python (backticks + non-empty info string)
+                const innerOpen = line.match(/^\s*(`{3,})(\S.*)$/);
+                if (innerOpen) {
+                    lines[i] = line.replace(/^\s*`{3,}/, (m) => m.slice(0, 2) + ZWSP + m.slice(2));
+                    innerDepth++;
+                    continue;
+                }
+        
+                // 2) Candidate closing line for fences: only backticks and optional spaces
+                const isClosing = new RegExp("^\\s*`{" + fenceLen + ",}\\s*$").test(line);
+                if (isClosing) {
+                    if (innerDepth > 0) {
+                        // Treat as inner closing; neutralize instead of closing the outer
+                        lines[i] = line.replace(/`{3,}/g, (m) => m.slice(0, 2) + ZWSP + m.slice(2));
+                        innerDepth--;
+                        continue;
+                    } else {
+                        // Real closing of the outer fence
+                        inFence = false;
+                        fenceLen = 0;
+                        continue;
+                    }
+                }
+        
+                // 3) Neutralize any other runs of >=3 backticks within the content line
+                if (/`{3,}/.test(line)) {
+                    lines[i] = line.replace(/`{3,}/g, (m) => m.slice(0, 2) + ZWSP + m.slice(2));
+                }
+            }
+            return lines.join('\n');
+        }
+        // Split the overall HTML (all messages) into separate message chunks.
+        // We detect a new message when we see an <h1> that contains the checkbox input
+        // id="message-checkbox-...". This relies on the structure generated by _updateChatMessages.
+        function chunkHtmlIntoMessageBlocks(fullHtml) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = fullHtml;
+
+            const blocks = [];
+            let current = [];
+
+            const isMsgHeader = (node) =>
+                node.nodeType === 1 &&
+                /^H[1-6]$/.test(node.tagName) &&
+                node.querySelector &&
+                node.querySelector("input[id^='message-checkbox-']");
+
+            const nodes = Array.from(tmp.childNodes);
+            for (const n of nodes) {
+                if (isMsgHeader(n)) {
+                    if (current.length) {
+                        blocks.push(nodesToHtml(current));
+                        current = [];
+                    }
+                    current.push(n);
+                } else {
+                    if (current.length) current.push(n);
+                }
+            }
+            if (current.length) blocks.push(nodesToHtml(current));
+            return blocks;
+
+            function nodesToHtml(list) {
+                const w = document.createElement('div');
+                list.forEach(x => w.appendChild(x.cloneNode(true)));
+                return w.innerHTML;
+            }
+        }
+
+        // Render a single message block into its own Shadow DOM and re-bind interactions.
+        function renderMessageBlock(container, blockHtml) {
+            const host = document.createElement('div');
+            host.className = 'message-host';
+            container.appendChild(host);
+        
+            const shadow = host.attachShadow({ mode: 'open' });
+        
+            const baseStyles = `
+                :host {
+                    color: var(--vscode-editor-foreground);
+                    font-size: 12px;
+                    font-family: var(--vscode-editor-font-family, Menlo, Monaco, Consolas, 'Courier New', monospace);
+                }
+                .chat-content { line-height: 1.4; word-break: break-word; }
+                .chat-content img { max-width: 100%; height: auto; }
+                .chat-content pre { white-space: pre-wrap; }
+                .chat-content code {
+                    display: inline-flex; max-width: 100%; overflow: hidden; border-radius: .125rem;
+                    cursor: pointer; background: rgba(127,127,127,.1); padding: 0 .2rem;
+                }
+                .chat-content pre code {
+                    display: block; padding: .5rem; margin: .5rem 0; overflow-x: auto; background: rgba(127,127,127,.08);
+                }
+                .chat-content a { color: var(--vscode-textLink-foreground); text-decoration: underline; }
+        
+                .chat-content h1, .chat-content h2, .chat-content h3,
+                .chat-content h4, .chat-content h5, .chat-content h6 {
+                    font-weight: 700;
+                    margin: 0 0 6px 0;
+                    line-height: 1.2;
+                    display: flex;
+                    align-items: center;
+                    gap: .5rem;
+                }
+                .chat-content h1 { font-size: 0.95rem; }
+                .chat-content h2 { font-size: 0.92rem; }
+                .chat-content h3 { font-size: 0.90rem; }
+                .chat-content h4 { font-size: 0.88rem; }
+                .chat-content h5 { font-size: 0.86rem; }
+                .chat-content h6 { font-size: 0.84rem; }
+        
+                .collapse-toggle {
+                    margin-left: auto;
+                    font-size: 0.8rem;
+                    width: 1.5rem;
+                    height: 1.5rem;
+                    line-height: 1.3rem;
+                    text-align: center;
+                    border: 1px solid var(--vscode-editorGroup-border);
+                    border-radius: 3px;
+                    background: transparent;
+                    color: inherit;
+                    cursor: pointer;
+                }
+        
+                .message-preview {
+                    color: var(--vscode-descriptionForeground);
+                    white-space: pre-wrap;
+                    border-left: 2px solid var(--vscode-editorGroup-border);
+                    padding-left: .5rem;
+                    margin: .25rem 0 .5rem .25rem;
+                }
+            `;
+        
+            shadow.innerHTML = `<style>${baseStyles}</style><div class="chat-content">${blockHtml}</div>`;
+            const root = shadow.querySelector('.chat-content');
+        
+            // Re-bind checkbox changes (onchange attribute was stripped by sanitizer)
+            root.querySelectorAll("input[type='checkbox'][id^='message-checkbox-']").forEach(cb => {
+                cb.addEventListener('change', function () {
+                    vscode.postMessage({
+                        type: 'checkboxChanged',
+                        id: this.id,
+                        checked: this.checked
+                    });
+                });
+            });
+        
+            // Re-bind editable content (onclick/onblur attributes were stripped)
+            root.querySelectorAll("[id^='message-content-']").forEach(el => {
+                el.addEventListener('click', function () {
+                    this.contentEditable = 'true';
+                    this.focus();
+                });
+                el.addEventListener('blur', function () {
+                    this.contentEditable = 'false';
+                    vscode.postMessage({
+                        type: 'messageContentChanged',
+                        id: this.id,
+                        value: this.innerText
+                    });
+                });
+            });
+        
+            // Turn inline `code` that looks like file paths into clickable links
+            replaceInlineFileCodeWithLinks(root);
+        
+            // Click-to-paste code (same message back to the extension)
+            root.querySelectorAll('code').forEach(codeBlock => {
+                if (codeBlock.innerText.startsWith("Copy code")) {
+                    codeBlock.innerText = codeBlock.innerText.replace("Copy code", "");
+                }
+                codeBlock.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    vscode.postMessage({
+                        type: 'codeSelected',
+                        value: this.innerText
+                    });
+                });
+        
+                const d = document.createElement('div');
+                d.innerHTML = codeBlock.innerHTML;
+                codeBlock.innerHTML = '';
+                codeBlock.appendChild(d);
+                d.classList.add("code");
+            });
+        
+            // Optional: syntax highlight inside Shadow DOM (best-effort)
+            try {
+                if (window.microlight && typeof window.microlight.reset === 'function') {
+                    const codes = root.querySelectorAll('code');
+                    window.microlight.reset(codes);
+                }
+            } catch (_) {}
+        
+            // ---- New: Collapse/Expand per message block ----
+            const headingEl = root.querySelector('h1, h2, h3, h4, h5, h6');
+            if (headingEl) {
+                // Collect all siblings after the heading as the message content
+                const contentNodes = [];
+                let n = headingEl.nextSibling;
+                while (n) {
+                    const next = n.nextSibling;
+                    contentNodes.push(n);
+                    root.removeChild(n);
+                    n = next;
+                }
+        
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-body';
+                contentNodes.forEach(node => contentDiv.appendChild(node));
+                root.appendChild(contentDiv);
+        
+                // Figure out a stable-ish key for this message (use the checkbox id index)
+                const check = headingEl.querySelector("input[id^='message-checkbox-']");
+                let msgKey = null;
+                if (check && check.id) {
+                    const m = check.id.match(/message-checkbox-(\d+)/);
+                    if (m) msgKey = m[1]; // a string index
+                }
+        
+                // Create preview when collapsed
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'message-preview';
+                previewDiv.textContent = makePreviewText(contentDiv, 3, 300);
+                root.insertBefore(previewDiv, contentDiv);
+        
+                // Toggle button
+                const btn = document.createElement('button');
+                btn.className = 'collapse-toggle';
+                btn.title = 'Collapse/Expand';
+                btn.setAttribute('aria-expanded', 'true');
+                btn.textContent = '−';
+                headingEl.appendChild(btn);
+        
+                // Restore previous state or default to expanded
+                let collapsed = msgKey ? !!collapseState.get(msgKey) : false;
+                applyCollapsed(collapsed);
+        
+                function applyCollapsed(c) {
+                    if (c) {
+                        contentDiv.style.display = 'none';
+                        previewDiv.style.display = 'block';
+                        btn.textContent = '+';
+                        btn.setAttribute('aria-expanded', 'false');
+                    } else {
+                        contentDiv.style.display = 'block';
+                        previewDiv.style.display = 'none';
+                        btn.textContent = '−';
+                        btn.setAttribute('aria-expanded', 'true');
+                    }
+                }
+        
+                // Button toggles
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    collapsed = !collapsed;
+                    applyCollapsed(collapsed);
+                    if (msgKey) collapseState.set(msgKey, collapsed);
+                });
+        
+                // Optional: clicking the header (not on the checkbox) toggles as well
+                headingEl.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target && target.tagName === 'INPUT') return; // don't toggle when clicking the checkbox
+                    if (target === btn) return; // already handled
+                    collapsed = !collapsed;
+                    applyCollapsed(collapsed);
+                    if (msgKey) collapseState.set(msgKey, collapsed);
+                });
+            }
+        }
+
+        // Recognize our generated header line
+        function isHeaderMarkdownLine(line) {
+          // e.g.: "### <u> <input id='message-checkbox-0' ...> SYSTEM </u>:"
+          return /^#{1,6}\s*<u>\s*<input[^>]*id=['"]message-checkbox-/.test(line);
+        }
+
+        // Escape only literal <style>...</style> occurrences outside code fences/inline code,
+        // but keep our header lines intact.
+        function escapeLiteralStyleTagsOutsideCodeExceptHeader(md) {
+          let inFence = false;
+          const lines = md.split(/\r?\n/);
+
+          // Replace <style ...> -> &lt;style ...&gt; and </style> -> &lt;/style&gt;
+          const escapeStyleTagsInPlain = (text) => {
+            return text
+              .replace(/<\s*style\b([^>]*)>/gi, (m, attrs) => `&lt;style${attrs || ''}&gt;`)
+              .replace(/<\s*\/\s*style\s*>/gi, '&lt;/style&gt;');
+          };
+
+          // Preserve inline code (`...`) segments as-is; escape only the rest of the line
+          const escapeOutsideInlineCode = (line) => {
+            const parts = line.split(/(`[^`]*`)/g);
+            return parts
+              .map((part, idx) => (idx % 2 === 1 ? part : escapeStyleTagsInPlain(part)))
+              .join('');
+          };
+
+          const processed = lines.map((line) => {
+            if (/^\s*```/.test(line)) {
+              inFence = !inFence;
+              return line; // leave fence markers unchanged
+            }
+            if (inFence) return line; // leave fenced code unchanged
+            if (isHeaderMarkdownLine(line)) return line; // keep header line intact
+            return escapeOutsideInlineCode(line);
+          });
+
+          return processed.join('\n');
+        }
+
+        function setResponse() {
+            var converter = new showdown.Converter({
+                omitExtraWLInCodeBlocks: true,
+                simplifiedAutoLink: true,
+                excludeTrailingPunctuationFromURLs: true,
+                literalMidWordUnderscores: true,
+                simpleLineBreaks: true,
+                extensions: ['thinkExtension']
+            });
+
+            // 1) Convert markdown to HTML for the entire chat content
+            const fixed = fixCodeBlocks(response);
+            // Escape only literal <style> tags in prose (not in code / header)
+            const escapedMd = escapeLiteralStyleTagsOutsideCodeExceptHeader(fixed);
+            // Neutralize nested code fences so inner fences stay as text within the outer block
+            const normalizedMd = preprocessNestedCodeFences(escapedMd);
+
+            const rawHtml = converter.makeHtml(normalizedMd);
+            const safeHtml = sanitizeHtml(rawHtml);
+            
+            // 3) Split into per-message chunks and render each in its own Shadow DOM
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = '';
+
+            const blocks = chunkHtmlIntoMessageBlocks(safeHtml);
+            if (blocks.length === 0) {
+                // Fallback: render everything in a single isolated block
+                renderMessageBlock(responseDiv, safeHtml);
+            } else {
+                blocks.forEach(b => renderMessageBlock(responseDiv, b));
+            }
+
+            // 4) Preserve scroll behavior
+            if (window.lastClickedFileLink && typeof window.lastClickedScrollTop === "number") {
+                responseDiv.scrollTop = window.lastClickedScrollTop;
+                window.lastClickedFileLink = null;
+                window.lastClickedScrollTop = null;
+            } else {
+                responseDiv.scrollTop = responseDiv.scrollHeight;
+            }
+        }
+
+        document.getElementById('prompt-input').addEventListener('paste', async function (e) {
+            const clipboardItems = e.clipboardData.items;
+            for (const item of clipboardItems) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const base64Data = event.target.result;
+                        vscode.postMessage({
+                            type: 'pasteImage',
+                            value: base64Data
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        document.getElementById('prompt-input').addEventListener('keyup', function (e) {
+            if (e.key === "Enter" && !e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'prompt',
+                    value: this.value
+                });
+            }
+            else if (e.key === "Enter" && e.ctrlKey) {
+                vscode.postMessage({
+                    type: 'promptNoQuery',
+                    value: this.value
+                });
+            }
+        });
+
+        document.getElementById('provider-selector').addEventListener('change', function () {
+            selectedProviderIndex = parseInt(this.value, 10);
+            models = providers[selectedProviderIndex].models;
+            populateSelectors(providers, selectedProviderIndex, 0);
+            vscode.postMessage({
+                type: 'providerModelChanged',
+                providerIndex: selectedProviderIndex,
+                modelIndex: 0
+            });
+        });
+
+        document.getElementById('model-selector').addEventListener('change', function () {
+            const selectedModelIndex = parseInt(this.value, 10);
+            vscode.postMessage({
+                type: 'providerModelChanged',
+                providerIndex: selectedProviderIndex,
+                modelIndex: selectedModelIndex,
+            });
+        });
+
+        document.getElementById('system-prompt-selector').addEventListener('change', function () {
+            const systemPromptIndex = parseInt(this.value, 10);
+            vscode.postMessage({
+                type: 'systemPromptChanged',
+                systemPromptIndex: systemPromptIndex
+            });
+        });
+
+        //document.getElementById('temperature-slider').addEventListener('input', function () {
+        //    const temperature = parseInt(this.value, 10) / 100;
+        //    vscode.postMessage({
+        //        type: 'temperatureChanged',
+        //        temperature: temperature,
+        //    });
+        //});
+
+        window.myFunction = function (checkboxElem) {
+            vscode.postMessage({
+                type: 'checkboxChanged',
+                id: checkboxElem.id,
+                checked: checkboxElem.checked
+            });
+        }
+
+        window.makeEditable = function (element) {
+            element.contentEditable = 'true';
+            element.focus();
+        }
+
+        window.saveContent = function (element) {
+            element.contentEditable = 'false';
+            const updatedContent = element.innerText;
+            vscode.postMessage({
+                type: 'messageContentChanged',
+                id: element.id,
+                value: updatedContent,
+            });
+        }
+
+    })();
+    ```
+  selected: true
+- role: user
+  content: |-
+    **media/styles.css**
+    ```css
+    .code {
+        white-space: pre;
+    }
+    p {
+        padding-top: 0.3rem;
+        padding-bottom: 0.3rem;
+    }
+
+    ul {
+        list-style: initial !important;
+        margin-left: 10px !important;
+    }
+
+    ol {
+        list-style-type: decimal !important;
+        list-style-position: outside;
+        padding-left: 40px; /* Adjust as needed to ensure numbers are visible */
+        margin-left: 20px !important; /* Reset margin to see true boundaries */
+    }
+
+
+
+    h1, h2, h3, h4, h5, h6 {
+        font-weight: bold !important;
+    }
+
+    body, html {
+        height: 100%;
+        margin: 0;
+    }
+    #container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    #top-wrapper {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1;
+        height: 50px;
+    }
+    #response {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px;
+        padding-top: 60px;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    #input-wrapper {
+        flex-shrink: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        grid-gap: 10px;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-top: 1px solid var(--vscode-editorGroup-border);
+        padding: 10px;
+        box-sizing: border-box;
+    }
+    #prompt-input {
+        grid-column: 1 / -1;
+        color: var(--vscode-editor-foreground);
+        background-color: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-editorGroup-border);
+        outline: none;
+        padding: 10px;
+        width: calc(100% - 22px);
+    }
+
+    #model-selector, #temperature-slider, label[for="temperature-slider"] {
+        margin-bottom: 10px;
+    }
+
+    think {
+        display: inline; /* Ensure it doesn't visually affect layout like block */
+        color: lightblue !important; /* Use !important to override other styles */
+        font-style: italic !important; /* Also use !important for emphasis */
+    }
+
+
+
+    select {
+        color: var(--vscode-dropdown-foreground);
+        background-color: var(--vscode-dropdown-background);
+        border: 1px solid var(--vscode-dropdown-border);
+        padding: 5px;
+        font-size: inherit;
+        cursor: pointer;
+    }
+
+    select option {
+        background: var(--vscode-dropdown-listBackground);
+    }
+
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: var(--vscode-slider-background);
+        height: 2px;
+        border-radius: 0;
+        outline: none;
+        cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+        margin-top: -7px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+    }
+
+    input[type="range"]::-ms-thumb {
+        background: var(--vscode-slider-knob);
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+    }
+
+    #top-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--vscode-editor-background);
+        border-bottom: 1px solid var(--vscode-editorGroup-border);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        box-sizing: border-box;
+        z-index: 1;
+    }
+
+    #top-wrapper input[type="text"], #top-wrapper select, #top-wrapper button {
+        margin: 0 5px;
+    }
+
+    #top-wrapper button {
+        padding: 5px 15px;
+    }
+
+    :root {
+        --vscode-dropdown-foreground: #C5C5C5;
+        --vscode-dropdown-background: #3C3C3C;
+        --vscode-dropdown-border: #303030;
+        --vscode-dropdown-listBackground: #252526;
+        --vscode-slider-background: #C5C5C5;
+        --vscode-slider-activeBackground: #007ACC;
+        --vscode-slider-knob: #CCCCCC;
+    }
+
+    /* Container for each message (outside Shadow DOM) */
+    #response .message-host {
+        display: block;
+        margin: 12px 0;
+        border: 1px solid var(--vscode-editorGroup-border);
+        border-radius: 6px;
+        padding: 8px;
+        background: transparent;
+    }
+
+    #stats-bar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+        background-color: var(--vscode-editor-background);
+        border-top: 1px solid var(--vscode-editorGroup-border);
+        padding: 6px 10px;
+        box-sizing: border-box;
+    }
+    #stats-bar .stats-sep {
+        opacity: 0.6;
+    }
+    ```
+  selected: true
+- role: user
+  content: Okay, so I have this Visual Studio Code extension that allows me to talk with LLMs. Everything is working fine. The only thing is that if you inspect the code, I'm able to right-click on a specific file in Visual Studio Code in the Explorer, and in the menu I'm going to have Add File Content to ChatGPT. That will add the file, like all the files, to the user request, so to the prompt. But the thing that I don't like sometimes is that the file, I will be modifying some of those files, so the files are going to change over the time, and I have to provide again the file if something changes, because sometimes the model is not going to be able to remember that those changes happened. So I want a way to add another option to the menu, so I want to keep the Add File Content to ChatGPT, but also I want to add another that says something like Add File Reference to ChatGPT. So in that way, if I click that, the file is not going to be added to the chat, but it's going to be, only a reference is going to be added, and before the prompt is, or the request is sent to the LLM provider, the file is going to be read and added to the chat, but only, like that reference is going to be replaced by the file, only when the extension sends the request to the LLM. So if, for example, I see the, I paste the chat to a text file, I'm going to see only the reference, I'm not going to see the file, but I want the file to be sent to the LLM, so something has to read the file before it sends the reference or the file, the request to the LLM.
+  selected: true
+- role: assistant
+  content: "I will add a new Explorer context menu command “Add File Reference to ChatGPT” that inserts a lightweight reference marker into the chat (so the UI and pasted YAML show only a reference). Right before sending the request to the LLM, the extension will detect these reference markers and expand them into the current file contents, ensuring the latest version is sent without cluttering the chat history.\n\nBrief:\n- Add new VS Code command: chatgpt.addFileReferenceToChat.\n- Add Explorer context menu entry “Add File Reference to ChatGPT”.\n- Implement provider.addFileReferenceToChat to append a reference-only message (with hidden marker).\n- Before calling the LLM, expand reference markers into code blocks by reading the current file content from the workspace.\n- Markers supported: <!--FILE:relative/path--> and [[FILE:relative/path]].\n- No UI reformat changes; pasting chat yields references only.\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: package.json\n```diff\n--- a/package.json\n+++ b/package.json\n@@ -33,6 +33,7 @@\n     \"onCommand:chatgpt.findProblems\",\n     \"onCommand:chatgpt.documentation\",\n-    \"onCommand:chatgpt.useSelectionAsChat\"\n+    \"onCommand:chatgpt.useSelectionAsChat\",\n+    \"onCommand:chatgpt.addFileReferenceToChat\"\n   ],\n   \"main\": \"./dist/extension.js\",\n   \"contributes\": {\n@@ -80,6 +81,10 @@\n       },\n       {\n         \"command\": \"chatgpt.addFileToChat\",\n         \"title\": \"Add File Content to ChatGPT\"\n+      },\n+      {\n+        \"command\": \"chatgpt.addFileReferenceToChat\",\n+        \"title\": \"Add File Reference to ChatGPT\"\n       }\n     ],\n     \"menus\": {\n@@ -160,6 +165,11 @@\n           \"when\": \"resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif\",\n           \"group\": \"navigation\"\n         },\n+        {\n+          \"command\": \"chatgpt.addFileReferenceToChat\",\n+          \"when\": \"resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/\",\n+          \"group\": \"navigation\"\n+        },\n         {\n           \"command\": \"chatgpt.addFileToChat\",\n           \"when\": \"resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/\",\n           \"group\": \"navigation\"\n         }\n       ]\n```\n\n### FILE: src/chatGptViewProvider.ts\n```diff\n--- a/src/chatGptViewProvider.ts\n+++ b/src/chatGptViewProvider.ts\n@@ -362,6 +362,58 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n     return chat_response;\n   }\n \n+  // Expand file reference markers in strings to current file contents.\n+  // Supported markers:\n+  //   [[FILE:relative/path.ext]]\n+  //   <!--FILE:relative/path.ext-->\n+  private expandFileReferencesInString(input: string): string {\n+    const regex = /(?:\\[\\[FILE:([^\\]]+)\\]\\])|(?:<!--\\s*FILE:([^>]+?)\\s*-->)/g;\n+    const replaced = input.replace(regex, (_m, g1, g2) => {\n+      const relPath = (g1 || g2 || '').trim();\n+      if (!relPath) return _m;\n+      const fileContent = this.readWorkspaceFile(relPath);\n+      if (fileContent == null) {\n+        // If file not found, keep the original marker\n+        return _m;\n+      }\n+      const ext = path.extname(relPath).slice(1);\n+      return `**${relPath}**\\n\\`\\`\\`${ext}\\n${fileContent}\\n\\`\\`\\``;\n+    });\n+    return replaced;\n+  }\n+\n+  // Read a file from any workspace folder by relative path.\n+  private readWorkspaceFile(relPath: string): string | null {\n+    const folders = vscode.workspace.workspaceFolders || [];\n+    for (const f of folders) {\n+      try {\n+        const abs = path.join(f.uri.fsPath, relPath);\n+        if (fs.existsSync(abs)) {\n+          return fs.readFileSync(abs, 'utf8');\n+        }\n+      } catch (_e) {\n+        // ignore and try next folder\n+      }\n+    }\n+    return null;\n+  }\n+\n+  // Produce a deep-copied messages array with references expanded in string/text parts.\n+  private expandFileReferencesInMessages(msgs: Array<Message>): Array<Message> {\n+    return msgs.map((msg) => {\n+      if (typeof msg.content === 'string') {\n+        return { ...msg, content: this.expandFileReferencesInString(msg.content) };\n+      } else if (Array.isArray(msg.content)) {\n+        const newParts = msg.content.map((part) => {\n+          if (this.isChatCompletionContentPartText(part)) {\n+            return { ...part, text: this.expandFileReferencesInString(part.text) };\n+          }\n+          return part;\n+        });\n+        return { ...msg, content: newParts };\n+      }\n+      return msg;\n+    });\n+  }\n+\n   private async _generate_search_prompt(prompt:string) {\n     this._prompt = prompt;\n     if (!prompt) {\n@@ -548,6 +600,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n             messagesToSend.push(messageWithoutSelected);\n           //}\n         }\n       }\n+      // Expand any file reference markers to current file contents\n+      messagesToSend = this.expandFileReferencesInMessages(messagesToSend);\n \n       const stream = await this._openai.chat.completions.create({\n         model: this._settings.model,\n@@ -706,4 +761,22 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n     const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n   }\n+\n+  // Adds a lightweight reference to a file; the actual content is injected only when sending.\n+  public addFileReferenceToChat(relativePath: string, _fileExtension: string) {\n+    // Show a readable reference and embed a hidden marker for later expansion.\n+    const content =\n+      `File reference: \\`${relativePath}\\`\\n` +\n+      `<!--FILE:${relativePath}-->`;\n+\n+    let newMessage: UserMessage = {\n+      role: \"user\",\n+      content,\n+      selected: true\n+    };\n+    this._messages?.push(newMessage);\n+    const idx = this._messages ? this._messages.length - 1 : 0;\n+    this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });\n+    const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);\n+    this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n+  }\n }\n```\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -98,6 +98,26 @@ export function activate(context: vscode.ExtensionContext) {\n \t  })\n \t);\n \n+\tcontext.subscriptions.push(\n+\t  vscode.commands.registerCommand('chatgpt.addFileReferenceToChat', async (uri: vscode.Uri) => {\n+\t\tif (!uri || !uri.fsPath) {\n+\t\t  vscode.window.showErrorMessage('No file selected!');\n+\t\t  return;\n+\t\t}\n+\t\ttry {\n+\t\t  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);\n+\t\t  let relativePath: string;\n+\t\t  if (workspaceFolder) {\n+\t\t\trelativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);\n+\t\t  } else {\n+\t\t\trelativePath = path.basename(uri.fsPath);\n+\t\t  }\n+\t\t  const fileExtension = path.extname(relativePath).substring(1);\n+\t\t  provider.addFileReferenceToChat(relativePath, fileExtension);\n+\t\t} catch (err) {\n+\t\t  vscode.window.showErrorMessage(`Failed to add file reference: ${err}`);\n+\t\t}\n+\t  })\n+\t);\n \tconst commandHandler = (command: string) => {\n \t\tconst config = vscode.workspace.getConfiguration('chatgpt');\n \t\tconst prompt = config.get(command) as string;\n```"
+  selected: true
+- role: user
+  content: |-
+    I am getting an error in expandFileReferencesInMessages:
+    ```typescript
+    Type '(SystemMessage | UserMessage | AssistantMessage | { content: (ChatCompletionContentPartImage | { ...; })[]; selected?: boolean | undefined; role: "system"; name?: string | undefined; } | { ...; })[]' is not assignable to type 'Message[]'.
+      Type 'SystemMessage | UserMessage | AssistantMessage | { content: (ChatCompletionContentPartImage | { ...; })[]; selected?: boolean | undefined; role: "system"; name?: string | undefined; } | { ...; }' is not assignable to type 'Message'.
+        Type '{ content: (OpenAI.Chat.Completions.ChatCompletionContentPartImage | { text: string; type: "text"; })[]; selected?: boolean; role: "system"; name?: string; }' is not assignable to type 'Message'.
+          Type '{ content: (OpenAI.Chat.Completions.ChatCompletionContentPartImage | { text: string; type: "text"; })[]; selected?: boolean; role: "system"; name?: string; }' is not assignable to type 'SystemMessage'.
+            Types of property 'content' are incompatible.
+              Type '(ChatCompletionContentPartImage | { text: string; type: "text"; })[]' is not assignable to type 'string'.ts(2322)
+
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    You’re hitting a typing mismatch because SystemMessage and AssistantMessage content must be strings in the Chat Completions API, while only UserMessage can have array content parts. Your expandFileReferencesInMessages was returning objects where TypeScript couldn’t guarantee that the returned shape still matches the correct union member, especially when mapping array content.
+
+    Fix: narrow by role and only transform array content for user messages. Also import SystemMessage and AssistantMessage types to annotate the return objects clearly.
+
+    Apply this change in src/chatGptViewProvider.ts:
+
+    1) Update imports to include SystemMessage and AssistantMessage:
+    ```ts
+    import { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, SystemMessage, AssistantMessage, BASE_URL } from './types';
+    ```
+
+    2) Replace expandFileReferencesInMessages with a role-narrowed version:
+    ```ts
+      // Produce a deep-copied messages array with references expanded in string/text parts.
+      private expandFileReferencesInMessages(msgs: ReadonlyArray<Message>): Message[] {
+        return msgs.map((msg) => {
+          // If content is a string, we can safely expand for any role (system/user/assistant)
+          if (typeof msg.content === 'string') {
+            const newContent = this.expandFileReferencesInString(msg.content);
+            if (msg.role === 'system') {
+              const sys: SystemMessage = { ...msg, content: newContent };
+              return sys;
+            }
+            if (msg.role === 'assistant') {
+              const asst: AssistantMessage = { ...msg, content: newContent };
+              return asst;
+            }
+            // user
+            const user: UserMessage = { ...msg, content: newContent };
+            return user;
+          }
+
+          // If content is an array, only user messages are allowed to have array content
+          if (Array.isArray(msg.content)) {
+            if (msg.role === 'user') {
+              const newParts = msg.content.map((part) => {
+                if (this.isChatCompletionContentPartText(part)) {
+                  return { ...part, text: this.expandFileReferencesInString(part.text) };
+                }
+                return part;
+              });
+              const user: UserMessage = { ...msg, content: newParts };
+              return user;
+            }
+            // For system/assistant, array content is not valid per Chat Completions params; keep as-is
+            return msg as Message;
+          }
+
+          // Fallback: unchanged
+          return msg;
+        });
+      }
+    ```
+
+    Why this fixes it:
+    - SystemMessage and AssistantMessage keep content as string.
+    - Only UserMessage is allowed to return content as an array of parts.
+    - Role checks narrow the union, so TypeScript knows which subtype you’re returning.
+  selected: true
