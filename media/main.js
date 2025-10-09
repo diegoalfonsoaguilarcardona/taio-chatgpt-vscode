@@ -15,6 +15,7 @@
     let isStreaming = false;
     let streamBuffer = '';
     let pendingDelta = '';
+    let pendingFinalResponse = false;
     let renderScheduled = false;
     const MAX_STREAM_LINES = 50;
 
@@ -48,6 +49,12 @@
         if (renderScheduled) return;
         renderScheduled = true;
         requestAnimationFrame(() => {
+            // If streaming already ended before this RAF fires, do nothing
+            if (!isStreaming) {
+                renderScheduled = false;
+                pendingDelta = '';
+                return;
+            }
             renderScheduled = false;
             if (pendingDelta) {
                 streamBuffer += pendingDelta;
@@ -141,7 +148,12 @@
         switch (message.type) {
             case "addResponse": {
                 response = message.value;
-                setResponse();
+                // If we're still streaming, defer the full render until streamEnd
+                if (isStreaming) {
+                    pendingFinalResponse = true;
+                } else {
+                    setResponse();
+                }
                 break;
             }
             case "updateResponse": {
@@ -218,6 +230,15 @@
             }
             case "streamEnd": {
                 isStreaming = false;
+                // Clear any pending streaming buffers and cancel scheduled render
+                pendingDelta = '';
+                streamBuffer = '';
+                renderScheduled = false;
+                // If a final full response was received during streaming, render it now
+                if (pendingFinalResponse) {
+                    pendingFinalResponse = false;
+                    setResponse();
+                }                
                 break;
             }            
         }
@@ -421,6 +442,7 @@
                 display: inline-flex; max-width: 100%; overflow: hidden; border-radius: .125rem;
                 cursor: pointer; background: rgba(127,127,127,.1); padding: 0 .2rem;
             }
+            .chat-content [id^='message-content-'] { white-space: pre-wrap; }                
             .chat-content pre code {
                 display: block; padding: .5rem; margin: .5rem 0; overflow-x: auto; background: rgba(127,127,127,.08);
             }

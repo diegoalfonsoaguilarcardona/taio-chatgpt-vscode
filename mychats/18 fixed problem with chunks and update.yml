@@ -1,0 +1,221 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal **pure unified diffs**.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+    INPUT: `sources` = list of { path: string, content: string (full file with 
+     newlines) }; `request` = natural language change description.
+    BEHAVIOR:
+    - Produce only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly; use LF newlines; never insert timestamps, hashes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer to the request and/or describe what is going to be done.  2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder: "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    2) Diffs: **one fenced diff block per affected file**, preceded by a `### FILE: <path>` heading; sort files alphabetically by path; within each file, sort hunks by ascending line number; include standard context lines.
+    PURE UNIFIED DIFF FORMAT PER FILE:
+    ### FILE: <path>
+    `diff
+    --- a/<path>
+    +++ b/<path>
+    @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+    <lines prefixed with ' ' for context, '-' for removals, '+' for additions>
+    `
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file: use `--- /dev/null` and `+++ b/<path>`; a single hunk from line 1 covering all added lines.
+    - Deleted file: use `--- a/<path>` and `+++ /dev/null`; a single hunk removing all lines.
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+    `text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    `
+    ERROR CASES (emit as their **own per-file fenced blocks** within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_NOT_FOUND_FOR_DELETE
+    `
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_WAS_DELETED_RECREATE_CONFIRM
+    `
+    - Impossible or contradictory request:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! REQUEST_CONFLICT
+    `
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code; never exceed the Brief plus the required per-file diff/code blocks; do not include commentary beyond the Brief.
+  selected: true
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+- role: user
+  content: Explain to me what is this project about
+  selected: true
+- role: assistant
+  content: |-
+    This project appears to be a Visual Studio Code extension designed to integrate OpenAI's ChatGPT and GPT-4 capabilities directly into the IDE. The extension allows developers to leverage AI-powered assistance for various coding tasks such as writing, explaining, refactoring, optimizing code, finding problems, and generating documentation.
+
+    ### Key Features:
+    1. **AI Integration**: Connects with OpenAI's API to use models like GPT-3.5 Turbo and GPT-4 for interactive coding assistance.
+       
+    2. **Commands**: Provides a set of commands accessible via the command palette, context menus, or custom keybindings, enabling actions such as asking questions, explaining selections, and refactoring code. 
+
+    3. **Prompt Management**: Supports custom AI prompts, allowing users to fine-tune the guidance provided by the AI during code assistance.
+
+    4. **Chat Interface**: Includes a chat-like interface (using a `Webview`) to interact with the AI, allowing for conversational queries and responses.
+
+    5. **File Interaction**: Allows referencing and sending file contents to the AI for context-aware assistance, including functionality to handle specific file types (JavaScript, Python, etc.).
+
+    6. **Configuration**: Features a robust settings interface, accommodating different providers, model configurations, and user-specific options like timeout lengths and conversation settings.
+
+    7. **Development Utilities**: Comes with typical development scripts for building, testing, and updating the package dependencies.
+
+    Overall, it aims to enhance programming productivity by integrating intelligent codex functionalities directly into the development environment, automating routine tasks, and providing robust AI-driven guidance.
+  selected: true
+- role: user
+  content: I'm having a problem with this project and it's that when I start to receive the streaming, so the chunks coming from the LLM provider, sometimes it doesn't happen always, most of the times it works fine, but if you see I print, when I'm receiving the stream chunks I start to print part of those receiving chunks just to see what is coming, but then when it finishes, it presents all the chat again, so I'm able to see all the chat. But there are some times where that doesn't happen and I continue seeing just the last chunk that came, so I have to update the chat, so I have to select for example another model and if I select another model, it reprints the chat and I see that the chat is okay, so it is something happening with the synchronization or I don't know.
+  selected: true
+- role: assistant
+  content: |-
+    I will fix a race condition in the webview streaming renderer that sometimes overrides the final full chat render with the truncated stream tail. The fix ensures:
+    - Streaming renders never update the DOM after streaming ends.
+    - If the final addResponse arrives during streaming, it’s deferred until streamEnd to render the full chat.
+    - streamEnd clears any scheduled stream updates and flushes the final render deterministically.
+
+    Brief summary of changes:
+    - media/main.js:
+      - Add a pendingFinalResponse flag.
+      - In addResponse: if streaming, defer final render; else render immediately.
+      - In scheduleStreamRender callback: bail out if streaming already ended.
+      - In streamEnd: stop streaming, clear buffers/schedule, and render final chat if pending.
+    This resolves the intermittent state where only the last chunk stays visible until a manual UI refresh. Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: media/main.js
+    ```diff
+    --- a/media/main.js
+    +++ b/media/main.js
+    @@ -12,6 +12,7 @@
+         // Streaming state and lightweight renderer
+         let isStreaming = false;
+         let streamBuffer = '';
+         let pendingDelta = '';
+    +    let pendingFinalResponse = false;
+         let renderScheduled = false;
+         const MAX_STREAM_LINES = 50;
+     
+    @@ -36,6 +37,12 @@
+         function scheduleStreamRender() {
+             if (renderScheduled) return;
+             renderScheduled = true;
+             requestAnimationFrame(() => {
+    +            // If streaming already ended before this RAF fires, do nothing
+    +            if (!isStreaming) {
+    +                renderScheduled = false;
+    +                pendingDelta = '';
+    +                return;
+    +            }
+                 renderScheduled = false;
+                 if (pendingDelta) {
+                     streamBuffer += pendingDelta;
+                     pendingDelta = '';
+    @@ -122,8 +129,15 @@
+         window.addEventListener("message", (event) => {
+             const message = event.data;
+             switch (message.type) {
+                 case "addResponse": {
+    -                response = message.value;
+    -                setResponse();
+    +                response = message.value;
+    +                // If we're still streaming, defer the full render until streamEnd
+    +                if (isStreaming) {
+    +                    pendingFinalResponse = true;
+    +                } else {
+    +                    setResponse();
+    +                }
+                     break;
+                 }
+                 case "updateResponse": {
+                     console.log("Update Response!!!!!");
+    @@ -186,7 +200,16 @@
+                     break;
+                 }
+                 case "streamEnd": {
+                     isStreaming = false;
+    +                // Clear any pending streaming buffers and cancel scheduled render
+    +                pendingDelta = '';
+    +                streamBuffer = '';
+    +                renderScheduled = false;
+    +                // If a final full response was received during streaming, render it now
+    +                if (pendingFinalResponse) {
+    +                    pendingFinalResponse = false;
+    +                    setResponse();
+    +                }
+                     break;
+                 }            
+             }
+         });
+    ```
+  selected: true
+- role: user
+  content: It is working perfect, but for some strange reason now I don't see the returns in the messages
+  selected: true
+- role: assistant
+  content: |-
+    I will preserve line breaks in non-code message content. The Shadow DOM renderer was wrapping plain text in a div, but default CSS collapsed newlines. I’ll add a white-space: pre-wrap rule targeting the editable message content divs so line returns render correctly without changing code block behavior.
+
+    Brief summary of changes:
+    - media/main.js: In the Shadow DOM base styles, add a rule for .chat-content [id^='message-content-'] to use white-space: pre-wrap, preserving line breaks in regular message text.
+    This affects only the webview rendering and keeps code blocks unchanged. Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: media/main.js
+    ```diff
+    --- a/media/main.js
+    +++ b/media/main.js
+    @@ -363,6 +363,7 @@
+                 .chat-content img { max-width: 100%; height: auto; }
+                 .chat-content pre { white-space: pre-wrap; }
+                 .chat-content code {
+                     display: inline-flex; max-width: 100%; overflow: hidden; border-radius: .125rem;
+                     cursor: pointer; background: rgba(127,127,127,.1); padding: 0 .2rem;
+                 }
+    +            .chat-content [id^='message-content-'] { white-space: pre-wrap; }
+                 .chat-content pre code {
+                     display: block; padding: .5rem; margin: .5rem 0; overflow-x: auto; background: rgba(127,127,127,.08);
+                 }
+                 .chat-content a { color: var(--vscode-textLink-foreground); text-decoration: underline; }
+    ```
+  selected: true
