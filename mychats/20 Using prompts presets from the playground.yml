@@ -1,0 +1,527 @@
+- role: system
+  content: You are a helpfull assistant. Remember to diferenciate the codes with Triple backticks.
+  selected: true
+- role: user
+  content: Provide me the last news about AI in colombia
+  selected: false
+- role: assistant
+  content: |-
+    Here’s a quick snapshot of the latest AI news in Colombia (as of October 12, 2025):
+
+    - Sept 30–Oct 1, 2025 — New algorithmic transparency directive: The Ombudsman’s Office (Defensoría) and the Attorney General’s Office (Procuraduría) issued Joint Directive 007 requiring Colombian public bodies (and certain private actors performing public functions) to disclose meaningful information about any AI/algorithmic systems they use, including purpose, functioning, and when applicable access to source code or significant explanations. The move follows Constitutional Court ruling T-067/25, which framed algorithmic transparency as part of the right of access to public information. ([defensoria.gov.co](https://www.defensoria.gov.co/-/colombia-estrena-directiva-para-garantizar-la-transparencia-de-los-algoritmos-del-estado?utm_source=openai))
+
+    - Oct 1, 2025 — Press coverage of the directive: National media reported that the State must explain how its AI works when it impacts citizens’ rights, highlighting the new standards created by Directive 007 and their link to ruling T-067/25. ([eluniversal.com.co](https://www.eluniversal.com.co/colombia/2025/09/30/estado-colombiano-debera-explicar-funcionamiento-de-su-inteligencia-artificial/?utm_source=openai))
+
+    - Sept 10, 2025 — “Urgency” message for the AI Bill: President Petro sent a mensaje de urgencia to fast‑track the government’s comprehensive AI bill through Congress (30 days per chamber). The bill, led by MinCiencias with MinTIC and others, was formally filed in late July. ([minciencias.gov.co](https://minciencias.gov.co/node/9102?utm_source=openai))
+
+    - July 28–29, 2025 — AI regulation formally introduced in Congress: The government’s AI bill was filed in the Senate (July 28). Separately, a House bill (098/2025C) to establish an AI regulatory framework began committee review. A May note from MinCiencias details the proposal’s aims and would designate MinCiencias as the National AI Authority. ([senado.gov.co](https://www.senado.gov.co/index.php/el-senado/noticias/6694-proyecto-para-regular-la-inteligencia-artificial-inicia-tramite-en-senado?utm_source=openai))
+
+    - June 25, 2025 — Human rights stance at IGF: Colombia joined the 2025 Joint Declaration on AI and Human Rights issued by the Freedom Online Coalition during the Internet Governance Forum in Norway. ([cancilleria.gov.co](https://www.cancilleria.gov.co/newsroom/news/colombia-suma-declaracion-conjunta-2025-inteligencia-artificial-derechos-humanos?utm_source=openai))
+
+    - Feb 15, 2025 — National AI Policy approved (CONPES 4144): Colombia adopted an updated national AI policy through DNP/CONPES with over 100 actions through 2030 and a planned investment of roughly COP 479,000 million, focusing on governance, data infrastructure, talent, and risk mitigation. Subsequent briefings were held in March. ([dnp.gov.co](https://www.dnp.gov.co/publicaciones/Planeacion/Paginas/conpes-4144-hoja-de-ruta-colombia-inteligencia-artificial-retos-actuales-transformacion-futura.aspx?ID=291&utm_source=openai))
+
+    - Local ecosystem highlights (Aug–Sept 2025):
+      - Medellín announced a training alliance with Google Cloud, Ruta N, and the C4IR to offer 5,000 free places in cloud and generative AI skills. ([medellin.gov.co](https://www.medellin.gov.co/es/sala-de-prensa/noticias/ruta-n-el-c4ir-medellin-y-google-se-unen-para-formar-a-mas-de-5-000-personas-en-tecnologia/?utm_source=openai))
+      - Bogotá was recognized for strategic AI use in culture and is participating in the Bloomberg Philanthropies City Data Alliance to apply data and AI to improve public services. ([bogota.gov.co](https://bogota.gov.co/mi-ciudad/cultura-recreacion-y-deporte/bogota-fue-reconocida-como-referente-en-el-uso-estrategico-de-ia-2025?utm_source=openai))
+
+    If you want, I can track the AI bill’s next hearings, summarize what Directive 007 requires for a specific agency, or focus on sector‑specific AI news (health, education, justice, or startups) in Colombia.
+  selected: false
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+- role: user
+  content: Okay, so I have this Visual Studio Code extension that I'm developing and allows me to communicate with different providers, LLM providers, and to ask questions about my source and request modifications to my source and things like that inside Visual Studio Code. It is working perfect and also added recently a support for the Responses API. So now my extension also can talk, for example, with OpenAI Responses API, and in that way I can enable some MCPs or some search tools, things like that. But there is only one thing, it's a question and maybe a modification request, and it's that when I go to the platform from OpenAI, the part where I can create new chats, I can select the Responses API, and when I select the Responses API, I can, for example, create When I go to tools, I can use MCP servers and I can select, for example, Google Drive or Gmail or whatever MCP server I want to work with. After I select that inside the platform, like the Playground from OpenAI, I can select, for example, the model that I want to use, things like that, and then when I finish that, I can go to the upper part of the screen and I see the presets and I can save this specific configuration as a preset. When I have that, if I have that preset, I can see a link that has an ID for that specific preset. My question and maybe the modification request is that when I have that, how can I use it or what do I need to modify to use that specific preset that I created in the dashboard to use it? How do I use it inside my Visual Studio Code extension? Do I need to add some source or just modify the settings, the providers argument inside the settings? With that, I can add a new provider that is going to be that specific preset that I created?
+  selected: true
+- role: assistant
+  content: |-
+    Short answer
+    - There isn’t a public “preset_id” you can pass to the OpenAI Responses API today. Presets you save in the Playground are mainly a UI convenience. The current guidance is: render/use the same text/tools you tested in the Playground in your API call — “just pass the rendered text for now.” ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+    - The easiest way to use your Playground setup (model + MCP servers + temps, etc.) in your VS Code extension is to mirror that configuration in your extension settings for a model that uses api: "responses". No code changes required.
+    - If you want MCP to work without implementing an approval flow in your stream handler, set require_approval: "never" on each MCP tool in your settings. ([cookbook.openai.com](https://cookbook.openai.com/examples/mcp/mcp_tool_guide?utm_source=openai))
+
+    How to wire your Playground preset into this extension
+    1) Create a “model config” in settings.json (or your workspace settings) that matches the Playground:
+    - Use the Responses API.
+    - Copy the model name (e.g., gpt-4.1 / gpt-4o / o4-mini, etc.).
+    - Add your MCP servers under tools with server_label and server_url (and optionally headers, allowed_tools, require_approval).
+    - Put any other knobs (temperature, reasoning options, etc.) under options.
+
+    Example settings.json entry
+    Add a new “model” under your OpenAI provider (you can make one provider-per-preset or one provider with many models—both work with your UI):
+
+    ```json
+    "chatgpt.providers": [
+      {
+        "name": "OpenAI",
+        "apiKey": "sk-...your key...",
+        "apiUrl": "https://api.openai.com/v1",
+        "models": [
+          {
+            "name": "Playground preset: GDrive+Gmail (Responses)",
+            "model_name": "gpt-4.1",
+            "api": "responses",
+            "tools": [
+              {
+                "type": "mcp",
+                "server_label": "gmail",
+                "server_url": "https://your-gmail-mcp.example.com/mcp/sse",
+                "require_approval": "never",
+                "headers": {
+                  "Authorization": "Bearer YOUR_GMAIL_MCP_TOKEN"
+                }
+              },
+              {
+                "type": "mcp",
+                "server_label": "gdrive",
+                "server_url": "https://your-gdrive-mcp.example.com/mcp/sse",
+                "require_approval": "never"
+              }
+            ],
+            "options": {
+              "temperature": 0.2,
+              "tool_choice": "auto"
+            }
+          }
+        ]
+      }
+    ]
+    ```
+
+    Why this works with your code
+    - In src/chatGptViewProvider.ts, when you pick a provider/model, the extension already merges the model’s tools and options into the Responses request:
+    ```ts
+    const { tools, tool_choice, ...restOptions } = this._settings.options || {};
+    const responsesClient = oc?.responses ?? oc?.beta?.responses;
+    responsesStream = await responsesClient.stream({
+      model: this._settings.model,
+      input: aggregatedInput,
+      ...(tools ? { tools } : {}),
+      ...(tool_choice ? { tool_choice } : {}),
+      ...restOptions
+    });
+    ```
+    So whatever you place under models[].tools and models[].options goes straight to responses.create/stream. No source changes needed. ([cookbook.openai.com](https://cookbook.openai.com/examples/mcp/mcp_tool_guide?utm_source=openai))
+
+    What about the “preset link with an ID” from the Playground?
+    - Today there’s no documented field like preset_id you can pass to Responses. OpenAI’s current docs around the new Prompts workflow say to use the same prompt text (and variables you rendered) in your API call “for now.” If/when they expose a Prompt/Preset ID directly in the Responses API, you could surface it by adding a prompt parameter to options and the extension will forward it (your code already spreads unknown options into the API call). ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+
+    Two optional improvements you may want
+    - Avoid repeated MCP tools/list calls for faster follow‑ups: capture the final response id from the stream and send previous_response_id on the next call. Your stream loop only handles response.output_text.delta right now; you can also listen for response.completed, grab the response id, and stash it for the next request. ([openai-hd4n6.mintlify.app](https://openai-hd4n6.mintlify.app/docs/guides/streaming-response?utm_source=openai))
+
+    Minimal patch sketch
+    ```ts
+    // Near top of class
+    private _lastResponseId?: string;
+
+    // In Responses stream loop:
+    for await (const event of responsesStream) {
+      const t = (event && event.type) || '';
+      if (t === 'response.output_text.delta') {
+        // ... existing code ...
+      } else if (t === 'response.completed') {
+        this._lastResponseId = (event as any)?.response?.id || this._lastResponseId;
+      }
+    }
+
+    // On next create/stream call:
+    const baseReq: any = {
+      model: this._settings.model,
+      input: aggregatedInput,
+      ...(this._lastResponseId ? { previous_response_id: this._lastResponseId } : {})
+    };
+    ```
+
+    - Tool approval flow (optional): If you want to keep “require approval” on, you’ll need to handle additional stream events (tool call requests and approvals). Until you add that, set require_approval: "never" on each MCP tool as shown above so streams don’t pause waiting for approval. ([cookbook.openai.com](https://cookbook.openai.com/examples/mcp/mcp_tool_guide?utm_source=openai))
+
+    Where to find accurate MCP tool fields
+    - Official cookbook page shows the MCP tool schema for Responses (server_label, server_url, allowed_tools, require_approval) and an end‑to‑end curl example. ([cookbook.openai.com](https://cookbook.openai.com/examples/mcp/mcp_tool_guide?utm_source=openai))
+    - OpenAI’s announcement post confirms Responses + MCP support. ([openai.com](https://openai.com/index/new-tools-and-features-in-the-responses-api/?utm_source=openai))
+
+    Bottom line
+    - You don’t need extra source code to “use a preset.” Mirror the Playground config in your providers settings (api: "responses", model_name, tools, options) and, for the system prompt/instructions, use your extension’s chatgpt.prompts list. If OpenAI later exposes a first‑class Prompt/Presets ID in Responses, your extension can pass it through via options with a tiny adjustment, but today you’ll just copy the same config the Playground shows into settings. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+  selected: true
+- role: user
+  content: |-
+    But OpenAI provide me this as an example of how to use my specific preset.
+    ```plaintext
+    from openai import OpenAI
+    client = OpenAI()
+
+    response = client.responses.create(
+      prompt={
+        "id": "YOUR_PROMPT_ID",
+        "version": "1"
+      },
+      input=[],
+      text={
+        "format": {
+          "type": "text"
+        }
+      },
+      reasoning={},
+      max_output_tokens=2048,
+      store=True,
+      include=["web_search_call.action.sources"]
+    )
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Great news: that preset link corresponds to a stored Prompt (with ID pmpt_…) that the Responses API can call directly via the prompt parameter. You can use it in your VS Code extension with little or no code change.
+
+    What works already in your code
+    - In the Responses path you spread this._settings.options into the API call:
+      - responsesClient.stream({ model, input, ...(tools), ...(tool_choice), ...restOptions })
+    - Because …restOptions is forwarded as-is, you can place prompt, reasoning, max_output_tokens, include, text, etc., inside models[].options in settings and they’ll be sent to OpenAI. No source changes needed for the basic case. ([openai.com](https://openai.com/index/new-tools-and-features-in-the-responses-api/?utm_source=openai))
+
+    How to wire your Playground preset (Prompt ID) in settings
+    1) In your VS Code settings.json (user or workspace), add a model entry under your OpenAI provider that uses api: "responses" and includes the prompt block. You can also mirror any tools you enabled (MCP, web_search, etc.) and other knobs (max_output_tokens, include, reasoning, text).
+
+    Example
+    ```json
+    "chatgpt.providers": [
+      {
+        "name": "OpenAI",
+        "apiKey": "sk-proj-...your project key...",
+        "apiUrl": "https://api.openai.com/v1",
+        "models": [
+          {
+            "name": "My Playground preset (Responses)",
+            "model_name": "gpt-4.1",           // or whichever model your preset uses
+            "api": "responses",
+            "tools": [
+              {
+                "type": "mcp",
+                "server_label": "gmail",
+                "server_url": "https://your-gmail-mcp.example.com/mcp/sse",
+                "require_approval": "never"
+              }
+            ],
+            "options": {
+              "prompt": {
+                "id": "YOUR_PROMPT_ID",
+                "version": "1"
+                // "variables": { ... }   // optional, see below
+              },
+              "max_output_tokens": 2048,
+              "include": ["web_search_call.action.sources"],
+              "text": { "format": { "type": "text" } },
+              "tool_choice": "auto",
+              "temperature": 0.2
+            }
+          }
+        ]
+      }
+    ]
+    ```
+
+    Notes
+    - Use a project API key from the same OpenAI Project that owns the Prompt ID; prompts are project‑scoped. If you omit "version", the Prompt ID uses the latest published version by default. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+    - MCP tools configured at model level are already forwarded by your code (you copy model.tools into options for Responses). ([openai.com](https://openai.com/index/new-tools-and-features-in-the-responses-api/?utm_source=openai))
+
+    What if your Prompt requires variables?
+    - If your Prompt template has {variables}, you can pass them through options.prompt.variables. If you want the extension to auto-fill a variable with the user’s message (your aggregatedInput), add a tiny patch so you can write "$AGGREGATED_INPUT" in settings and have it replaced at send time.
+
+    Minimal patch (optional)
+    ```ts
+    // In search(), Responses API branch, before calling stream/create:
+    const { tools, tool_choice, ...restOptions } = this._settings.options || {};
+    // Make a shallow copy so we don't mutate settings persistently
+    const sendOptions: any = { ...restOptions };
+
+    // Optional: expand a sentinel into the prompt variables
+    if (sendOptions.prompt?.variables) {
+      for (const [k, v] of Object.entries(sendOptions.prompt.variables)) {
+        if (v === "$AGGREGATED_INPUT") {
+          sendOptions.prompt.variables[k] = aggregatedInput;
+        }
+      }
+    }
+
+    // Optional: allow sending empty input like the Playground sample
+    const useEmptyInput = sendOptions.useEmptyInput === true;
+    const baseReq: any = {
+      model: this._settings.model,
+      ...(useEmptyInput ? { input: [] } : { input: aggregatedInput }),
+      ...(tools ? { tools } : {}),
+      ...(tool_choice ? { tool_choice } : {}),
+      ...sendOptions
+    };
+
+    let responsesStream = await responsesClient.stream?.(baseReq)
+      .catch(() => responsesClient.create?.(baseReq));
+    ```
+
+    Then you can write in settings:
+    ```json
+    "options": {
+      "prompt": {
+        "id": "pmpt_...",
+        "version": "1",
+        "variables": { "user_input": "$AGGREGATED_INPUT" }
+      },
+      "useEmptyInput": false
+    }
+    ```
+
+    Do I need a new provider?
+    - Not required. You can either:
+      - add a new model entry under your existing “OpenAI” provider for each preset, or
+      - create a separate provider per preset if you prefer to keep them visually distinct in your selector.
+    Both work with your UI.
+
+    SDK/version tip
+    - Make sure you’re on a recent openai SDK so the Responses client and newer fields work smoothly; your code already checks oc.responses or oc.beta.responses and forwards unknown options, so it will still work even if types lag behind. ([openai.com](https://openai.com/index/new-tools-and-features-in-the-responses-api/?utm_source=openai))
+
+    Why this matches the official flow
+    - OpenAI documents project‑level Prompts with IDs and versions and indicates you can pin a version or use the latest; the Responses API accepts a prompt object alongside other parameters. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+
+    Bottom line
+    - You can use your saved Playground preset today by adding the prompt block (id/version and optional variables) to the model’s options in settings. Your extension will forward it to the Responses API along with your tools and other options. Only add the small patch if you want automatic variable injection or to force input: [] exactly like the Playground example. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+  selected: true
+- role: user
+  content: |-
+    But I don't understand why in your Example you have to set the tools and everything? Can't you just set options with the prompt id and version?
+    ```plaintext
+    from openai import OpenAI
+    client = OpenAI()
+
+    response = client.responses.create(
+      prompt={
+        "id": "YOUR_PROMPT_ID",
+        "version": "1"
+      },
+      input=[],
+      text={
+        "format": {
+          "type": "text"
+        }
+      },
+      reasoning={},
+      max_output_tokens=2048,
+      store=True,
+      include=["web_search_call.action.sources"]
+    )
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    You can absolutely pass only the prompt id/version and let the Prompt (preset) drive the rest — as long as everything you need (instructions, tools/MCP servers, tool_choice, include fields, output format, etc.) is already saved inside that Prompt in your OpenAI project.
+
+    Key points
+    - If your saved Prompt contains tool definitions and other settings, you don’t need to repeat them in the API call. The Responses API will use what’s in the Prompt.
+    - The Playground code sample includes fields like text, reasoning, include, max_output_tokens, input just to show they can be overridden at call time. They’re optional if your Prompt already sets what you need.
+    - Variables: If your Prompt template expects variables, you must pass variables. If it doesn’t, you can call it with input: [] or your own input string.
+
+    How to do it in your extension today (no code changes)
+    - Put only the prompt object in the model’s options. Your extension forwards options to the Responses API as-is.
+
+    Example settings.json
+    ```json
+    "chatgpt.providers": [
+      {
+        "name": "OpenAI",
+        "apiKey": "sk-proj-...your key...",
+        "apiUrl": "https://api.openai.com/v1",
+        "models": [
+          {
+            "name": "Preset: Gmail+Drive",
+            "model_name": "gpt-4.1",
+            "api": "responses",
+            "options": {
+              "prompt": {
+                "id": "YOUR_PROMPT_ID",
+                "version": "1"
+              }
+              // Optional overrides if you want them:
+              // "input": [],                      // to emulate the Playground sample
+              // "max_output_tokens": 2048,
+              // "text": { "format": { "type": "text" } },
+              // "include": ["web_search_call.action.sources"]
+              // "tool_choice": "auto"
+            }
+          }
+        ]
+      }
+    ]
+    ```
+
+    What happens under the hood in your code
+    - In the Responses path, you send:
+    ```ts
+    responsesClient.stream({
+      model: this._settings.model,
+      input: aggregatedInput,           // your chat text; you can also send []
+      ...this._settings.options         // spreads prompt, text, include, etc.
+    });
+    ```
+    So setting only options.prompt is valid. The server will use the Prompt’s stored tools/settings.
+
+    When should you still set tools in settings?
+    - Only if:
+      - Your saved Prompt doesn’t include the tools, or
+      - You want to override/augment tools at runtime, or
+      - You’re not using a Prompt at all and want to define tools purely from the extension.
+
+    Tip about input
+    - The Playground example shows input: [] (empty) because the Prompt might not require user input. In your extension, you currently aggregate chat messages into a string and pass it as input. If your Prompt expects no input, either:
+      - Add "input": [] in options in settings, or
+      - Add a tiny flag to your code to allow empty input for models that want it. For example, in settings:
+        "options": { "useEmptyInput": true, "prompt": { "id": "...", "version": "1" } }
+      And adjust your call to send input: [] when that flag is set.
+
+    Minimal code tweak to support optional empty input (only if you want it)
+    ```ts
+    // Before calling responsesClient.*:
+    const { tools, tool_choice, useEmptyInput, ...restOptions } = this._settings.options || {};
+    const baseReq: any = {
+      model: this._settings.model,
+      ...(useEmptyInput ? { input: [] } : { input: aggregatedInput }),
+      ...(tools ? { tools } : {}),
+      ...(tool_choice ? { tool_choice } : {}),
+      ...restOptions
+    };
+    ```
+
+    Bottom line
+    - Yes, you can just set options.prompt with id/version in your provider model config, and it will use the Prompt’s stored configuration (including MCP tools) without redefining them in your extension. Add overrides only if you want to change something at call time.
+  selected: true
+- role: user
+  content: |-
+    But what I mean is that you define the tools, but those are defined from the preset. No?
+    ```json
+    "chatgpt.providers": [
+      {
+        "name": "OpenAI",
+        "apiKey": "sk-proj-...your project key...",
+        "apiUrl": "https://api.openai.com/v1",
+        "models": [
+          {
+            "name": "My Playground preset (Responses)",
+            "model_name": "gpt-4.1",           // or whichever model your preset uses
+            "api": "responses",
+            "tools": [
+              {
+                "type": "mcp",
+                "server_label": "gmail",
+                "server_url": "https://your-gmail-mcp.example.com/mcp/sse",
+                "require_approval": "never"
+              }
+            ],
+            "options": {
+              "prompt": {
+                "id": "YOUR_PROMPT_ID",
+                "version": "1"
+                // "variables": { ... }   // optional, see below
+              },
+              "max_output_tokens": 2048,
+              "include": ["web_search_call.action.sources"],
+              "text": { "format": { "type": "text" } },
+              "tool_choice": "auto",
+              "temperature": 0.2
+            }
+          }
+        ]
+      }
+    ]
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Short answer: yes. If your saved Prompt/preset already contains the MCP tools (and any other settings), you don’t need to define tools in your VS Code settings. Just pass the prompt object (id/version) and the Responses API will use whatever is saved in that Prompt. You only add tools in settings if you want to override or augment what the Prompt defines. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+
+    What to put in your settings
+    - Keep the model entry api: "responses".
+    - Put only the prompt block under options.
+    - Optionally add input: [] (or other overrides like max_output_tokens) if you want to mimic the Playground call exactly; your code spreads options last, so options.input will override the aggregatedInput you build. No code change needed.
+
+    Example (minimal; no tools in settings)
+    ```json
+    "chatgpt.providers": [
+      {
+        "name": "OpenAI",
+        "apiKey": "sk-proj-...your project key...",
+        "apiUrl": "https://api.openai.com/v1",
+        "models": [
+          {
+            "name": "Preset: Gmail+Drive",
+            "model_name": "gpt-4.1",
+            "api": "responses",
+            "options": {
+              "prompt": { "id": "YOUR_PROMPT_ID", "version": "1" },
+              "input": [],                       // optional: match Playground sample
+              "max_output_tokens": 2048,         // optional override
+              "include": ["web_search_call.action.sources"] // optional override
+            }
+          }
+        ]
+      }
+    ]
+    ```
+
+    Why this works with your code
+    - In the Responses branch you build the request like:
+    ```ts
+    responsesClient.stream({
+      model: this._settings.model,
+      input: aggregatedInput,
+      ...(tools ? { tools } : {}),
+      ...(tool_choice ? { tool_choice } : {}),
+      ...restOptions // options from settings
+    });
+    ```
+    Because ...restOptions is spread last, anything you set inside options (including prompt and input) takes precedence. If you don’t put tools in settings, none will be sent, and the Prompt’s stored tools are used. ([cookbook.openai.com](https://cookbook.openai.com/examples/responses_api/responses_example?utm_source=openai))
+
+    When should you add tools in settings?
+    - Only if your Prompt doesn’t include them, or you intentionally want to override/extend the Prompt’s tools (e.g., add an extra MCP server at runtime). Otherwise, omit tools in settings and rely on the Prompt. The MCP tool schema shown in the official cookbook is only needed when you’re supplying tools directly in the API call. ([cookbook.openai.com](https://cookbook.openai.com/examples/o-series/o3o4-mini_prompting_guide?utm_source=openai))
+
+    Tip: project scope and versions
+    - Use a project API key that has access to the Prompt in that project.
+    - If you omit version, the Prompt ID targets the latest published version; include "version": "1" (or another) to pin. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+
+    Optional guard (only if you want to prevent accidental “double tools”)
+    - Today you already avoid sending tools if the model config has no tools. If you want a hard rule “don’t send tools when a prompt is present,” add this tiny change right before the Responses request:
+
+    ```ts
+    const { tools, tool_choice, ...restOptions } = this._settings.options || {};
+    const effectiveTools = restOptions.prompt ? undefined : tools;
+
+    const req = {
+      model: this._settings.model,
+      input: aggregatedInput,
+      ...(effectiveTools ? { tools: effectiveTools } : {}),
+      ...(tool_choice ? { tool_choice } : {}),
+      ...restOptions
+    };
+    ```
+
+    Bottom line
+    - If the preset/Prompt contains your MCP servers and other knobs, keep your VS Code model entry lean: just set options.prompt (and any call‑time overrides you actually want). No need to duplicate tools in settings. ([help.openai.com](https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%23.flac?utm_source=openai))
+  selected: true
