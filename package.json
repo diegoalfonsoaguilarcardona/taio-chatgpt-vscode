@@ -225,6 +225,14 @@
                 "type": "string",
                 "description": "API URL for the provider."
               },
+              "chatCompletionsUrl": {
+                "type": "string",
+                "description": "Chat Completions API base URL for this provider (optional; overrides apiUrl when using chat completions)."
+              },
+              "responsesUrl": {
+                "type": "string",
+                "description": "Responses API base URL for this provider (optional; used when a model selects the Responses API)."
+              },              
               "models": {
                 "type": "array",
                 "description": "List of models offered by this provider.",
@@ -235,6 +243,23 @@
                       "type": "string",
                       "description": "Name of the model (e.g., gpt-3.5-turbo)."
                     },
+                    "model_name": {
+                      "type": "string",
+                      "description": "The actual model identifier to send to the provider (e.g., gpt-4o, o4-mini)."
+                    },
+                    "api": {
+                      "type": "string",
+                      "enum": ["chatCompletions", "responses"],
+                      "description": "Which API to use for this model."
+                    },
+                    "tools": {
+                      "type": "array",
+                      "description": "Optional tools configuration for providers that support tools (e.g., OpenAI Responses).",
+                      "items": {
+                        "type": "object",
+                        "description": "Tool definition object; schema is provider-specific."
+                      }
+                    },                    
                     "options": {
                       "type": "object",
                       "description": "Options for the model.",
@@ -368,6 +393,6 @@
     "js-tiktoken": "^1.0.10",
     "js-yaml": "^4.1.0",
     "node-fetch": "^3.3.2",
-    "openai": "^4.29.2"
+    "openai": "^4.60.1"
   }
 }

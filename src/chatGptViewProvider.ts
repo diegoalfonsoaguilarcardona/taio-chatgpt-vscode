@@ -29,6 +29,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     keepConversation: true,
     timeoutLength: 60,
     apiUrl: BASE_URL,
+    apiType: 'chatCompletions',    
     model: 'gpt-3.5-turbo',
     options: {
     },
@@ -222,17 +223,29 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               const provider_data = providers[providerIndex];
               if (provider_data.models && provider_data.models.length > modelIndex) {
                 const model_data = provider_data.models[modelIndex];
+                const apiType = (model_data as any).api || 'chatCompletions';
+                // Choose base URL according to apiType, with sensible fallbacks
+                let selectedApiUrl = provider_data.apiUrl;
+                if (apiType === 'responses') {
+                  selectedApiUrl = provider_data.responsesUrl || provider_data.apiUrl;
+                } else {
+                  selectedApiUrl = provider_data.chatCompletionsUrl || provider_data.apiUrl;
+                }
                 const provider_settings = {
                   model: model_data.model_name,
-                  apiUrl: provider_data.apiUrl,
+                  apiUrl: selectedApiUrl,
                   apiKey: provider_data.apiKey,
+                  apiType,
                   options: {
-                  ...model_data.options // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
+                  ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
+                  // If tools are configured at model level, pass them via options for Responses API usage
+                  ...((model_data as any).tools ? { tools: (model_data as any).tools } : {})
                   },
                 };
                 this.setSettings({
                   apiUrl: provider_settings.apiUrl,
                   model: provider_settings.model,
+                  apiType: provider_settings.apiType,
                   options: {
                   ...provider_settings.options, // Spread operator to include all keys from options
                   },
@@ -749,59 +762,170 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       // Expand any file reference markers to current file contents
       messagesToSend = this.expandFileReferencesInMessages(messagesToSend);
 
-      const stream = await this._openai.chat.completions.create({
-        model: this._settings.model,
-        messages: messagesToSend,
-        stream: true,
-        ...this._settings.options, // Spread operator to include all keys from options
-      });
-      
-      console.log("Message sender created");
-
-      this._view?.webview.postMessage({ type: 'streamStart' });
-
-      let completionTokens = 0;
-      full_message = "";
-
-      // Throttled delta accumulator to reduce IPC messages
-      let deltaAccumulator = "";
-      let lastSend = 0;
-      const flushDelta = (force = false) => {
-        if (!deltaAccumulator) return;
-        const now = Date.now();
-        if (force || now - lastSend > 50) { // ~20 fps
-          this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });
-          deltaAccumulator = "";
-          lastSend = now;
+      // Choose API flow based on settings.apiType
+      if (this._settings.apiType === 'responses') {
+        // Aggregate messages into a single input string for Responses API
+        let aggregatedInput = "";
+        for (const msg of messagesToSend) {
+          const role = (msg as any).role?.toUpperCase?.() || 'USER';
+          if (typeof (msg as any).content === 'string') {
+            aggregatedInput += `\n# ${role}:\n${(msg as any).content}`;
+          } else if (Array.isArray((msg as any).content)) {
+            aggregatedInput += `\n# ${role}:\n`;
+            for (const part of (msg as any).content) {
+              if (this.isChatCompletionContentPartText(part)) {
+                aggregatedInput += part.text;
+              } else if (this.isChatCompletionContentPartImage(part)) {
+                aggregatedInput += `\n[Image: ${part.image_url.url}]\n`;
+              }
+            }
+          }
         }
-      };
 
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        console.log("chunk:", chunk);
-        console.log("content:", content);
-        if (!content) continue;
+        const { tools, tool_choice, ...restOptions } = this._settings.options || {};
 
-        const tokenList = this._enc.encode(content);
-        completionTokens += tokenList.length;
-        console.log("tokens:", completionTokens);
-        full_message += content;
+        // Resolve Responses client from stable or beta namespace
+        const oc: any = this._openai as any;
+        const responsesClient = oc?.responses ?? oc?.beta?.responses;
+        if (!responsesClient) {
+          throw new Error('Responses API client not available in the installed OpenAI SDK. Please upgrade the "openai" package or switch this model to Chat Completions.');
+        }
 
-        // stream delta (throttled)
-        deltaAccumulator += content;
-        flushDelta(false);
+        // Try streaming first (if supported); otherwise fall back to non-stream create()
+        let responsesStream: any = null;
+        if (typeof responsesClient.stream === 'function') {
+          try {
+            responsesStream = await responsesClient.stream({
+              model: this._settings.model,
+              input: aggregatedInput,
+              ...(tools ? { tools } : {}),
+              ...(tool_choice ? { tool_choice } : {}),
+              ...restOptions
+            });
+          } catch (err) {
+            console.warn('Responses.stream failed; falling back to responses.create()', err);
+          }
+        }
+
+        if (responsesStream && (Symbol.asyncIterator in Object(responsesStream))) {
+          console.log("Responses stream created");
+          this._view?.webview.postMessage({ type: 'streamStart' });
+
+          let completionTokens = 0;
+          full_message = "";
+
+          let deltaAccumulator = "";
+          let lastSend = 0;
+          const flushDelta = (force = false) => {
+            if (!deltaAccumulator) return;
+            const now = Date.now();
+            if (force || now - lastSend > 50) {
+              this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });
+              deltaAccumulator = "";
+              lastSend = now;
+            }
+          };
+
+          for await (const event of responsesStream) {
+            const t = (event && event.type) || '';
+            if (t === 'response.output_text.delta') {
+              const content = (event as any).delta || "";
+              if (!content) continue;
+              const tokenList = this._enc.encode(content);
+              completionTokens += tokenList.length;
+              full_message += content;
+              deltaAccumulator += content;
+              flushDelta(false);
+            } else if (t === 'response.error') {
+              const msg = (event as any)?.error?.message || 'Responses stream error';
+              throw new Error(msg);
+            } else {
+              // handle other events silently (tool calls, etc.) for now
+            }
+          }
+
+          flushDelta(true);
+          this._view?.webview.postMessage({ type: 'streamEnd' });
+          this._messages?.push({ role: "assistant", content: full_message, selected:true });
+          const tokenList = this._enc.encode(full_message);
+          chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
+        } else if (typeof responsesClient.create === 'function') {
+          // Non-stream fallback
+          const resp = await responsesClient.create({
+            model: this._settings.model,
+            input: aggregatedInput,
+            ...(tools ? { tools } : {}),
+            ...(tool_choice ? { tool_choice } : {}),
+            ...restOptions
+          });
+          // Extract text from Responses payload
+          const text =
+            (resp as any)?.output_text ??
+            ((resp as any)?.output?.[0]?.content?.[0]?.text ?? '') ??
+            '';
+          full_message = String(text || '');
+          this._messages?.push({ role: "assistant", content: full_message, selected:true });
+          const tokenList = this._enc.encode(full_message);
+          chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
+        } else {
+          throw new Error('Responses API does not support stream() or create() in this SDK/version.');
+        }
+      } else {
+        // Default Chat Completions flow
+        const stream = await this._openai.chat.completions.create({
+          model: this._settings.model,
+          messages: messagesToSend,
+          stream: true,
+          ...this._settings.options, // Spread operator to include all keys from options
+        });
+        
+        console.log("Message sender created");
+
+        this._view?.webview.postMessage({ type: 'streamStart' });
+
+        let completionTokens = 0;
+        full_message = "";
+
+        // Throttled delta accumulator to reduce IPC messages
+        let deltaAccumulator = "";
+        let lastSend = 0;
+        const flushDelta = (force = false) => {
+          if (!deltaAccumulator) return;
+          const now = Date.now();
+          if (force || now - lastSend > 50) { // ~20 fps
+            this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });
+            deltaAccumulator = "";
+            lastSend = now;
+          }
+        };
+
+        for await (const chunk of stream) {
+          const content = (chunk as any).choices?.[0]?.delta?.content || "";
+          console.log("chunk:", chunk);
+          console.log("content:", content);
+          if (!content) continue;
+
+          const tokenList = this._enc.encode(content);
+          completionTokens += tokenList.length;
+          console.log("tokens:", completionTokens);
+          full_message += content;
+
+          // stream delta (throttled)
+          deltaAccumulator += content;
+          flushDelta(false);
+        }
+
+        // Ensure last delta is flushed and end the stream
+        flushDelta(true);
+        this._view?.webview.postMessage({ type: 'streamEnd' });
+
+        this._messages?.push({ role: "assistant", content: full_message, selected:true })
+        console.log("Full message:", full_message);
+        console.log("Full Number of tokens:", completionTokens);
+        const tokenList = this._enc.encode(full_message);
+        console.log("Full Number of tokens tiktoken:", tokenList.length);
+        chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)
       }
-
-      // Ensure last delta is flushed and end the stream
-      flushDelta(true);
-      this._view?.webview.postMessage({ type: 'streamEnd' });
-
-      this._messages?.push({ role: "assistant", content: full_message, selected:true })
-      console.log("Full message:", full_message);
-      console.log("Full Number of tokens:", completionTokens);
-      const tokenList = this._enc.encode(full_message);
-      console.log("Full Number of tokens tiktoken:", tokenList.length);
-      chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length)
     } catch (e: any) {
       console.error(e);
       if (this._response!=undefined) {

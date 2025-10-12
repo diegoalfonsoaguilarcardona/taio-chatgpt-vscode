@@ -25,6 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 	  model: "none",
 	  apiUrl: BASE_URL,
 	  apiKey: "none",
+	  apiType: 'chatCompletions',
 	  options: {
 		maxModelTokens: 1000,
 		maxResponseTokens: 1000,
@@ -36,13 +37,22 @@ export function activate(context: vscode.ExtensionContext) {
 		const firstProvider = providers[0];
 		if (firstProvider.models && firstProvider.models.length > 0) {
 			const firstModel = firstProvider.models[0];
-			// Assuming firstModel and firstProvider are already defined based on your JSON structure:
+            // Determine API type and URL based on model/provider configuration
+            const apiType = firstModel.api || 'chatCompletions';
+            const apiUrl =
+                apiType === 'responses'
+                    ? (firstProvider.responsesUrl || firstProvider.apiUrl || BASE_URL)
+                    : (firstProvider.chatCompletionsUrl || firstProvider.apiUrl || BASE_URL);
+
 			activate_provider_settings = {
 			  model: firstModel.model_name,
-			  apiUrl: firstProvider.apiUrl,
+              apiUrl,
 			  apiKey: firstProvider.apiKey,
+			  apiType,
 			  options: {
 				...firstModel.options, // Spread operator to include all keys from options
+                // If tools are defined at model level, include them in options for convenience
+                ...(firstModel.tools ? { tools: firstModel.tools } : {}),
 			  },
 			};
 		}
@@ -56,6 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
 	  timeoutLength: config.get('timeoutLength') || 60,
 	  apiUrl: activate_provider_settings.apiUrl,
 	  model: activate_provider_settings.model,
+      apiType: activate_provider_settings.apiType,
 	  options: {
 		...activate_provider_settings.options, // Use spread operator to include all options
 	  },
@@ -157,18 +168,26 @@ export function activate(context: vscode.ExtensionContext) {
 				const firstProvider = providers[0];
 				if (firstProvider.models && firstProvider.models.length > 0) {
 					const firstModel = firstProvider.models[0];
-					activate_provider_settings = {
+                    const apiType = firstModel.api || 'chatCompletions';
+                    const apiUrl =
+                        apiType === 'responses'
+                            ? (firstProvider.responsesUrl || firstProvider.apiUrl || BASE_URL)
+                            : (firstProvider.chatCompletionsUrl || firstProvider.apiUrl || BASE_URL);
+                    activate_provider_settings = {
 					  model: firstModel.model_name,
-					  apiUrl: firstProvider.apiUrl,
+					  apiUrl,
 					  apiKey: firstProvider.apiKey,
+					  apiType,
 					  options: {
 						...firstModel.options, // Use spread operator to include all options
+                        ...(firstModel.tools ? { tools: firstModel.tools } : {}),
 					  },
 					};
 				}
 				provider.setSettings({
 				  apiUrl: activate_provider_settings.apiUrl,
 				  model: activate_provider_settings.model,
+				  apiType: activate_provider_settings.apiType,
 				  options: {
 					...activate_provider_settings.options, // Use spread operator to include all options
 				  },

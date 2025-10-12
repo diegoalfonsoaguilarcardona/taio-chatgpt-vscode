@@ -10,6 +10,7 @@ export type Settings = {
   timeoutLength?: number;
   model?: string;
   apiUrl?: string;
+  apiType?: 'chatCompletions' | 'responses';  
   options?: {
     [key: string]: any; // Allows for any number of properties with any value type
   };
@@ -18,6 +19,8 @@ export type Settings = {
 export interface Model {
   name: string;            // Display in UI
   model_name: string;      // For API calls
+  api?: 'chatCompletions' | 'responses'; // Which API to use
+  tools?: any[];           // Optional tools for Responses API (provider-specific)  
   options: {
     [key: string]: any;
   };
@@ -26,7 +29,9 @@ export interface Model {
 export interface Provider {
   name: string;
   apiKey: string;
-  apiUrl: string;
+  apiUrl: string;                 // Fallback / legacy single URL
+  chatCompletionsUrl?: string;    // Optional override for chat completions
+  responsesUrl?: string;          // Optional URL for Responses API
   models: Model[];
 }
 
@@ -34,6 +39,7 @@ export interface ProviderSettings {
   model: string;
   apiUrl: string;
   apiKey: string;
+  apiType?: 'chatCompletions' | 'responses';  
   options: {
     [key: string]: any; // This allows options to have any number of properties with any types
   };
