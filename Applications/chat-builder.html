@@ -17,18 +17,22 @@
       background: canvas; color: canvastext;
     }
     textarea { min-height: 180px; resize: vertical; }
-    .controls .row { display: grid; grid-template-columns: 180px 1fr; gap: 12px; align-items: center; }
-    .buttons { display: flex; gap: 8px; margin-top: 10px; }
+    .grid-2 { display: grid; grid-template-columns: 180px 1fr; gap: 12px; align-items: start; }
+    .buttons { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     button { width: auto; cursor: pointer; }
     .output textarea { min-height: 420px; white-space: pre; }
     .hint { color: #888; font-size: 12px; margin-top: 4px; }
+    .row { display: grid; gap: 8px; }
+    .inline { display: flex; gap: 8px; align-items: center; }
+    .inline input[type="text"] { width: 180px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="controls">
       <h1>Compose Message</h1>
-      <div class="row">
+
+      <div class="row grid-2">
         <div>
           <label for="role">Role</label>
           <select id="role">
@@ -43,11 +47,24 @@
           <div class="hint">Tip: Press Ctrl/Cmd + Enter to append.</div>
         </div>
       </div>
+
       <div class="buttons">
         <button id="append">Append</button>
         <button id="copy">Copy YAML</button>
         <button id="clear" title="Clear all">Clear</button>
       </div>
+
+      <h1 style="margin-top:16px">Quick Paste</h1>
+      <div class="buttons">
+        <button id="paste-user">Paste user message</button>
+        <button id="paste-assistant">Paste assistant message</button>
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <label for="code-lang" style="margin:0; font-weight:600;">Code block lang</label>
+        <input id="code-lang" type="text" placeholder="e.g., html, js, py" />
+        <button id="paste-code">Paste code block</button>
+      </div>
+      <div class="hint">“Paste code block” inserts a fenced block into the content of the last YAML message (just before selected: true). If there are no messages yet, a new one is created using the currently selected role.</div>
     </section>
 
     <section class="output">
@@ -65,7 +82,7 @@
     const entries = [];
 
     function toYamlString(str) {
-      // Use JSON-style double-quoted string; valid YAML 1.2.
+      // JSON-style double-quoted single-line string (valid YAML 1.2)
       return JSON.stringify(str);
     }
 
@@ -73,13 +90,14 @@
       const out = [];
       for (const e of entries) {
         out.push(`- role: ${e.role}`);
-        const hasNewlines = e.content.includes('\n');
+        const content = e.content ?? '';
+        const hasNewlines = content.includes('\n');
         if (hasNewlines) {
           out.push(`  content: |-`);
-          const lines = e.content.replace(/\r\n/g, '\n').split('\n');
+          const lines = content.replace(/\r\n/g, '\n').split('\n');
           for (const line of lines) out.push(`    ${line}`);
         } else {
-          out.push(`  content: ${toYamlString(e.content)}`);
+          out.push(`  content: ${toYamlString(content)}`);
         }
         out.push(`  selected: true`);
       }
@@ -87,15 +105,48 @@
     }
 
     function render() {
-      document.getElementById('output').value = toYaml(entries);
+      const txt = toYaml(entries);
+      const out = document.getElementById('output');
+      out.value = txt;
+      out.scrollTop = out.scrollHeight;
     }
 
+    function appendEntry(role, content) {
+      entries.push({ role, content: content ?? '' });
+      render();
+    }
+
+    function normalizeText(t) {
+      return (t ?? '').replace(/\r\n/g, '\n');
+    }
+
+    async function readClipboardText() {
+      try {
+        const t = await navigator.clipboard.readText();
+        return t ?? '';
+      } catch (e) {
+        try {
+          // Legacy fallback (may not work in all browsers/contexts)
+          const ta = document.createElement('textarea');
+          document.body.appendChild(ta);
+          ta.focus();
+          document.execCommand('paste');
+          const v = ta.value;
+          document.body.removeChild(ta);
+          return v || '';
+        } catch {
+          alert('Unable to read clipboard. Please paste manually.');
+          return '';
+        }
+      }
+    }
+
+    // UI bindings
     document.getElementById('append').addEventListener('click', () => {
       const role = document.getElementById('role').value;
       const content = document.getElementById('content').value || '';
-      entries.push({ role, content });
+      appendEntry(role, content);
       document.getElementById('content').value = '';
-      render();
       document.getElementById('content').focus();
     });
 
@@ -120,6 +171,44 @@
         document.getElementById('append').click();
       }
     });
+
+    // Quick paste: user
+    document.getElementById('paste-user').addEventListener('click', async () => {
+      const txt = normalizeText(await readClipboardText());
+      if (!txt) return;
+      appendEntry('user', txt);
+    });
+
+    // Quick paste: assistant
+    document.getElementById('paste-assistant').addEventListener('click', async () => {
+      const txt = normalizeText(await readClipboardText());
+      if (!txt) return;
+      appendEntry('assistant', txt);
+    });
+
+    // Quick paste: code block -> insert into last message content, before "selected: true"
+    document.getElementById('paste-code').addEventListener('click', async () => {
+      const lang = (document.getElementById('code-lang').value || '').trim();
+      const txt = normalizeText(await readClipboardText());
+      if (!txt) return;
+
+      const fenced = '``​`' + lang + '\n' + txt + '\n``​`';
+
+      if (entries.length === 0) {
+        // No messages yet: create a new one using the currently selected role
+        const role = document.getElementById('role').value;
+        entries.push({ role, content: fenced });
+      } else {
+        // Append into the content of the last message
+        const last = entries[entries.length - 1];
+        const base = normalizeText(last.content ?? '');
+        last.content = base ? (base + '\n\n' + fenced) : fenced;
+      }
+      render();
+    });
+
+    // Initial render
+    render();
   </script>
 </body>
 </html>
