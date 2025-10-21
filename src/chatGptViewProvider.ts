@@ -919,7 +919,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             args: string,
             completed: boolean,
             submitted: boolean,
-            hasServerOutput: boolean
+            hasServerOutput: boolean,
+            // accumulate server-provided tool output (for delta streams)
+            output?: string
           }> = {};
           // Compatible submitter across SDK variants
           const submitToolOutputs =
@@ -1017,7 +1019,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   args: '',
                   completed: false,
                   submitted: false,
-                  hasServerOutput: false
+                  hasServerOutput: false,
+                  // initialize accumulator
+                  output: ''
                 };
               }
               if (info.name && !toolCalls[info.id].name) {
@@ -1041,24 +1045,46 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 await trySubmitMissingToolOutputs();
               }
               continue;
-            } else if (t === 'response.tool_output') {
-              // Server-provided output from a hosted/built-in tool (e.g., web_search)
-              const toolCallId = (event as any)?.tool_call_id || (event as any)?.tool_call?.id || (event as any)?.id;
-              const out = (event as any)?.output;
-              if (toolCallId && toolCalls[toolCallId]) {
-                toolCalls[toolCallId].hasServerOutput = true;
-                const name = toolCalls[toolCallId].name || 'tool';
-                const outStr = this.safeStringify(out, 2000);
-                postProgress(`📥 tool.output (${name}): ${outStr}`);
-                // Also add to chat history as an assistant message (selectable for later context)
-                this._messages?.push({
-                  role: "assistant",
-                  content: `Tool ${name} output:\n${outStr}`,
-                  selected: true
-                });
-                const chat_progress = this._updateChatMessages(0, 0);
-                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+            } else if (t.startsWith('response.tool_output')) {
+              // Handle tool output events (may be delta/done or a single event)
+              const toolCallId =
+                (event as any)?.tool_call_id ||
+                (event as any)?.tool_call?.id ||
+                (event as any)?.id;
+              const rec = toolCallId ? toolCalls[toolCallId] : undefined;
+              const name = rec?.name || 'tool';
+              if (t === 'response.tool_output.delta') {
+                // Streamed tool output chunk
+                const delta =
+                  (event as any)?.delta ??
+                  (event as any)?.output_delta ??
+                  '';
+                if (rec) {
+                  rec.output = (rec.output || '') + String(delta);
+                  rec.hasServerOutput = true;
+                }
+                const shown = this.safeStringify(delta, 400);
+                postProgress(`📥 tool.output.delta (${name}): ${shown}`);
+                continue;
               }
+              // Final output or single-shot output
+              let out = (event as any)?.output;
+              if (!out && rec && rec.output) {
+                out = rec.output;
+              }
+              if (rec) {
+                rec.hasServerOutput = true;
+              }
+              const outStr = this.safeStringify(out ?? '', 2000);
+              postProgress(`📥 tool.output (${name}): ${outStr}`);
+              // Add to chat history as an assistant message (selectable for later context)
+              this._messages?.push({
+                role: "assistant",
+                content: `Tool ${name} output:\n${outStr}`,
+                selected: true
+              });
+              const chat_progress = this._updateChatMessages(0, 0);
+              this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
               continue;
             } else if (t === 'response.error') {
               const msg = (event as any)?.error?.message || 'Responses stream error';
