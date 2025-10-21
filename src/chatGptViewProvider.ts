@@ -673,6 +673,55 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  // Safely stringify arbitrary values, limited length to avoid flooding UI.
+  private safeStringify(value: any, maxLen = 2000): string {
+    let s: string;
+    try {
+      if (typeof value === 'string') s = value;
+      else s = JSON.stringify(value, null, 2);
+    } catch {
+      s = String(value);
+    }
+    if (s.length > maxLen) {
+      return s.slice(0, maxLen) + ' …';
+    }
+    return s;
+  }
+
+  // Minimal tool-call runner: if a tool requires client output (custom tool),
+  // provide a deterministic stub so the model can proceed. We do NOT implement
+  // external tools here (e.g., web search).
+  private async runToolCallStub(name: string, argsJsonText: string): Promise<string> {
+    let args: any = {};
+    try {
+      args = argsJsonText ? JSON.parse(argsJsonText) : {};
+    } catch {
+      args = { raw: String(argsJsonText || '').trim() };
+    }
+    return `Client has no implementation for tool "${name}". Args: ${this.safeStringify(args)}`;
+  }
+
+  // Extract tool-call properties from a Responses stream event (best-effort).
+  private extractToolEventInfo(ev: any): { id?: string, name?: string, argumentsDelta?: string, completed?: boolean } {
+    const id =
+      ev?.tool_call?.id ||
+      ev?.id ||
+      ev?.delta?.id ||
+      ev?.data?.id;
+    const name =
+      ev?.tool_call?.name ||
+      ev?.tool_call?.type ||
+      ev?.delta?.name ||
+      ev?.name;
+    const argumentsDelta =
+      ev?.delta?.arguments ||
+      ev?.arguments_delta ||
+      ev?.delta?.input ||
+      undefined;
+    const completed = ev?.type === 'response.tool_call.completed' || ev?.completed === true;
+    return { id, name, argumentsDelta, completed };
+  }
+  
   private async _generate_search_prompt(prompt:string) {
     this._prompt = prompt;
     if (!prompt) {
@@ -863,6 +912,19 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         if (responsesStream && (Symbol.asyncIterator in Object(responsesStream))) {
           console.log("Responses stream created");
           this._view?.webview.postMessage({ type: 'streamStart' });
+          // Track tool calls and outputs to avoid deadlocks on custom tools
+          const toolCalls: Record<string, {
+            id: string,
+            name: string,
+            args: string,
+            completed: boolean,
+            submitted: boolean,
+            hasServerOutput: boolean
+          }> = {};
+          // Compatible submitter across SDK variants
+          const submitToolOutputs =
+            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream) ||
+            (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
 
           let completionTokens = 0;
           full_message = "";
@@ -879,8 +941,56 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             }
           };
 
+          // Helper to post one-off progress lines immediately
+          const postProgress = (line: string) => {
+            this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
+          };
+          // Try submitting stub outputs for any completed tool calls without server outputs
+          const trySubmitMissingToolOutputs = async () => {
+            if (typeof submitToolOutputs !== 'function') return;
+            const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
+            if (!ready.length) return;
+            try {
+              const outs = await Promise.all(ready.map(async (c) => {
+                const out = await this.runToolCallStub(c.name || 'tool', c.args);
+                // Also add to chat history for later selection
+                this._messages?.push({
+                  role: "assistant",
+                  content: `Tool ${c.name || 'tool'} output (stub):\n${out}`,
+                  selected: true
+                });
+                const chat_progress = this._updateChatMessages(0, 0);
+                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+                postProgress(`📥 tool.output (stub): ${out}`);
+                return { tool_call_id: c.id, output: out };
+              }));
+              await submitToolOutputs(outs);
+              ready.forEach(c => { c.submitted = true; });
+            } catch (e) {
+              console.warn('Submitting stub tool outputs failed:', e);
+            }
+          };
+
           for await (const event of responsesStream) {
             const t = (event && event.type) || '';
+            if (t === 'response.created') {
+              postProgress('▶️ response.created');
+              continue;
+            }
+            if (t === 'response.completed') {
+              postProgress('✅ response.completed');
+              continue;
+            }
+            if (t === 'step.started') {
+              const step = (event as any)?.step;
+              postProgress(`🟡 step.started: ${step?.type || 'unknown'}`);
+              continue;
+            }
+            if (t === 'step.completed') {
+              const step = (event as any)?.step;
+              postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`);
+              continue;
+            }            
             if (t === 'response.output_text.delta') {
               const content = (event as any).delta || "";
               if (!content) continue;
@@ -889,6 +999,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               full_message += content;
               deltaAccumulator += content;
               flushDelta(false);
+              continue;
+            }
+            if (t === 'response.output_text.done') {
+              postProgress('--- output_text.done ---');
+              continue;              
             } else if (t === 'response.error') {
               const msg = (event as any)?.error?.message || 'Responses stream error';
               throw new Error(msg);
