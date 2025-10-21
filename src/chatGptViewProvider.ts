@@ -1004,9 +1004,72 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             if (t === 'response.output_text.done') {
               postProgress('--- output_text.done ---');
               continue;              
+            } else if (t.startsWith('response.tool_call')) {
+              // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
+              const info = this.extractToolEventInfo(event);
+              if (!info.id) {
+                continue;
+              }
+              if (!toolCalls[info.id]) {
+                toolCalls[info.id] = {
+                  id: info.id,
+                  name: info.name || '',
+                  args: '',
+                  completed: false,
+                  submitted: false,
+                  hasServerOutput: false
+                };
+              }
+              if (info.name && !toolCalls[info.id].name) {
+                toolCalls[info.id].name = info.name;
+              }
+              if (info.argumentsDelta) {
+                toolCalls[info.id].args += String(info.argumentsDelta);
+              }
+              if (t === 'response.tool_call.started') {
+                postProgress(`🔧 tool_call.started: ${toolCalls[info.id].name || 'tool'}`);
+              }
+              if (t === 'response.tool_call.delta') {
+                const argsDelta = (event as any)?.delta ?? '';
+                const shown = this.safeStringify(argsDelta, 400);
+                postProgress(`   … tool_call.delta (${toolCalls[info.id].name || 'tool'}) args += ${shown}`);
+              }
+              if (t === 'response.tool_call.completed' || info.completed) {
+                toolCalls[info.id].completed = true;
+                postProgress(`✅ tool_call.completed: ${toolCalls[info.id].name || 'tool'}`);
+                // If this is a custom tool (no server output), submit a stub so the model can continue
+                await trySubmitMissingToolOutputs();
+              }
+              continue;
+            } else if (t === 'response.tool_output') {
+              // Server-provided output from a hosted/built-in tool (e.g., web_search)
+              const toolCallId = (event as any)?.tool_call_id || (event as any)?.tool_call?.id || (event as any)?.id;
+              const out = (event as any)?.output;
+              if (toolCallId && toolCalls[toolCallId]) {
+                toolCalls[toolCallId].hasServerOutput = true;
+                const name = toolCalls[toolCallId].name || 'tool';
+                const outStr = this.safeStringify(out, 2000);
+                postProgress(`📥 tool.output (${name}): ${outStr}`);
+                // Also add to chat history as an assistant message (selectable for later context)
+                this._messages?.push({
+                  role: "assistant",
+                  content: `Tool ${name} output:\n${outStr}`,
+                  selected: true
+                });
+                const chat_progress = this._updateChatMessages(0, 0);
+                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+              }
+              continue;
             } else if (t === 'response.error') {
               const msg = (event as any)?.error?.message || 'Responses stream error';
               throw new Error(msg);
+            } else if (t === 'response.refusal.delta') {
+              const d = (event as any)?.delta ?? '';
+              postProgress(`⚠️ refusal.delta: ${d}`);
+              continue;
+            } else if (t === 'response.refusal.done') {
+              postProgress('⚠️ refusal.done');
+              continue;              
             } else {
               // handle other events silently (tool calls, etc.) for now
             }
