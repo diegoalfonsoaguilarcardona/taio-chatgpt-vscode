@@ -36,6 +36,7 @@
     "onCommand:chatgpt.findProblems",
     "onCommand:chatgpt.documentation",
     "onCommand:chatgpt.useSelectionAsChat",
+    "onCommand:chatgpt.appendSelectionAsChat",
     "onCommand:chatgpt.addFileReferenceToChat"
   ],
   "main": "./dist/extension.js",
@@ -77,6 +78,10 @@
         "command": "chatgpt.useSelectionAsChat",
         "title": "Use selection as ChatGPT conversation"
       },
+      {
+        "command": "chatgpt.appendSelectionAsChat",
+        "title": "Append selection to ChatGPT conversation"
+      },      
       {
         "command": "chatgpt.tryAgain",
         "title": "Retry ChatGPT request"
@@ -130,6 +135,11 @@
           "command": "chatgpt.useSelectionAsChat",
           "when": "editorHasSelection",
           "group": "chatgpt-menu-group@7"
+        },
+        {
+          "command": "chatgpt.appendSelectionAsChat",
+          "when": "editorHasSelection",
+          "group": "chatgpt-menu-group@8"
         }
       ],
       "commandPalette": [
@@ -165,6 +175,10 @@
         {
           "command": "chatgpt.useSelectionAsChat",
           "when": "editorHasSelection"
+        },
+        {
+          "command": "chatgpt.appendSelectionAsChat",
+          "when": "editorHasSelection"          
         }
       ],
       "explorer/context": [

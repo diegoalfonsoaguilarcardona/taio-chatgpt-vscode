@@ -1,0 +1,90 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal **pure unified diffs**.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+    INPUT: `sources` = list of { path: string, content: string (full file with 
+     newlines) }; `request` = natural language change description.
+    BEHAVIOR:
+    - Produce only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly; use LF newlines; never insert timestamps, hashes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer to the request and/or describe what is going to be done.  2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder: "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    2) Diffs: **one fenced diff block per affected file**, preceded by a `### FILE: <path>` heading; sort files alphabetically by path; within each file, sort hunks by ascending line number; include standard context lines.
+    PURE UNIFIED DIFF FORMAT PER FILE:
+    ### FILE: <path>
+    `diff
+    --- a/<path>
+    +++ b/<path>
+    @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+    <lines prefixed with ' ' for context, '-' for removals, '+' for additions>
+    `
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file: use `--- /dev/null` and `+++ b/<path>`; a single hunk from line 1 covering all added lines.
+    - Deleted file: use `--- a/<path>` and `+++ /dev/null`; a single hunk removing all lines.
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+    `text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    `
+    ERROR CASES (emit as their **own per-file fenced blocks** within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_NOT_FOUND_FOR_DELETE
+    `
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_WAS_DELETED_RECREATE_CONFIRM
+    `
+    - Impossible or contradictory request:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! REQUEST_CONFLICT
+    `
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code; never exceed the Brief plus the required per-file diff/code blocks; do not include commentary beyond the Brief.
+  selected: true
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+- role: user
+  content: Okay, so I have this Visual Studio Code extension that allows me to communicate with different LLM providers and to have something like a chat where I can add, for example, files, source files, and things like that, and ask about how to modify something and whatever. So I have this application. The thing is that if you see, one of the features that it has is that I can select a Jamf file and then I can convert that Jamf file into the current chat. So in that way, I can, for example, save a file also with a specific chat and then I can reload using selecting all the chat and doing right click and converting that file into the current chat. The thing is that it is working perfect, but I want to add another feature and it's to append some Jamf file into the chat. So in that way, what I want is to select the specific Jamf file or one part of the Jamf file and right click again, but to have another option that allows me to append the Jamf selected text into the current chat. Do not remove the other feature, just add this new feature.
+  selected: true
+- role: assistant
+  content: "I will add a new command “Append selection to ChatGPT conversation” that parses the selected YAML and appends the resulting messages to the current chat without removing existing ones. This includes:\n- New command contribution and activation event.\n- Editor context menu and Command Palette entries (shown when there is a selection).\n- Command registration in the extension.\n- A new method in the provider to parse YAML and append messages, defaulting selected to true if missing.\n\nBrief:\n- Add new command chatgpt.appendSelectionAsChat.\n- Show it in editor context menu and command palette when there is a selection.\n- Implement ChatGPTViewProvider.appendSelectionAsChat(): parse selected YAML array of messages, validate, default selected=true if missing, append to existing _messages, and refresh the webview.\n- Keep existing useSelectionAsChat behavior unchanged.\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: package.json\n```diff\n--- a/package.json\n+++ b/package.json\n@@ -33,6 +33,7 @@\n     \"onCommand:chatgpt.findProblems\",\n     \"onCommand:chatgpt.documentation\",\n     \"onCommand:chatgpt.useSelectionAsChat\",\n+    \"onCommand:chatgpt.appendSelectionAsChat\",\n     \"onCommand:chatgpt.addFileReferenceToChat\"\n   ],\n   \"main\": \"./dist/extension.js\",\n@@ -84,6 +85,10 @@\n       {\n         \"command\": \"chatgpt.useSelectionAsChat\",\n         \"title\": \"Use selection as ChatGPT conversation\"\n+      },\n+      {\n+        \"command\": \"chatgpt.appendSelectionAsChat\",\n+        \"title\": \"Append selection to ChatGPT conversation\"\n       },\n       {\n         \"command\": \"chatgpt.tryAgain\",\n@@ -131,6 +136,11 @@\n           \"command\": \"chatgpt.useSelectionAsChat\",\n           \"when\": \"editorHasSelection\",\n           \"group\": \"chatgpt-menu-group@7\"\n+        },\n+        {\n+          \"command\": \"chatgpt.appendSelectionAsChat\",\n+          \"when\": \"editorHasSelection\",\n+          \"group\": \"chatgpt-menu-group@8\"\n         }\n       ],\n       \"commandPalette\": [\n@@ -159,6 +169,10 @@\n         {\n           \"command\": \"chatgpt.useSelectionAsChat\",\n           \"when\": \"editorHasSelection\"\n+        },\n+        {\n+          \"command\": \"chatgpt.appendSelectionAsChat\",\n+          \"when\": \"editorHasSelection\"\n         }\n       ],\n       \"explorer/context\": [\n```\n\n### FILE: src/chatGptViewProvider.ts\n```diff\n--- a/src/chatGptViewProvider.ts\n+++ b/src/chatGptViewProvider.ts\n@@ -307,6 +307,57 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {\n       vscode.window.showErrorMessage('Failed to use selection as chat: ' + error);\n     }\n   }\n+\n+  public async appendSelectionAsChat() {\n+    console.log(\"append selection as chat\");\n+\n+    // Ensure there is an active text editor with a selection\n+    const activeEditor = vscode.window.activeTextEditor;\n+    if (!activeEditor) {\n+      vscode.window.showErrorMessage('No active text editor with a selection!');\n+      return;\n+    }\n+\n+    const selection = activeEditor.selection;\n+    if (selection.isEmpty) {\n+      vscode.window.showErrorMessage('No text selected!');\n+      return;\n+    }\n+\n+    // Get the selected text\n+    const selectedText = activeEditor.document.getText(selection);\n+\n+    try {\n+      // Parse the selected text as YAML\n+      const parsedMessages = yaml.load(selectedText);\n+\n+      // Validate the parsed YAML structure\n+      if (!Array.isArray(parsedMessages)) {\n+        throw new Error('Selected text is not an array of messages.');\n+      }\n+\n+      // Normalize and validate messages; default selected=true if missing\n+      const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {\n+        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {\n+          throw new Error('Invalid message format. Each message must have role and content properties.');\n+        }\n+        const selected = ('selected' in msg) ? !!msg.selected : true;\n+        return { ...msg, selected } as Message;\n+      });\n+\n+      // Append to the existing _messages\n+      if (!this._messages) this._messages = [];\n+      this._messages.push(...normalizedMessages);\n+\n+      // Update the webview visualization\n+      const chat_response = this._updateChatMessages(\n+        this._getMessagesNumberOfTokens(),\n+        0\n+      );\n+      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });\n+    } catch (error) {\n+      console.error(\"Failed to append selection as chat:\", error);\n+      vscode.window.showErrorMessage('Failed to append selection as chat: ' + error);\n+    }\n+  }\n \n   public fixCodeBlocks(response: string) {\n     // Use a regular expression to find all occurrences of the substring in the string\n```\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -157,7 +157,8 @@ export function activate(context: vscode.ExtensionContext) {\n \t\tvscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),\n \t\tvscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),\n \t\tvscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),\n-\t\tvscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())\n+\t\tvscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat()),\n+\t\tvscode.commands.registerCommand('chatgpt.appendSelectionAsChat', () => provider.appendSelectionAsChat())\n \n \t\t\n \t);\n```"
+  selected: true

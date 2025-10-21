@@ -152,9 +152,8 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),
 		vscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),
 		vscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),
-		vscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat())
-
-		
+        vscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat()),
+        vscode.commands.registerCommand('chatgpt.appendSelectionAsChat', () => provider.appendSelectionAsChat())
 	);
 
 

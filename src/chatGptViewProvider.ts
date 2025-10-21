@@ -417,6 +417,59 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  public async appendSelectionAsChat() {
+    console.log("append selection as chat");
+
+    // Ensure there is an active text editor with a selection
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+      vscode.window.showErrorMessage('No active text editor with a selection!');
+      return;
+    }
+
+    const selection = activeEditor.selection;
+    if (selection.isEmpty) {
+      vscode.window.showErrorMessage('No text selected!');
+      return;
+    }
+
+    // Get the selected text
+    const selectedText = activeEditor.document.getText(selection);
+
+    try {
+      // Parse the selected text as YAML
+      const parsedMessages = yaml.load(selectedText);
+
+      // Validate the parsed YAML structure
+      if (!Array.isArray(parsedMessages)) {
+        throw new Error('Selected text is not an array of messages.');
+      }
+
+      // Normalize and validate messages; default selected=true if missing
+      const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {
+        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {
+          throw new Error('Invalid message format. Each message must have role and content properties.');
+        }
+        const selected = ('selected' in msg) ? !!msg.selected : true;
+        return { ...msg, selected } as Message;
+      });
+
+      // Append to the existing _messages
+      if (!this._messages) this._messages = [];
+      this._messages.push(...normalizedMessages);
+
+      // Update the webview visualization
+      const chat_response = this._updateChatMessages(
+        this._getMessagesNumberOfTokens(),
+        0
+      );
+      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+    } catch (error) {
+      console.error("Failed to append selection as chat:", error);
+      vscode.window.showErrorMessage('Failed to append selection as chat: ' + error);
+    }
+  }
+
   public fixCodeBlocks(response: string) {
     // Use a regular expression to find all occurrences of the substring in the string
     const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');
