@@ -883,23 +883,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   parts.push({ type: 'input_text', text: part.text });
                 } else if (this.isChatCompletionContentPartImage(part)) {
                   const url: string = part.image_url.url;
-                  if (url.startsWith('data:')) {
-                    // data URL -> image_data + mime_type
-                    const m = url.match(/^data:(.+?);base64,(.*)$/);
-                    if (m) {
-                      parts.push({
-                        type: 'input_image',
-                        image_data: m[2],
-                        mime_type: m[1],
-                      });
-                    } else {
-                      // Fallback: send as text reference
-                      parts.push({ type: 'input_text', text: `[Image data URL omitted]` });
-                    }
-                  } else {
-                    // Non-data URL
-                    parts.push({ type: 'input_image', image_url: url });
-                  }
+                  // Always use image_url (supports data URLs and normal URLs)
+                  parts.push({ type: 'input_image', image_url: url });
+
                 }
               }
             }
@@ -987,7 +973,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 const chat_progress = this._updateChatMessages(0, 0);
                 this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
                 postProgress(`📥 tool.output (stub): ${out}`);
-                return { tool_call_id: c.id, output: out };
+                // Responses API expects tool outputs as output items (e.g., output_text or refusal)
+                return {
+                  tool_call_id: c.id,
+                  output: [{ type: 'output_text', text: out }]
+                };
               }));
               await submitToolOutputs(outs);
               ready.forEach(c => { c.submitted = true; });
@@ -1013,11 +1003,35 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               continue;
             }
             if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
-            if (t === 'response.reasoning.delta') {
+            // Reasoning summary text stream (new event names)
+            if (t === 'response.reasoning_summary_text.delta') {
               const d = (event as any)?.delta ?? '';
-              if (d) reasoningDelta += String(d);
+              if (d) {
+                reasoningDelta += String(d);
+                // Stream reasoning brief text to UI as it arrives (like stdout.write in example)
+                this._view?.webview.postMessage({ type: 'appendDelta', value: String(d) });
+              }
               continue;
-            } else if (t.startsWith('response.tool_call')) {
+            }
+            if (t === 'response.reasoning_summary_text.done') {
+              postProgress('📥 reasoning summary done');
+              continue;
+            }
+            // Web search tool progress (new event names) – concise messages only
+            if (t === 'response.web_search_call.in_progress') {
+              postProgress('🔎 web search: in progress');
+              continue;
+            }
+            if (t === 'response.web_search_call.searching') {
+              postProgress('🔎 web search: searching');
+              continue;
+            }
+            if (t === 'response.web_search_call.completed') {
+              postProgress('🔎 web search: completed');
+              continue;
+            }
+            // Fallback: older/general tool events (kept for compatibility)
+            if (t.startsWith('response.tool_call')) {
               // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
               const info = this.extractToolEventInfo(event);
               if (!info.id) {
@@ -1097,6 +1111,22 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               const chat_progress = this._updateChatMessages(0, 0);
               this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
               continue;
+            } else if (t === 'response.output_item.done') {
+              // Display results of web_search (concise summary without raw object)
+              const item = (event as any)?.item;
+              if (item?.type === 'web_search_call') {
+                const q = item?.action?.query || '';
+                postProgress(`🔎 web search executed: ${q}`);
+                // Also add as assistant message to keep in history
+                this._messages?.push({
+                  role: "assistant",
+                  content: `Web search executed: ${q}`,
+                  selected: true
+                });
+                const chat_progress = this._updateChatMessages(0, 0);
+                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+              }
+              continue;              
             } else if (t === 'response.error') {
               const msg = (event as any)?.error?.message || 'Responses stream error';
               throw new Error(msg);
@@ -1116,7 +1146,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           this._view?.webview.postMessage({ type: 'streamEnd' });
           // After streaming, fetch final response to extract reasoning summary if available
           try {
-            const finalResp = await responsesStream.getFinalResponse();
+            const finalResp = await responsesStream.finalResponse();
             const outputArr: any[] = (finalResp as any)?.output || [];
             const reasoningItem = outputArr.find((o: any) => o?.type === 'reasoning');
             const summaryText =
