@@ -721,6 +721,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     const completed = ev?.type === 'response.tool_call.completed' || ev?.completed === true;
     return { id, name, argumentsDelta, completed };
   }
+
+  // Detect server-side tools that do not require client-side tool outputs
+  private isServerSideToolName(name?: string): boolean {
+    return typeof name === 'string' && /web_search/i.test(name);
+  }
   
   private async _generate_search_prompt(prompt:string) {
     this._prompt = prompt;
@@ -875,17 +880,27 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             const c: any = (m as any).content;
             if (typeof c === 'string') {
               if (c.trim()) {
-                parts.push({ type: 'input_text', text: c });
+                // Assistant history must be output_text; user/system are input_text
+                if (role === 'assistant') {
+                  parts.push({ type: 'output_text', text: c });
+                } else {
+                  parts.push({ type: 'input_text', text: c });
+                }
               }
             } else if (Array.isArray(c)) {
               for (const part of c) {
                 if (this.isChatCompletionContentPartText(part)) {
-                  parts.push({ type: 'input_text', text: part.text });
+                  if (role === 'assistant') {
+                    parts.push({ type: 'output_text', text: part.text });
+                  } else {
+                    parts.push({ type: 'input_text', text: part.text });
+                  }
                 } else if (this.isChatCompletionContentPartImage(part)) {
                   const url: string = part.image_url.url;
-                  // Always use image_url (supports data URLs and normal URLs)
-                  parts.push({ type: 'input_image', image_url: url });
-
+                  // Images are inputs; only attach for non-assistant roles
+                  if (role !== 'assistant') {
+                    parts.push({ type: 'input_image', image_url: url });
+                  }
                 }
               }
             }
@@ -906,6 +921,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
 
         let responsesStream: any = null;
+        
+        console.log(">>>>>>>>>>>>>>>>> responsesInput:", responsesInput);
+
         try {
           responsesStream = await responsesClient.stream({
             model: this._settings.model,
@@ -935,9 +953,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             hasServerOutput: boolean,
             output?: string
           }> = {};
-          const submitToolOutputs =
-            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream) ||
-            (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
+          // Detect available SDK helper(s)
+          const inputToolOutputsFn =
+            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream);
+          const submitToolOutputsFn = (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
 
           let completionTokens = 0;
           full_message = "";
@@ -959,8 +978,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
           };
           const trySubmitMissingToolOutputs = async () => {
-            if (typeof submitToolOutputs !== 'function') return;
-            const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
+            if (typeof inputToolOutputsFn !== 'function' && typeof submitToolOutputsFn !== 'function') return;
+            const ready = Object.values(toolCalls).filter(
+              c => c.completed && !c.submitted && !c.hasServerOutput && !this.isServerSideToolName(c.name)
+            );
             if (!ready.length) return;
             try {
               const outs = await Promise.all(ready.map(async (c) => {
@@ -979,7 +1000,14 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   output: [{ type: 'output_text', text: out }]
                 };
               }));
-              await submitToolOutputs(outs);
+              // Use the correct helper shape depending on SDK
+              if (typeof inputToolOutputsFn === 'function') {
+                // Newer SDK: pass array directly
+                await inputToolOutputsFn(outs);
+              } else if (typeof submitToolOutputsFn === 'function') {
+                // Older SDK: expects an object with tool_outputs
+                await submitToolOutputsFn({ tool_outputs: outs });
+              }
               ready.forEach(c => { c.submitted = true; });
             } catch (e) {
               console.warn('Submitting stub tool outputs failed:', e);
@@ -1023,10 +1051,19 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               continue;
             }
             if (t === 'response.web_search_call.searching') {
+              // Mark corresponding tool call (if tracked) as server-handled
+              const id = (event as any)?.item_id;
+              if (id && toolCalls[id]) {
+                toolCalls[id].hasServerOutput = true;
+              }              
               postProgress('🔎 web search: searching');
               continue;
             }
             if (t === 'response.web_search_call.completed') {
+              const id = (event as any)?.item_id;
+              if (id && toolCalls[id]) {
+                toolCalls[id].hasServerOutput = true;
+              }              
               postProgress('🔎 web search: completed');
               continue;
             }
@@ -1052,6 +1089,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               if (info.name && !toolCalls[info.id].name) {
                 toolCalls[info.id].name = info.name;
               }
+              // If this is a known server-side tool (e.g., web_search), don't submit client outputs
+              if (this.isServerSideToolName(toolCalls[info.id].name)) {
+                toolCalls[info.id].hasServerOutput = true;
+              }              
               if (info.argumentsDelta) {
                 toolCalls[info.id].args += String(info.argumentsDelta);
               }
@@ -1115,6 +1156,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               // Display results of web_search (concise summary without raw object)
               const item = (event as any)?.item;
               if (item?.type === 'web_search_call') {
+                // Mark matching tool call (if present) as having server output
+                const tid = item?.id;
+                if (tid && toolCalls[tid]) toolCalls[tid].hasServerOutput = true;
+                
                 const q = item?.action?.query || '';
                 postProgress(`🔎 web search executed: ${q}`);
                 // Also add as assistant message to keep in history

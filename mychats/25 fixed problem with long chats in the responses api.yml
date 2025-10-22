@@ -1,0 +1,1053 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal **pure unified diffs**.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+    INPUT: `sources` = list of { path: string, content: string (full file with 
+     newlines) }; `request` = natural language change description.
+    BEHAVIOR:
+    - Produce only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly; use LF newlines; never insert timestamps, hashes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer to the request and/or describe what is going to be done.  2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder: "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    2) Diffs: **one fenced diff block per affected file**, preceded by a `### FILE: <path>` heading; sort files alphabetically by path; within each file, sort hunks by ascending line number; include standard context lines.
+    PURE UNIFIED DIFF FORMAT PER FILE:
+    ### FILE: <path>
+    `diff
+    --- a/<path>
+    +++ b/<path>
+    @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+    <lines prefixed with ' ' for context, '-' for removals, '+' for additions>
+    `
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file: use `--- /dev/null` and `+++ b/<path>`; a single hunk from line 1 covering all added lines.
+    - Deleted file: use `--- a/<path>` and `+++ /dev/null`; a single hunk removing all lines.
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+    `text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    `
+    ERROR CASES (emit as their **own per-file fenced blocks** within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_NOT_FOUND_FOR_DELETE
+    `
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_WAS_DELETED_RECREATE_CONFIRM
+    `
+    - Impossible or contradictory request:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! REQUEST_CONFLICT
+    `
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code; never exceed the Brief plus the required per-file diff/code blocks; do not include commentary beyond the Brief.
+  selected: true
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+- role: user
+  content: 'Ok so I have this visual studio code extension code, It allows me to communicate with different llms providers.  The thing is that the extension allows to use the chat copletions api and also the responses api.  I am having problems with the responses api: - it is not showing the web-search response and also it doesn''t shows the reasoning brief.  Now openai allows to provide that information, so I want you to use it.'
+  selected: true
+- role: user
+  content: |-
+    So I have this example code provided by OpenAI, where I can do a query and some events are going to happen (see that the name of the events is different that the ones that I have in the extension code). Fix the code so it uses the openai provided code.
+    ```javascript
+    // index.js
+    import fs from "fs";
+    import OpenAI from "openai";
+    import dotenv from "dotenv";
+    dotenv.config();
+
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    async function run() {
+      const b64 = fs.readFileSync("moon.jpg", { encoding: "base64" });
+
+      const stream = await client.responses.stream({
+        // ✅ Use a reasoning-capable model that supports summaries
+        model: "gpt-4o",
+        tools: [{ type: "web_search" }],
+        // Ask for the public “reasoning brief”
+        reasoning: { summary: "auto" },                      // :contentReference[oaicite:3]{index=3}
+        // Strong instruction so it actually uses the tool (events will appear)
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text:
+    `You MUST use the web_search tool; do not answer from memory.
+    Task: Using this Moon image, search the internet for the latest (as of today) NASA Artemis updates.
+    Return a concise timeline with exact dates and 3+ citations.`
+              },
+              {
+                type: "input_image",
+                // ✅ Correct shape: data URL via image_url (not image_data)
+                image_url: `data:image/jpeg;base64,${b64}`,  // :contentReference[oaicite:4]{index=4}
+              },
+            ],
+          },
+        ],
+        stream: true,
+      });
+
+      let finalText = "";
+
+      for await (const e of stream) {
+        if (e.type === "response.output_item.done")
+          console.log("🔧 response.output_item.done:", JSON.stringify(e, null, 2));
+        
+        if (e.type === "response.web_search_call.in_progress")
+          console.log("🔧 web search call in progress:", JSON.stringify(e, null, 2));
+        if (e.type === "response.web_search_call.searching")
+          console.log("🔧 web search call searching:", JSON.stringify(e, null, 2));
+        if (e.type === "response.web_search_call.completed")
+          console.log("🔧 web search call completed:", JSON.stringify(e, null, 2));
+        if (e.type === "response.reasoning_summary_text.delta")
+          process.stdout.write(e.delta);
+        if (e.type === "response.reasoning_summary_text.done")
+          console.log("📥 Reasoning summary text Done");
+        
+        // Streamed answer
+        if (e.type === "response.output_text.delta") {
+          process.stdout.write(e.delta);
+          finalText += e.delta;
+        }
+      }
+
+      // ✅ Correct helper: finalResponse()
+      const resp = await stream.finalResponse();            // not getFinalResponse()
+      // Reasoning brief lives in a `reasoning` output item
+      const reasoningItem = (resp.output || []).find(o => o.type === "reasoning");
+      const reasoningBrief =
+        reasoningItem?.summary?.map(p => p.text).join("\n") || "(no summary returned)";
+
+      console.log("\n\n=== Reasoning Brief ===\n" + reasoningBrief);
+      console.log("\n=== Final Answer ===\n" + finalText);
+    }
+
+    run().catch(err => console.error("❌ Error:", err));
+
+    ```
+  selected: true
+- role: user
+  content: |-
+    I am also providing the result of the execution of that code.  Keep in mind that I used gpt-4o for that example, so the reasoning brief is not going to happen there, but I tested with gpt-5 and it works fine.  So modify the extension code so it uses the messages in the openai's code.  Also in the search event just use the Web call in progress, searching and compleated but without showing the e object.  Also use the output_item.done to display the results of the web_search.
+    ```json
+    npm start
+
+    > openai-responses-demo@1.0.0 start
+    > node index.js
+
+    [dotenv@17.2.3] injecting env (1) from .env -- tip: ⚙️  override existing env vars with { override: true }
+    🔧 web search call in progress: {
+      "type": "response.web_search_call.in_progress",
+      "sequence_number": 3,
+      "output_index": 0,
+      "item_id": "ws_0e62d262ba276a3a0068f846a5d7f4819e960c954aa7a59b18"
+    }
+    🔧 web search call searching: {
+      "type": "response.web_search_call.searching",
+      "sequence_number": 4,
+      "output_index": 0,
+      "item_id": "ws_0e62d262ba276a3a0068f846a5d7f4819e960c954aa7a59b18"
+    }
+    🔧 web search call completed: {
+      "type": "response.web_search_call.completed",
+      "sequence_number": 5,
+      "output_index": 0,
+      "item_id": "ws_0e62d262ba276a3a0068f846a5d7f4819e960c954aa7a59b18"
+    }
+    🔧 response.output_item.done: {
+      "type": "response.output_item.done",
+      "sequence_number": 6,
+      "output_index": 0,
+      "item": {
+        "id": "ws_0e62d262ba276a3a0068f846a5d7f4819e960c954aa7a59b18",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "query": "NASA Artemis updates October 2023"
+        }
+      }
+    }
+    Here is a **concise and up-to-date timeline** (as of October 22, 2025) of the latest NASA Artemis program developments, with **exact dates** and **at least three citations** per entry:
+
+    ---
+
+    **• December 5, 2024 — NASA Delays Artemis II and III**  
+    - Artemis II (first crewed flight around the Moon) was postponed from September 2025 to **April 2026**, primarily due to issues with Orion’s heat shield and life‑support systems.  
+    - Artemis III (first human lunar landing near the South Pole) was delayed to **mid‑2027**.  
+      ([nasa.gov](https://www.nasa.gov/news-release/nasa-shares-orion-heat-shield-findings-updates-artemis-moon-missions/?utm_source=openai))
+
+    ---
+
+    **• January 9, 2025 — Official Adjustment to Late‑2025/2026**  
+    - NASA reaffirmed updated targets of **September 2025** for Artemis II and **September 2026** for Artemis III, citing the need for additional development, testing, and safety verification.  
+      ([nasa.gov](https://www.nasa.gov/news-release/nasa-shares-progress-toward-early-artemis-moon-missions-with-crew/?utm_source=openai))
+
+    ---
+
+    **• March 2025 — Potential Acceleration to February 2026**  
+    - Reports emerged that NASA was exploring moving the Artemis II launch earlier, potentially to **February 2026**, to improve integration efficiencies, although this was not officially confirmed at the time.  
+      ([americaspace.com](https://www.americaspace.com/2025/03/22/nasa-accelerates-artemis-2-by-two-months/?utm_source=openai))
+
+    ---
+
+    **• August 2025 — Media Briefings and Training Announced**  
+    - NASA scheduled media briefings and mission preview events for Artemis II in late **September 2025**. These included the announcement of the 2025 astronaut class and detailed mission briefings at Johnson Space Center.  
+      ([nasa.gov](https://www.nasa.gov/news-release/nasa-to-announce-new-astronaut-class-preview-artemis-ii-moon-mission/?utm_source=openai))
+
+    ---
+
+    **• October 16, 2025 — Orion Arrives at Vehicle Assembly Building (VAB)**  
+    - The Orion spacecraft for Artemis II was delivered to the VAB at Kennedy Space Center on **October 16, 2025**, to begin stacking with the Space Launch System (SLS) rocket ahead of the planned early 2026 launch.  
+      ([space.com](https://www.space.com/news/live/nasa-artemis-2-moon-mission-updates?utm_source=openai))
+
+    ---
+
+    **• September 23, 2025 — Launch Window and Timeline Confirmed**  
+    - NASA stated that Artemis II is on track for launch in **April 2026**, with the earliest possible date **February 5, 2026**, pending safety assessments and operational readiness. Artemis III remains planned for **2027**.  
+      ([reuters.com](https://www.reuters.com/science/first-us-artemis-astronaut-mission-around-moon-track-april-officials-say-2025-09-23/?utm_source=openai))
+
+    ---
+
+    **• September 24, 2025 — Orion Spacecraft Named "Integrity"**  
+    - The Artemis II crew officially named their Orion spacecraft **“Integrity”**, embodying the mission’s core values, during a live event on **September 24, 2025**.  
+      ([timesofindia.indiatimes.com](https://timesofindia.indiatimes.com/science/nasas-artemis-ii-mission-orion-spacecraft-integrity-named-ahead-of-historic-lunar-flight-in-february-2026/articleshow/124112683.cms?utm_source=openai))
+
+    ---
+
+    ### Summary Table
+
+    | Date              | Event Summary                                                                 |
+    |-------------------|--------------------------------------------------------------------------------|
+    | December 5, 2024  | Initial delays: Artemis II → April 2026; Artemis III → mid-2027                |
+    | January 9, 2025   | Official targets: Artemis II → Sept 2025; Artemis III → Sept 2026              |
+    | March 2025        | NASA explores accelerating Artemis II to February 2026                          |
+    | August 2025       | Media events and mission preview scheduled for Sept 2025                       |
+    | October 16, 2025  | Orion spacecraft arrives at VAB for stacking                                   |
+    | September 23, 2025| Launch window set: Artemis II no earlier than Feb 5, 2026, up to April 2026    |
+    | September 24, 2025| Orion spacecraft officially named “Integrity” by Artemis II crew               |
+
+    ---
+
+    These updates reflect the current trajectory and scheduling of NASA’s Artemis I missions through Artemis III, including delays, technical progress, and key milestones.🔧 response.output_item.done: {
+      "type": "response.output_item.done",
+      "sequence_number": 92,
+      "output_index": 1,
+      "item": {
+        "id": "msg_0e62d262ba276a3a0068f846aac3b4819eaeac53ac7fc3e65e",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "end_index": 660,
+                "start_index": 525,
+                "title": "NASA Shares Orion Heat Shield Findings, Updates Artemis Moon Missions - NASA",
+                "url": "https://www.nasa.gov/news-release/nasa-shares-orion-heat-shield-findings-updates-artemis-moon-missions/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1056,
+                "start_index": 924,
+                "title": "NASA Shares Progress Toward Early Artemis Moon Missions with Crew - NASA",
+                "url": "https://www.nasa.gov/news-release/nasa-shares-progress-toward-early-artemis-moon-missions-with-crew/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1456,
+                "start_index": 1335,
+                "title": "NASA Accelerates Artemis 2 by Two Months - AmericaSpace",
+                "url": "https://www.americaspace.com/2025/03/22/nasa-accelerates-artemis-2-by-two-months/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1882,
+                "start_index": 1747,
+                "title": "NASA to Announce New Astronaut Class, Preview Artemis II Moon Mission - NASA",
+                "url": "https://www.nasa.gov/news-release/nasa-to-announce-new-astronaut-class-preview-artemis-ii-moon-mission/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 2281,
+                "start_index": 2181,
+                "title": "NASA's Artemis 2 moon mission: Live updates | Space",
+                "url": "https://www.space.com/news/live/nasa-artemis-2-moon-mission-updates?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 2731,
+                "start_index": 2580,
+                "title": "First US Artemis astronaut mission around the moon on track for April",
+                "url": "https://www.reuters.com/science/first-us-artemis-astronaut-mission-around-moon-track-april-officials-say-2025-09-23/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 3195,
+                "start_index": 2969,
+                "title": "NASA's Artemis II mission: Orion spacecraft 'Integrity' named ahead of historic lunar flight in February 2026",
+                "url": "https://timesofindia.indiatimes.com/science/nasas-artemis-ii-mission-orion-spacecraft-integrity-named-ahead-of-historic-lunar-flight-in-february-2026/articleshow/124112683.cms?utm_source=openai"
+              }
+            ],
+            "logprobs": [],
+            "text": "Here is a **concise and up-to-date timeline** (as of October 22, 2025) of the latest NASA Artemis program developments, with **exact dates** and **at least three citations** per entry:\n\n---\n\n**• December 5, 2024 — NASA Delays Artemis II and III**  \n- Artemis II (first crewed flight around the Moon) was postponed from September 2025 to **April 2026**, primarily due to issues with Orion’s heat shield and life‑support systems.  \n- Artemis III (first human lunar landing near the South Pole) was delayed to **mid‑2027**.  \n  ([nasa.gov](https://www.nasa.gov/news-release/nasa-shares-orion-heat-shield-findings-updates-artemis-moon-missions/?utm_source=openai))\n\n---\n\n**• January 9, 2025 — Official Adjustment to Late‑2025/2026**  \n- NASA reaffirmed updated targets of **September 2025** for Artemis II and **September 2026** for Artemis III, citing the need for additional development, testing, and safety verification.  \n  ([nasa.gov](https://www.nasa.gov/news-release/nasa-shares-progress-toward-early-artemis-moon-missions-with-crew/?utm_source=openai))\n\n---\n\n**• March 2025 — Potential Acceleration to February 2026**  \n- Reports emerged that NASA was exploring moving the Artemis II launch earlier, potentially to **February 2026**, to improve integration efficiencies, although this was not officially confirmed at the time.  \n  ([americaspace.com](https://www.americaspace.com/2025/03/22/nasa-accelerates-artemis-2-by-two-months/?utm_source=openai))\n\n---\n\n**• August 2025 — Media Briefings and Training Announced**  \n- NASA scheduled media briefings and mission preview events for Artemis II in late **September 2025**. These included the announcement of the 2025 astronaut class and detailed mission briefings at Johnson Space Center.  \n  ([nasa.gov](https://www.nasa.gov/news-release/nasa-to-announce-new-astronaut-class-preview-artemis-ii-moon-mission/?utm_source=openai))\n\n---\n\n**• October 16, 2025 — Orion Arrives at Vehicle Assembly Building (VAB)**  \n- The Orion spacecraft for Artemis II was delivered to the VAB at Kennedy Space Center on **October 16, 2025**, to begin stacking with the Space Launch System (SLS) rocket ahead of the planned early 2026 launch.  \n  ([space.com](https://www.space.com/news/live/nasa-artemis-2-moon-mission-updates?utm_source=openai))\n\n---\n\n**• September 23, 2025 — Launch Window and Timeline Confirmed**  \n- NASA stated that Artemis II is on track for launch in **April 2026**, with the earliest possible date **February 5, 2026**, pending safety assessments and operational readiness. Artemis III remains planned for **2027**.  \n  ([reuters.com](https://www.reuters.com/science/first-us-artemis-astronaut-mission-around-moon-track-april-officials-say-2025-09-23/?utm_source=openai))\n\n---\n\n**• September 24, 2025 — Orion Spacecraft Named \"Integrity\"**  \n- The Artemis II crew officially named their Orion spacecraft **“Integrity”**, embodying the mission’s core values, during a live event on **September 24, 2025**.  \n  ([timesofindia.indiatimes.com](https://timesofindia.indiatimes.com/science/nasas-artemis-ii-mission-orion-spacecraft-integrity-named-ahead-of-historic-lunar-flight-in-february-2026/articleshow/124112683.cms?utm_source=openai))\n\n---\n\n### Summary Table\n\n| Date              | Event Summary                                                                 |\n|-------------------|--------------------------------------------------------------------------------|\n| December 5, 2024  | Initial delays: Artemis II → April 2026; Artemis III → mid-2027                |\n| January 9, 2025   | Official targets: Artemis II → Sept 2025; Artemis III → Sept 2026              |\n| March 2025        | NASA explores accelerating Artemis II to February 2026                          |\n| August 2025       | Media events and mission preview scheduled for Sept 2025                       |\n| October 16, 2025  | Orion spacecraft arrives at VAB for stacking                                   |\n| September 23, 2025| Launch window set: Artemis II no earlier than Feb 5, 2026, up to April 2026    |\n| September 24, 2025| Orion spacecraft officially named “Integrity” by Artemis II crew               |\n\n---\n\nThese updates reflect the current trajectory and scheduling of NASA’s Artemis I missions through Artemis III, including delays, technical progress, and key milestones."
+          }
+        ],
+        "role": "assistant"
+      }
+    }
+
+
+    === Reasoning Brief ===
+    (no summary returned)
+
+    === Final Answer ===
+    Here is a **concise and up-to-date timeline** (as of October 22, 2025) of the latest NASA Artemis program developments, with **exact dates** and **at least three citations** per entry:
+
+    ---
+
+    **• December 5, 2024 — NASA Delays Artemis II and III**  
+    - Artemis II (first crewed flight around the Moon) was postponed from September 2025 to **April 2026**, primarily due to issues with Orion’s heat shield and life‑support systems.  
+    - Artemis III (first human lunar landing near the South Pole) was delayed to **mid‑2027**.  
+      ([nasa.gov](https://www.nasa.gov/news-release/nasa-shares-orion-heat-shield-findings-updates-artemis-moon-missions/?utm_source=openai))
+
+    ---
+
+    **• January 9, 2025 — Official Adjustment to Late‑2025/2026**  
+    - NASA reaffirmed updated targets of **September 2025** for Artemis II and **September 2026** for Artemis III, citing the need for additional development, testing, and safety verification.  
+      ([nasa.gov](https://www.nasa.gov/news-release/nasa-shares-progress-toward-early-artemis-moon-missions-with-crew/?utm_source=openai))
+
+    ---
+
+    **• March 2025 — Potential Acceleration to February 2026**  
+    - Reports emerged that NASA was exploring moving the Artemis II launch earlier, potentially to **February 2026**, to improve integration efficiencies, although this was not officially confirmed at the time.  
+      ([americaspace.com](https://www.americaspace.com/2025/03/22/nasa-accelerates-artemis-2-by-two-months/?utm_source=openai))
+
+    ---
+
+    **• August 2025 — Media Briefings and Training Announced**  
+    - NASA scheduled media briefings and mission preview events for Artemis II in late **September 2025**. These included the announcement of the 2025 astronaut class and detailed mission briefings at Johnson Space Center.  
+      ([nasa.gov](https://www.nasa.gov/news-release/nasa-to-announce-new-astronaut-class-preview-artemis-ii-moon-mission/?utm_source=openai))
+
+    ---
+
+    **• October 16, 2025 — Orion Arrives at Vehicle Assembly Building (VAB)**  
+    - The Orion spacecraft for Artemis II was delivered to the VAB at Kennedy Space Center on **October 16, 2025**, to begin stacking with the Space Launch System (SLS) rocket ahead of the planned early 2026 launch.  
+      ([space.com](https://www.space.com/news/live/nasa-artemis-2-moon-mission-updates?utm_source=openai))
+
+    ---
+
+    **• September 23, 2025 — Launch Window and Timeline Confirmed**  
+    - NASA stated that Artemis II is on track for launch in **April 2026**, with the earliest possible date **February 5, 2026**, pending safety assessments and operational readiness. Artemis III remains planned for **2027**.  
+      ([reuters.com](https://www.reuters.com/science/first-us-artemis-astronaut-mission-around-moon-track-april-officials-say-2025-09-23/?utm_source=openai))
+
+    ---
+
+    **• September 24, 2025 — Orion Spacecraft Named "Integrity"**  
+    - The Artemis II crew officially named their Orion spacecraft **“Integrity”**, embodying the mission’s core values, during a live event on **September 24, 2025**.  
+      ([timesofindia.indiatimes.com](https://timesofindia.indiatimes.com/science/nasas-artemis-ii-mission-orion-spacecraft-integrity-named-ahead-of-historic-lunar-flight-in-february-2026/articleshow/124112683.cms?utm_source=openai))
+
+    ---
+
+    ### Summary Table
+
+    | Date              | Event Summary                                                                 |
+    |-------------------|--------------------------------------------------------------------------------|
+    | December 5, 2024  | Initial delays: Artemis II → April 2026; Artemis III → mid-2027                |
+    | January 9, 2025   | Official targets: Artemis II → Sept 2025; Artemis III → Sept 2026              |
+    | March 2025        | NASA explores accelerating Artemis II to February 2026                          |
+    | August 2025       | Media events and mission preview scheduled for Sept 2025                       |
+    | October 16, 2025  | Orion spacecraft arrives at VAB for stacking                                   |
+    | September 23, 2025| Launch window set: Artemis II no earlier than Feb 5, 2026, up to April 2026    |
+    | September 24, 2025| Orion spacecraft officially named “Integrity” by Artemis II crew               |
+
+    ---
+
+    These updates reflect the current trajectory and scheduling of NASA’s Artemis I missions through Artemis III, including delays, technical progress, and key milestones.
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Planned changes:
+    - Update Responses API streaming in src/chatGptViewProvider.ts to use OpenAI’s current event names and helpers:
+      - Switch from responsesStream.getFinalResponse() to responsesStream.finalResponse().
+      - Handle new events: response.web_search_call.in_progress/searching/completed; response.reasoning_summary_text.delta/done; response.output_item.done.
+      - Post concise progress lines for web search events (no raw event object).
+      - Use response.output_item.done to display the executed web search query.
+      - Keep streaming of response.output_text.delta as before.
+    - Ensure reasoning brief is captured and added as a <think>…</think> assistant message using the new reasoning_summary_text stream and finalResponse() summary extraction.
+    - Align Responses input image handling to match OpenAI example: send input_image with image_url (including data URLs), not image_data/mime_type.
+
+    Brief:
+    - Implements OpenAI’s latest Responses stream event handling: web search progress, reasoning summary streaming, and final response helper.
+    - Displays web search progress and executed query (via output_item.done) in the UI, without dumping raw event JSON.
+    - Adds the reasoning brief to chat when available and continues to stream the final answer text.
+    - Uses image_url for input images in Responses input to match OpenAI’s example.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -510,21 +510,12 @@
+                 if (typeof c === 'string') {
+                   if (c.trim()) {
+                     parts.push({ type: 'input_text', text: c });
+                   }
+                 } else if (Array.isArray(c)) {
+                   for (const part of c) {
+                     if (this.isChatCompletionContentPartText(part)) {
+                       parts.push({ type: 'input_text', text: part.text });
+                     } else if (this.isChatCompletionContentPartImage(part)) {
+    -                  const url: string = part.image_url.url;
+    -                  if (url.startsWith('data:')) {
+    -                    // data URL -> image_data + mime_type
+    -                    const m = url.match(/^data:(.+?);base64,(.*)$/);
+    -                    if (m) {
+    -                      parts.push({
+    -                        type: 'input_image',
+    -                        image_data: m[2],
+    -                        mime_type: m[1],
+    -                      });
+    -                    } else {
+    -                      // Fallback: send as text reference
+    -                      parts.push({ type: 'input_text', text: `[Image data URL omitted]` });
+    -                    }
+    -                  } else {
+    -                    // Non-data URL
+    -                    parts.push({ type: 'input_image', image_url: url });
+    -                  }
+    +                  const url: string = part.image_url.url;
+    +                  // Always use image_url (supports data URLs and normal URLs)
+    +                  parts.push({ type: 'input_image', image_url: url });
+                     }
+                   }
+                 }
+                 if (parts.length) {
+                   input.push({ role, content: parts });
+                 }
+               }
+               return input;
+    @@ -559,7 +550,7 @@
+     
+               let completionTokens = 0;
+               full_message = "";
+    -          let reasoningDelta = "";
+    +          let reasoningDelta = "";
+     
+               let deltaAccumulator = "";
+               let lastSend = 0;
+    @@ -603,28 +594,40 @@
+                   const content = (event as any).delta || "";
+                   if (!content) continue;
+                   const tokenList = this._enc.encode(content);
+                   completionTokens += tokenList.length;
+                   full_message += content;
+                   deltaAccumulator += content;
+                   flushDelta(false);
+                   continue;
+                 }
+                 if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
+    -            if (t === 'response.reasoning.delta') {
+    -              const d = (event as any)?.delta ?? '';
+    -              if (d) reasoningDelta += String(d);
+    -              continue;
+    -            } else if (t.startsWith('response.tool_call')) {
+    +            // Reasoning summary text stream (new event names)
+    +            if (t === 'response.reasoning_summary_text.delta') {
+    +              const d = (event as any)?.delta ?? '';
+    +              if (d) reasoningDelta += String(d);
+    +              continue;
+    +            }
+    +            if (t === 'response.reasoning_summary_text.done') {
+    +              postProgress('📥 reasoning summary done');
+    +              continue;
+    +            }
+    +            // Web search tool progress (new event names) – concise messages only
+    +            if (t === 'response.web_search_call.in_progress') {
+    +              postProgress('🔎 web search: in progress');
+    +              continue;
+    +            }
+    +            if (t === 'response.web_search_call.searching') {
+    +              postProgress('🔎 web search: searching');
+    +              continue;
+    +            }
+    +            if (t === 'response.web_search_call.completed') {
+    +              postProgress('🔎 web search: completed');
+    +              continue;
+    +            }
+    +            // Fallback: older/general tool events (kept for compatibility)
+    +            if (t.startsWith('response.tool_call')) {
+                   // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
+                   const info = this.extractToolEventInfo(event);
+                   if (!info.id) {
+                     continue;
+                   }
+                   if (!toolCalls[info.id]) {
+                     toolCalls[info.id] = {
+                       id: info.id,
+                       name: info.name || '',
+                       args: '',
+    @@ -658,6 +661,24 @@
+                     await trySubmitMissingToolOutputs();
+                   }
+                   continue;
+                 } else if (t === 'response.tool_output' || t.startsWith('response.tool_output')) {
+                   // Handle tool output events (may be delta/done or a single event)
+                   const toolCallId =
+                     (event as any)?.tool_call_id ||
+                     (event as any)?.tool_call?.id ||
+                     (event as any)?.id;
+                   const rec = toolCallId ? toolCalls[toolCallId] : undefined;
+                   const name = rec?.name || 'tool';
+                   if (t === 'response.tool_output.delta') {
+                     // Streamed tool output chunk
+                     const delta =
+                       (event as any)?.delta ??
+                       (event as any)?.output_delta ??
+                       '';
+                     if (rec) {
+                       rec.output = (rec.output || '') + String(delta);
+                       rec.hasServerOutput = true;
+                     }
+                     const shown = this.safeStringify(delta, 400);
+                     postProgress(`📥 tool.output.delta (${name}): ${shown}`);
+                     continue;
+                   }
+                   // Final output or single-shot output
+                   let out = (event as any)?.output;
+                   if (!out && rec && rec.output) {
+                     out = rec.output;
+                   }
+                   if (rec) {
+                     rec.hasServerOutput = true;
+                   }
+                   const outStr = this.safeStringify(out ?? '', 2000);
+                   postProgress(`📥 tool.output (${name}): ${outStr}`);
+                   // Add to chat history as an assistant message (selectable for later context)
+                   this._messages?.push({
+                     role: "assistant",
+                     content: `Tool ${name} output:\n${outStr}`,
+                     selected: true
+                   });
+                   const chat_progress = this._updateChatMessages(0, 0);
+                   this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+                   continue;
+    +            } else if (t === 'response.output_item.done') {
+    +              // Display results of web_search (concise summary without raw object)
+    +              const item = (event as any)?.item;
+    +              if (item?.type === 'web_search_call') {
+    +                const q = item?.action?.query || '';
+    +                postProgress(`🔎 web search executed: ${q}`);
+    +                // Also add as assistant message to keep in history
+    +                this._messages?.push({
+    +                  role: "assistant",
+    +                  content: `Web search executed: ${q}`,
+    +                  selected: true
+    +                });
+    +                const chat_progress = this._updateChatMessages(0, 0);
+    +                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+    +              }
+    +              continue;
+                 } else if (t === 'response.error') {
+                   const msg = (event as any)?.error?.message || 'Responses stream error';
+                   throw new Error(msg);
+                 } else if (t === 'response.refusal.delta') {
+                   const d = (event as any)?.delta ?? '';
+                   postProgress(`⚠️ refusal.delta: ${d}`);
+                   continue;
+                 } else if (t === 'response.refusal.done') {
+                   postProgress('⚠️ refusal.done');
+                   continue;              
+                 } else {
+                   // handle other events silently (tool calls, etc.) for now
+                 }
+               }
+     
+               flushDelta(true);
+               this._view?.webview.postMessage({ type: 'streamEnd' });
+               // After streaming, fetch final response to extract reasoning summary if available
+               try {
+    -            const finalResp = await responsesStream.getFinalResponse();
+    +            const finalResp = await responsesStream.finalResponse();
+                 const outputArr: any[] = (finalResp as any)?.output || [];
+                 const reasoningItem = outputArr.find((o: any) => o?.type === 'reasoning');
+                 const summaryText =
+                   (reasoningItem?.summary || [])
+                     .map((p: any) => p?.text || '')
+                     .filter(Boolean)
+                     .join('\n') || '';
+                 if (summaryText || reasoningDelta) {
+                   const thinkText = summaryText || reasoningDelta;
+                   this._messages?.push({
+                     role: "assistant",
+                     content: `<think>${thinkText}</think>`,
+                     selected: true
+                   });
+                 }
+               } catch (e) {
+                 console.warn('Could not get final response for reasoning summary:', e);
+               }
+    ```
+  selected: true
+- role: user
+  content: |-
+    I did all the modifications that you sugested. The source that I am providing you shows the modifications.  But I want to see the reasoning stream, and also add it as a chat item.
+    ```javascript
+    if (e.type === "response.reasoning_summary_text.delta")
+          process.stdout.write(e.delta);
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Planned changes:
+    - Stream the reasoning summary text as it arrives and also add it as a chat item after streaming.
+    - Specifically, on response.reasoning_summary_text.delta, append the delta to the streaming UI (appendDelta) while accumulating it for later.
+    - Keep existing logic that adds a <think>…</think> assistant message after stream end using either the streamed deltas or the final summary.
+
+    Brief:
+    - Show reasoning stream in the live output area during Responses API streaming, and still add the reasoning brief as a separate chat message at the end.
+    - Minimal change: post appendDelta for each reasoning delta while continuing to accumulate it.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -600,8 +600,12 @@
+                 if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
+                 // Reasoning summary text stream (new event names)
+                 if (t === 'response.reasoning_summary_text.delta') {
+                   const d = (event as any)?.delta ?? '';
+    -              if (d) reasoningDelta += String(d);
+    +              if (d) {
+    +                reasoningDelta += String(d);
+    +                // Stream reasoning brief text to UI as it arrives (like stdout.write in example)
+    +                this._view?.webview.postMessage({ type: 'appendDelta', value: String(d) });
+    +              }
+                   continue;
+                 }
+                 if (t === 'response.reasoning_summary_text.done') {
+                   postProgress('📥 reasoning summary done');
+                   continue;
+    ```
+  selected: true
+- role: user
+  content: |-
+    It is working perfect now.  I have updated the file with your suggested diff (So the provided source is updated as you can see in the shared files (previously)).  The thing is that when I provide an image and use the responses api (some model that uses the responses api), sometimes it get stuck and I get this message.
+    ```yaml
+    prompt
+    extensionHostProcess.js:207
+    Creating message sender...
+    extensionHostProcess.js:207
+    Responses stream created
+    extensionHostProcess.js:207
+    prompt
+    extensionHostProcess.js:207
+    Creating message sender...
+    extensionHostProcess.js:207
+    Responses stream created
+    extensionHostProcess.js:207
+    BadRequestError: 400 Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.
+        at APIError.generate (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/error.js:45:1)
+        at OpenAI.makeStatusError (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/core.js:302:1)
+        at OpenAI.makeRequest (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/core.js:346:1)
+        at processTicksAndRejections (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/lib/internal/process/task_queues.js:105:5)
+        at ResponseStream._createOrRetrieveResponse (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/lib/responses/ResponseStream.js:51:1) {status: 400, headers: Proxy(Object), request_id: 'req_4689485c2feb4d16b2e7f4baac220453', error: {…}, code: 'invalid_value', …}
+
+    extensionHostProcess.js:207
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Plan:
+    - Fix Responses tool output submission shape in src/chatGptViewProvider.ts. The API expects output items typed as output_text/refusal, not input_text or raw strings. We will wrap our stub tool output in [{ type: 'output_text', text: out }] when calling submitToolOutputs/inputToolOutputs to avoid the 400 invalid_value error.
+
+    Brief:
+    - Corrects tool output payload for Responses API tool calls to use output_text items.
+    - Prevents “Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.” errors when submitting stub tool outputs.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -614,7 +614,11 @@
+                     const chat_progress = this._updateChatMessages(0, 0);
+                     this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+                     postProgress(`📥 tool.output (stub): ${out}`);
+    -                return { tool_call_id: c.id, output: out };
+    +                // Responses API expects tool outputs as output items (e.g., output_text or refusal)
+    +                return {
+    +                  tool_call_id: c.id,
+    +                  output: [{ type: 'output_text', text: out }]
+    +                };
+                   }));
+                   await submitToolOutputs(outs);
+                   ready.forEach(c => { c.submitted = true; });
+    ```
+  selected: true
+- role: user
+  content: |-
+    I did the modification that you sugested (as you can see in the shared file.  But I still getting this error only when I send images to the chat.
+    ```yaml
+
+    Messages: (1) [{…}]
+    extensionHostProcess.js:207
+    apiUrl: https://api.openai.com/v1
+    extensionHostProcess.js:207
+    prompt
+    extensionHostProcess.js:207
+    Creating message sender...
+    extensionHostProcess.js:207
+    Responses stream created
+    extensionHostProcess.js:207
+    prompt
+    extensionHostProcess.js:207
+    Creating message sender...
+    extensionHostProcess.js:207
+    Responses stream created
+    extensionHostProcess.js:207
+    BadRequestError: 400 Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.
+        at APIError.generate (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/error.js:45:1)
+        at OpenAI.makeStatusError (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/core.js:302:1)
+        at OpenAI.makeRequest (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/core.js:346:1)
+        at processTicksAndRejections (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/lib/internal/process/task_queues.js:105:5)
+        at ResponseStream._createOrRetrieveResponse (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/lib/responses/ResponseStream.js:51:1) {status: 400, headers: Proxy(Object), request_id: 'req_149abfbd917b4141a53901a5d7b057cb', error: {…}, code: 'invalid_value', …}
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Planned changes:
+    - Fix Responses API tool output submission to handle both SDK shapes:
+      - Prefer stream.inputToolOutputs([...]) with output items [{ type: 'output_text', text: ... }].
+      - Fallback to stream.submitToolOutputs({ tool_outputs: [...] }) for older SDKs.
+    - This avoids sending any input_text types to the outputs endpoint, which caused the 400 error when images are included.
+
+    Brief:
+    - Detects and uses the correct tool-output submission method for the current SDK, formatting payloads properly as output_text.
+    - Prevents “Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.” when using Responses with images/tools.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -572,9 +572,10 @@
+                 hasServerOutput: boolean,
+                 output?: string
+               }> = {};
+    -          const submitToolOutputs =
+    -            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream) ||
+    -            (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
+    +          // Detect available SDK helper(s)
+    +          const inputToolOutputsFn =
+    +            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream);
+    +          const submitToolOutputsFn = (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
+     
+               let completionTokens = 0;
+               full_message = "";
+    @@ -596,8 +597,8 @@
+               const postProgress = (line: string) => {
+                 this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
+               };
+               const trySubmitMissingToolOutputs = async () => {
+    -            if (typeof submitToolOutputs !== 'function') return;
+    +            if (typeof inputToolOutputsFn !== 'function' && typeof submitToolOutputsFn !== 'function') return;
+                 const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
+                 if (!ready.length) return;
+                 try {
+                   const outs = await Promise.all(ready.map(async (c) => {
+                     const out = await this.runToolCallStub(c.name || 'tool', c.args);
+    @@ -614,9 +615,15 @@
+                     // Responses API expects tool outputs as output items (e.g., output_text or refusal)
+                     return {
+                       tool_call_id: c.id,
+                       output: [{ type: 'output_text', text: out }]
+                     };
+                   }));
+    -              await submitToolOutputs(outs);
+    +              // Use the correct helper shape depending on SDK
+    +              if (typeof inputToolOutputsFn === 'function') {
+    +                // Newer SDK: pass array directly
+    +                await inputToolOutputsFn(outs);
+    +              } else if (typeof submitToolOutputsFn === 'function') {
+    +                // Older SDK: expects an object with tool_outputs
+    +                await submitToolOutputsFn({ tool_outputs: outs });
+    +              }
+                   ready.forEach(c => { c.submitted = true; });
+                 } catch (e) {
+                   console.warn('Submitting stub tool outputs failed:', e);
+                 }
+               };
+    ```
+  selected: true
+- role: user
+  content: |-
+    I did the modifications (again) as you can see in the provided source file.  And I still getting the same error when I add images in the responses api.
+    ```yaml
+
+    Creating message sender...
+    extensionHostProcess.js:207
+    Responses stream created
+    extensionHostProcess.js:207
+    BadRequestError: 400 Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.
+        at APIError.generate (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/error.js:45:1)
+        at OpenAI.makeStatusError (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/core.js:302:1)
+        at OpenAI.makeRequest (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/core.js:346:1)
+        at processTicksAndRejections (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/lib/internal/process/task_queues.js:105:5)
+        at ResponseStream._createOrRetrieveResponse (/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/dist/webpack:/diegoaacchatgpt/node_modules/openai/lib/responses/ResponseStream.js:51:1) {status: 400, headers: Proxy(Object), request_id: 'req_1d9f47f88dd84e4391a37c5c1fba552a', error: {…}, code: 'invalid_value', …}
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Planned changes:
+    - Prevent submitting stub tool outputs for server-side tools like web_search, which caused the invalid_value error.
+    - Mark web_search tool calls as having server output using both tool_call and web_search events.
+    - Filter out server-side tools from the stub submission path.
+
+    Brief:
+    - Fix Responses API 400 Invalid value: 'input_text' by not sending client tool outputs for web_search.
+    - Recognizes server-provided tools via event names and tool name; avoids erroneous stub submission.
+    - Keeps reasoning and web search progress streaming intact.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -566,6 +566,8 @@
+               const inputToolOutputsFn =
+                 (responsesStream as any)?.inputToolOutputs?.bind(responsesStream);
+               const submitToolOutputsFn = (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
+    +          // Helper to detect server-side tools that do not require client outputs
+    +          const isServerSideToolName = (n?: string) => typeof n === 'string' && /web_search/i.test(n);
+     
+               let completionTokens = 0;
+               full_message = "";
+    @@ -595,7 +597,9 @@
+               const trySubmitMissingToolOutputs = async () => {
+                 if (typeof inputToolOutputsFn !== 'function' && typeof submitToolOutputsFn !== 'function') return;
+    -            const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
+    +            const ready = Object.values(toolCalls).filter(
+    +              c => c.completed && !c.submitted && !c.hasServerOutput && !isServerSideToolName(c.name)
+    +            );
+                 if (!ready.length) return;
+                 try {
+                   const outs = await Promise.all(ready.map(async (c) => {
+                     const out = await this.runToolCallStub(c.name || 'tool', c.args);
+    @@ -630,6 +634,12 @@
+                   postProgress('🔎 web search: in progress');
+                   continue;
+                 }
+                 if (t === 'response.web_search_call.searching') {
+    +              // Mark corresponding tool call (if tracked) as server-handled
+    +              const id = (event as any)?.item_id;
+    +              if (id && toolCalls[id]) {
+    +                toolCalls[id].hasServerOutput = true;
+    +              }
+                   postProgress('🔎 web search: searching');
+                   continue;
+                 }
+                 if (t === 'response.web_search_call.completed') {
+    +              const id = (event as any)?.item_id;
+    +              if (id && toolCalls[id]) {
+    +                toolCalls[id].hasServerOutput = true;
+    +              }
+                   postProgress('🔎 web search: completed');
+                   continue;
+                 }
+    @@ -655,6 +665,9 @@
+                   if (info.name && !toolCalls[info.id].name) {
+                     toolCalls[info.id].name = info.name;
+                   }
+    +              // If this is a known server-side tool (e.g., web_search), don't submit client outputs
+    +              if (isServerSideToolName(toolCalls[info.id].name)) {
+    +                toolCalls[info.id].hasServerOutput = true;
+    +              }
+                   if (info.argumentsDelta) {
+                     toolCalls[info.id].args += String(info.argumentsDelta);
+                   }
+    @@ -717,6 +730,10 @@
+                 } else if (t === 'response.output_item.done') {
+                   // Display results of web_search (concise summary without raw object)
+                   const item = (event as any)?.item;
+                   if (item?.type === 'web_search_call') {
+    +                // Mark matching tool call (if present) as having server output
+    +                const tid = item?.id;
+    +                if (tid && toolCalls[tid]) toolCalls[tid].hasServerOutput = true;
+    +
+                     const q = item?.action?.query || '';
+                     postProgress(`🔎 web search executed: ${q}`);
+                     // Also add as assistant message to keep in history
+                     this._messages?.push({
+                       role: "assistant",
+    ```
+  selected: true
+- role: user
+  content: |-
+    I did the modifications that you sugested (as you can see in the shared files), but this is not defined
+    ```typescript
+    isServerSideToolName
+    ```
+  selected: true
+- role: assistant
+  content: |-
+    Planned changes:
+    - Define a class helper method isServerSideToolName to detect server-driven tools (e.g., web_search).
+    - Update references inside Responses streaming logic to use this.isServerSideToolName, fixing the runtime “isServerSideToolName is not defined” error.
+
+    Brief:
+    - Adds missing helper and updates calls, preventing ReferenceError at runtime.
+    - Keeps previous logic that avoids submitting client outputs for server-side tools.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -392,6 +392,11 @@
+         const completed = ev?.type === 'response.tool_call.completed' || ev?.completed === true;
+         return { id, name, argumentsDelta, completed };
+       }
+    +  
+    +  // Detect server-side tools that do not require client-side tool outputs
+    +  private isServerSideToolName(name?: string): boolean {
+    +    return typeof name === 'string' && /web_search/i.test(name);
+    +  }
+       
+       private async _generate_search_prompt(prompt:string) {
+         this._prompt = prompt;
+    @@ -608,7 +613,7 @@
+               };
+               const trySubmitMissingToolOutputs = async () => {
+                 if (typeof inputToolOutputsFn !== 'function' && typeof submitToolOutputsFn !== 'function') return;
+    -            const ready = Object.values(toolCalls).filter(
+    +            const ready = Object.values(toolCalls).filter(
+                   c => c.completed && !c.submitted && !c.hasServerOutput && !isServerSideToolName(c.name)
+                 );
+                 if (!ready.length) return;
+    @@ -671,7 +676,7 @@
+                   if (info.name && !toolCalls[info.id].name) {
+                     toolCalls[info.id].name = info.name;
+                   }
+                   // If this is a known server-side tool (e.g., web_search), don't submit client outputs
+    -              if (isServerSideToolName(toolCalls[info.id].name)) {
+    +              if (this.isServerSideToolName(toolCalls[info.id].name)) {
+                     toolCalls[info.id].hasServerOutput = true;
+                   }              
+                   if (info.argumentsDelta) {
+    ```
+  selected: true
+- role: user
+  content: 'I did more modifications and now I see what is the problem: in the responses api the user messages are input_text, but the assistant messages are output_text (just in case the system prompt is input_text also).  So use the provided source as the last modified version and from there provide me a solution for that problem.'
+  selected: true
+- role: assistant
+  content: |-
+    Plan:
+    - Adjust Responses API input builder to use input_text for user/system messages and output_text for assistant messages, per OpenAI’s schema. This fixes the “Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.” error when history includes assistant messages.
+    - Keep input_image for images (only for non-assistant roles).
+
+    Brief:
+    - Build Responses input parts by role:
+      - user/system: input_text, input_image
+      - assistant: output_text
+    - Prevents invalid payloads when assistant history is included.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -497,28 +497,34 @@
+             // Build Responses API "input" with images and text parts
+             const buildResponsesInput = (msgs: Array<Message>) => {
+               const input: any[] = [];
+               for (const m of msgs) {
+                 const role = (m as any).role || 'user';
+                 const parts: any[] = [];
+                 const c: any = (m as any).content;
+                 if (typeof c === 'string') {
+                   if (c.trim()) {
+    -                console.log(">>>>>>>>>>>>>>>>>>>>>>>> HERE1");
+    -                parts.push({ type: 'input_text', text: c });
+    +                // Assistant history must be output_text; user/system are input_text
+    +                if (role === 'assistant') {
+    +                  parts.push({ type: 'output_text', text: c });
+    +                } else {
+    +                  parts.push({ type: 'input_text', text: c });
+    +                }
+                   }
+                 } else if (Array.isArray(c)) {
+                   for (const part of c) {
+                     if (this.isChatCompletionContentPartText(part)) {
+    -                  console.log(">>>>>>>>>>>>>>>>>>>>>>>> HERE2");
+    -                  parts.push({ type: 'input_text', text: part.text });
+    +                  if (role === 'assistant') {
+    +                    parts.push({ type: 'output_text', text: part.text });
+    +                  } else {
+    +                    parts.push({ type: 'input_text', text: part.text });
+    +                  }
+                     } else if (this.isChatCompletionContentPartImage(part)) {
+    -                  console.log(">>>>>>>>>>>>>>>>>>>>>>>> HERE3");
+                       const url: string = part.image_url.url;
+    -                  // Always use image_url (supports data URLs and normal URLs)
+    -                  parts.push({ type: 'input_image', image_url: url });
+    +                  // Images are inputs; only attach for non-assistant roles
+    +                  if (role !== 'assistant') {
+    +                    parts.push({ type: 'input_image', image_url: url });
+    +                  }
+     
+                     }
+                   }
+                 }
+                 if (parts.length) {
+                   input.push({ role, content: parts });
+                 }
+               }
+    ```
+  selected: true
