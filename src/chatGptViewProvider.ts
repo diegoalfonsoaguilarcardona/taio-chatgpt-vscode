@@ -974,6 +974,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             }
           };
 
+          // Collectors for post-stream insertion
+          const webSearchQueries: string[] = [];
+          const messageOutputItems: any[] = [];
+          
           const postProgress = (line: string) => {
             this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
           };
@@ -1162,14 +1166,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 
                 const q = item?.action?.query || '';
                 postProgress(`🔎 web search executed: ${q}`);
-                // Also add as assistant message to keep in history
-                this._messages?.push({
-                  role: "assistant",
-                  content: `Web search executed: ${q}`,
-                  selected: true
-                });
-                const chat_progress = this._updateChatMessages(0, 0);
-                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+                // Collect queries to aggregate later into a single message (not selected)
+                if (q) webSearchQueries.push(q);
+              } else if (item?.type === 'message') {
+                // Capture message output items (with annotations) to add after stream, not selected
+                messageOutputItems.push(item);
               }
               continue;              
             } else if (t === 'response.error') {
@@ -1189,6 +1190,24 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
           flushDelta(true);
           this._view?.webview.postMessage({ type: 'streamEnd' });
+
+          // After streaming, add aggregated web searches (not selected)
+          if (webSearchQueries.length) {
+            const content = `Web searches executed:\n` + webSearchQueries.map(q => `- ${q}`).join('\n');
+            this._messages?.push({ role: "assistant", content, selected: false });
+            const chat_progress = this._updateChatMessages(0, 0);
+            this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+          }
+
+          // Add any captured message output items with full annotations (not selected)
+          for (const mi of messageOutputItems) {
+            const contentJson = JSON.stringify(mi, null, 2);
+            const content = `Responses message output item:\n\`\`\`json\n${contentJson}\n\`\`\``;
+            this._messages?.push({ role: "assistant", content, selected: false });
+            const chat_progress = this._updateChatMessages(0, 0);
+            this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+          }
+          
           // After streaming, fetch final response to extract reasoning summary if available
           try {
             const finalResp = await responsesStream.finalResponse();
@@ -1204,7 +1223,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               this._messages?.push({
                 role: "assistant",
                 content: `<think>${thinkText}</think>`,
-                selected: true
+                selected: false
               });
             }
           } catch (e) {
