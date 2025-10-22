@@ -407,6 +407,6 @@
     "js-tiktoken": "^1.0.10",
     "js-yaml": "^4.1.0",
     "node-fetch": "^3.3.2",
-    "openai": "^4.60.1"
+    "openai": "^6.0.0"
   }
 }

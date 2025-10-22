@@ -1,0 +1,723 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal **pure unified diffs**.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+    INPUT: `sources` = list of { path: string, content: string (full file with 
+     newlines) }; `request` = natural language change description.
+    BEHAVIOR:
+    - Produce only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly; use LF newlines; never insert timestamps, hashes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer to the request and/or describe what is going to be done.  2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder: "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    2) Diffs: **one fenced diff block per affected file**, preceded by a `### FILE: <path>` heading; sort files alphabetically by path; within each file, sort hunks by ascending line number; include standard context lines.
+    PURE UNIFIED DIFF FORMAT PER FILE:
+    ### FILE: <path>
+    `diff
+    --- a/<path>
+    +++ b/<path>
+    @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+    <lines prefixed with ' ' for context, '-' for removals, '+' for additions>
+    `
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file: use `--- /dev/null` and `+++ b/<path>`; a single hunk from line 1 covering all added lines.
+    - Deleted file: use `--- a/<path>` and `+++ /dev/null`; a single hunk removing all lines.
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+    `text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    `
+    ERROR CASES (emit as their **own per-file fenced blocks** within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_NOT_FOUND_FOR_DELETE
+    `
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_WAS_DELETED_RECREATE_CONFIRM
+    `
+    - Impossible or contradictory request:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! REQUEST_CONFLICT
+    `
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code; never exceed the Brief plus the required per-file diff/code blocks; do not include commentary beyond the Brief.
+  selected: true
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+- role: user
+  content: 'Ok so I have this visual studio code extension code, It allows me to communicate with different llms providers.  The thing is that the extension allows to use the chat copletions api and also the responses api.  I am having problems with the responses api: - it is not showing the web-search response and also it doesn''t shows the reasoning brief.  Now openai allows to provide that information, so I want you to use it.'
+  selected: true
+- role: user
+  content: |-
+    Ok so I have this visual studio code extension code, It allows me to communicate with different llms providers.  The thing is that the extension allows to use the chat copletions api and also the responses api.  I am having problems with the responses api: - it is not showing the web-search response and also it doesn't shows the reasoning brief.  Now openai allows to provide that information, so I want you to use it. From the Openai's last documetation they say that: To ensure full support for the Responses API, tool calls, reasoning summaries, and image input, it’s safest to use a version >= 5.22.0, because v5.22.0 added support for reasoning_text. So for a nodejs application they recommend a package.json file like this one.
+    ```json
+    {
+      "name": "openai-responses-demo",
+      "version": "1.0.0",
+      "description": "Demo for OpenAI Responses API with reasoning summary, image, web search",
+      "type": "module",
+      "main": "index.js",
+      "scripts": {
+        "start": "node index.js"
+      },
+      "dependencies": {
+        "dotenv": "^16.0.0",
+        "openai": "^6.0.0"
+      }
+    }
+
+    ```
+  selected: true
+- role: user
+  content: |-
+    Also in the documentation they provided an example that uses images and text in the query and also uses the web-search tool.
+    ```typescript
+    // index.js
+    import fs from "fs";
+    import OpenAI from "openai";
+    import dotenv from "dotenv";
+
+    dotenv.config();
+
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    async function runDemo() {
+      // Read & encode image
+      const imageData = fs.readFileSync("moon.jpg", { encoding: "base64" });
+
+      // Start streaming response
+      const stream = await client.responses.stream({
+        model: "gpt-5-thinking",             // use a reasoning-capable model
+        tools: [{ type: "web_search" }],
+        reasoning: { summary: "auto" },      // request reasoning summary
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: "Using this image of the Moon, search the internet for recent updates on NASA's Artemis program and summarize key milestones with citations."
+              },
+              {
+                type: "input_image",
+                image_data: imageData,
+                mime_type: "image/jpeg"
+              }
+            ]
+          }
+        ],
+        stream: true
+      });
+
+      let finalText = "";
+      for await (const event of stream) {
+        if (event.type === "response.output_text.delta") {
+          process.stdout.write(event.delta);
+          finalText += event.delta;
+        } else if (event.type === "response.tool_output") {
+          console.log("\n📥 TOOL OUTPUT:", JSON.stringify(event.output, null, 2));
+        } else if (event.type === "step.started") {
+          console.log("\n🟡 STEP STARTED:", event.step?.type);
+        } else if (event.type === "step.completed") {
+          console.log("\n🟢 STEP COMPLETED:", event.step?.type);
+        }
+      }
+
+      // After streaming done, get final response object to extract reasoning summary
+      const resp = await stream.getFinalResponse();
+      const reasoningItem = (resp.output || []).find(o => o.type === "reasoning");
+      const summary = reasoningItem?.summary?.map(p => p.text).join("\n") || "(no summary)";
+      console.log("\n\n=== Reasoning Summary ===\n" + summary);
+      console.log("\n=== Final Answer ===\n" + finalText);
+    }
+
+    runDemo().catch(err => {
+      console.error("❌ Error:", err);
+    });
+
+    ```
+  selected: true
+- role: user
+  content: So, using that example provide me the modifications that I have to do to the code so it works as the example.  I want to be able to see the reasoning (if the model support it), also I want to be able to see the web-search (and any other tool from the api) response, also I want to be able to use images (the current implementation is having problem when I include base64 images in the chat, it gets locked).
+  selected: true
+- role: assistant
+  content: |-
+    Planned changes:
+    - Upgrade OpenAI SDK to ^6.0.0 to fully support Responses API features (reasoning, web_search, images).
+    - Update Responses API branch to:
+      - Build proper responses.input with input_text/input_image parts (parsing data URLs to image_data + mime_type).
+      - Use client.responses.stream() from v6 and handle new event types.
+      - Capture and display tool outputs during stream.
+      - Extract and display reasoning summary after stream via getFinalResponse(), rendering it as a separate assistant message wrapped in <think>…</think>.
+    - Keep Chat Completions flow as-is; only adjust Responses flow, minimizing unrelated changes.
+
+    Brief:
+    - package.json: update "openai" dep to ^6.0.0.
+    - chatGptViewProvider.ts (search, responses branch):
+      - Build responses.input array (text + base64 images) instead of single aggregated string.
+      - Use openai.responses.stream with tools and reasoning: { summary: "auto" } (unless provided in options).
+      - Handle response.output_text.delta, response.tool_output, response.reasoning.delta; at end call getFinalResponse(), extract reasoning summary, and append as a separate assistant message using <think> tags for the existing styling to render.
+      - This also avoids the prior image-lock issue by sending images as input_image with image_data.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: package.json
+    ```diff
+    --- a/package.json
+    +++ b/package.json
+    @@ -167,7 +167,7 @@
+         "@types/node-fetch": "^2.6.11",
+         "js-tiktoken": "^1.0.10",
+         "js-yaml": "^4.1.0",
+         "node-fetch": "^3.3.2",
+    -    "openai": "^4.60.1"
+    +    "openai": "^6.0.0"
+       }
+     }
+     
+    ```
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -523,134 +523,164 @@
+     
+           // Choose API flow based on settings.apiType
+           if (this._settings.apiType === 'responses') {
+    -        // Aggregate messages into a single input string for Responses API
+    -        let aggregatedInput = "";
+    -        for (const msg of messagesToSend) {
+    -          const role = (msg as any).role?.toUpperCase?.() || 'USER';
+    -          if (typeof (msg as any).content === 'string') {
+    -            aggregatedInput += `\n# ${role}:\n${(msg as any).content}`;
+    -          } else if (Array.isArray((msg as any).content)) {
+    -            aggregatedInput += `\n# ${role}:\n`;
+    -            for (const part of (msg as any).content) {
+    -              if (this.isChatCompletionContentPartText(part)) {
+    -                aggregatedInput += part.text;
+    -              } else if (this.isChatCompletionContentPartImage(part)) {
+    -                aggregatedInput += `\n[Image: ${part.image_url.url}]\n`;
+    -              }
+    -            }
+    -          }
+    -        }
+    -
+    -        const { tools, tool_choice, ...restOptions } = this._settings.options || {};
+    -
+    -        // Resolve Responses client from stable or beta namespace
+    -        const oc: any = this._openai as any;
+    -        const responsesClient = oc?.responses ?? oc?.beta?.responses;
+    -        if (!responsesClient) {
+    -          throw new Error('Responses API client not available in the installed OpenAI SDK. Please upgrade the "openai" package or switch this model to Chat Completions.');
+    -        }
+    -
+    -        // Try streaming first (if supported); otherwise fall back to non-stream create()
+    -        let responsesStream: any = null;
+    -        if (typeof responsesClient.stream === 'function') {
+    -          try {
+    -            responsesStream = await responsesClient.stream({
+    -              model: this._settings.model,
+    -              input: aggregatedInput,
+    -              ...(tools ? { tools } : {}),
+    -              ...(tool_choice ? { tool_choice } : {}),
+    -              ...restOptions
+    -            });
+    -          } catch (err) {
+    -            console.warn('Responses.stream failed; falling back to responses.create()', err);
+    -          }
+    -        }
+    -
+    -        if (responsesStream && (Symbol.asyncIterator in Object(responsesStream))) {
+    -          console.log("Responses stream created");
+    -          this._view?.webview.postMessage({ type: 'streamStart' });
+    -          // Track tool calls and outputs to avoid deadlocks on custom tools
+    -          const toolCalls: Record<string, {
+    -            id: string,
+    -            name: string,
+    -            args: string,
+    -            completed: boolean,
+    -            submitted: boolean,
+    -            hasServerOutput: boolean,
+    -            // accumulate server-provided tool output (for delta streams)
+    -            output?: string
+    -          }> = {};
+    -          // Compatible submitter across SDK variants
+    -          const submitToolOutputs =
+    -            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream) ||
+    -            (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
+    -
+    -          let completionTokens = 0;
+    -          full_message = "";
+    -
+    -          let deltaAccumulator = "";
+    -          let lastSend = 0;
+    -          const flushDelta = (force = false) => {
+    -            if (!deltaAccumulator) return;
+    -            const now = Date.now();
+    -            if (force || now - lastSend > 50) {
+    -              this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });
+    -              deltaAccumulator = "";
+    -              lastSend = now;
+    -            }
+    -          };
+    -
+    -          // Helper to post one-off progress lines immediately
+    -          const postProgress = (line: string) => {
+    -            this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
+    -          };
+    -          // Try submitting stub outputs for any completed tool calls without server outputs
+    -          const trySubmitMissingToolOutputs = async () => {
+    -            if (typeof submitToolOutputs !== 'function') return;
+    -            const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
+    -            if (!ready.length) return;
+    -            try {
+    -              const outs = await Promise.all(ready.map(async (c) => {
+    -                const out = await this.runToolCallStub(c.name || 'tool', c.args);
+    -                // Also add to chat history for later selection
+    -                this._messages?.push({
+    -                  role: "assistant",
+    -                  content: `Tool ${c.name || 'tool'} output (stub):\n${out}`,
+    -                  selected: true
+    -                });
+    -                const chat_progress = this._updateChatMessages(0, 0);
+    -                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+    -                postProgress(`📥 tool.output (stub): ${out}`);
+    -                return { tool_call_id: c.id, output: out };
+    -              }));
+    -              await submitToolOutputs(outs);
+    -              ready.forEach(c => { c.submitted = true; });
+    -            } catch (e) {
+    -              console.warn('Submitting stub tool outputs failed:', e);
+    -            }
+    -          };
+    -
+    -          for await (const event of responsesStream) {
+    -            const t = (event && event.type) || '';
+    -            if (t === 'response.created') {
+    -              postProgress('▶️ response.created');
+    -              continue;
+    -            }
+    -            if (t === 'response.completed') {
+    -              postProgress('✅ response.completed');
+    -              continue;
+    -            }
+    -            if (t === 'step.started') {
+    -              const step = (event as any)?.step;
+    -              postProgress(`🟡 step.started: ${step?.type || 'unknown'}`);
+    -              continue;
+    -            }
+    -            if (t === 'step.completed') {
+    -              const step = (event as any)?.step;
+    -              postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`);
+    -              continue;
+    -            }            
+    -            if (t === 'response.output_text.delta') {
+    -              const content = (event as any).delta || "";
+    -              if (!content) continue;
+    -              const tokenList = this._enc.encode(content);
+    -              completionTokens += tokenList.length;
+    -              full_message += content;
+    -              deltaAccumulator += content;
+    -              flushDelta(false);
+    -              continue;
+    -            }
+    -            if (t === 'response.output_text.done') {
+    -              postProgress('--- output_text.done ---');
+    -              continue;              
+    -            } else if (t.startsWith('response.tool_call')) {
+    +        // Build Responses API "input" with images and text parts
+    +        const buildResponsesInput = (msgs: Array<Message>) => {
+    +          const input: any[] = [];
+    +          for (const m of msgs) {
+    +            const role = (m as any).role || 'user';
+    +            const parts: any[] = [];
+    +            const c: any = (m as any).content;
+    +            if (typeof c === 'string') {
+    +              if (c.trim()) {
+    +                parts.push({ type: 'input_text', text: c });
+    +              }
+    +            } else if (Array.isArray(c)) {
+    +              for (const part of c) {
+    +                if (this.isChatCompletionContentPartText(part)) {
+    +                  parts.push({ type: 'input_text', text: part.text });
+    +                } else if (this.isChatCompletionContentPartImage(part)) {
+    +                  const url: string = part.image_url.url;
+    +                  if (url.startsWith('data:')) {
+    +                    // data URL -> image_data + mime_type
+    +                    const m = url.match(/^data:(.+?);base64,(.*)$/);
+    +                    if (m) {
+    +                      parts.push({
+    +                        type: 'input_image',
+    +                        image_data: m[2],
+    +                        mime_type: m[1],
+    +                      });
+    +                    } else {
+    +                      // Fallback: send as text reference
+    +                      parts.push({ type: 'input_text', text: `[Image data URL omitted]` });
+    +                    }
+    +                  } else {
+    +                    // Non-data URL
+    +                    parts.push({ type: 'input_image', image_url: url });
+    +                  }
+    +                }
+    +              }
+    +            }
+    +            if (parts.length) {
+    +              input.push({ role, content: parts });
+    +            }
+    +          }
+    +          return input;
+    +        };
+    +
+    +        const { tools, tool_choice, reasoning, ...restOptions } = this._settings.options || {};
+    +        const responsesInput = buildResponsesInput(messagesToSend);
+    +
+    +        // Use OpenAI v6 Responses client
+    +        const responsesClient: any = (this._openai as any).responses;
+    +        if (!responsesClient || typeof responsesClient.stream !== 'function') {
+    +          throw new Error('Responses API client not available. Ensure "openai" >= 6.0.0 is installed.');
+    +        }
+    +
+    +        let responsesStream: any = null;
+    +        try {
+    +          responsesStream = await responsesClient.stream({
+    +            model: this._settings.model,
+    +            input: responsesInput,
+    +            ...(tools ? { tools } : {}),
+    +            ...(tool_choice ? { tool_choice } : {}),
+    +            // Request reasoning summary unless explicitly provided in options
+    +            ...(reasoning ? { reasoning } : { reasoning: { summary: 'auto' } }),
+    +            ...restOptions,
+    +            stream: true
+    +          });
+    +        } catch (err) {
+    +          throw err;
+    +        }
+    +
+    +        if (responsesStream && (Symbol.asyncIterator in Object(responsesStream))) {
+    +          console.log("Responses stream created");
+    +          this._view?.webview.postMessage({ type: 'streamStart' });
+    +
+    +          // Track tool calls and outputs
+    +          const toolCalls: Record<string, {
+    +            id: string,
+    +            name: string,
+    +            args: string,
+    +            completed: boolean,
+    +            submitted: boolean,
+    +            hasServerOutput: boolean,
+    +            output?: string
+    +          }> = {};
+    +          const submitToolOutputs =
+    +            (responsesStream as any)?.inputToolOutputs?.bind(responsesStream) ||
+    +            (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
+    +
+    +          let completionTokens = 0;
+    +          full_message = "";
+    +          let reasoningDelta = "";
+    +
+    +          let deltaAccumulator = "";
+    +          let lastSend = 0;
+    +          const flushDelta = (force = false) => {
+    +            if (!deltaAccumulator) return;
+    +            const now = Date.now();
+    +            if (force || now - lastSend > 50) {
+    +              this._view?.webview.postMessage({ type: 'appendDelta', value: deltaAccumulator });
+    +              deltaAccumulator = "";
+    +              lastSend = now;
+    +            }
+    +          };
+    +
+    +          const postProgress = (line: string) => {
+    +            this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
+    +          };
+    +          const trySubmitMissingToolOutputs = async () => {
+    +            if (typeof submitToolOutputs !== 'function') return;
+    +            const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
+    +            if (!ready.length) return;
+    +            try {
+    +              const outs = await Promise.all(ready.map(async (c) => {
+    +                const out = await this.runToolCallStub(c.name || 'tool', c.args);
+    +                this._messages?.push({
+    +                  role: "assistant",
+    +                  content: `Tool ${c.name || 'tool'} output (stub):\n${out}`,
+    +                  selected: true
+    +                });
+    +                const chat_progress = this._updateChatMessages(0, 0);
+    +                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+    +                postProgress(`📥 tool.output (stub): ${out}`);
+    +                return { tool_call_id: c.id, output: out };
+    +              }));
+    +              await submitToolOutputs(outs);
+    +              ready.forEach(c => { c.submitted = true; });
+    +            } catch (e) {
+    +              console.warn('Submitting stub tool outputs failed:', e);
+    +            }
+    +          };
+    +
+    +          for await (const event of responsesStream) {
+    +            const t = (event && event.type) || '';
+    +            if (t === 'response.created') { postProgress('▶️ response.created'); continue; }
+    +            if (t === 'response.completed') { postProgress('✅ response.completed'); continue; }
+    +            if (t === 'step.started') { const step = (event as any)?.step; postProgress(`🟡 step.started: ${step?.type || 'unknown'}`); continue; }
+    +            if (t === 'step.completed') { const step = (event as any)?.step; postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`); continue; }
+    +            if (t === 'response.output_text.delta') {
+    +              const content = (event as any).delta || "";
+    +              if (!content) continue;
+    +              const tokenList = this._enc.encode(content);
+    +              completionTokens += tokenList.length;
+    +              full_message += content;
+    +              deltaAccumulator += content;
+    +              flushDelta(false);
+    +              continue;
+    +            }
+    +            if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
+    +            if (t === 'response.reasoning.delta') {
+    +              const d = (event as any)?.delta ?? '';
+    +              if (d) reasoningDelta += String(d);
+    +              continue;
+    +            } else if (t.startsWith('response.tool_call')) {
+                   // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
+                   const info = this.extractToolEventInfo(event);
+                   if (!info.id) {
+                     continue;
+                   }
+                   if (!toolCalls[info.id]) {
+                     toolCalls[info.id] = {
+                       id: info.id,
+                       name: info.name || '',
+                       args: '',
+                       completed: false,
+                       submitted: false,
+                       hasServerOutput: false,
+                       // initialize accumulator
+                       output: ''
+                     };
+                   }
+                   if (info.name && !toolCalls[info.id].name) {
+                     toolCalls[info.id].name = info.name;
+                   }
+                   if (info.argumentsDelta) {
+                     toolCalls[info.id].args += String(info.argumentsDelta);
+                   }
+                   if (t === 'response.tool_call.started') {
+                     postProgress(`🔧 tool_call.started: ${toolCalls[info.id].name || 'tool'}`);
+                   }
+                   if (t === 'response.tool_call.delta') {
+                     const argsDelta = (event as any)?.delta ?? '';
+                     const shown = this.safeStringify(argsDelta, 400);
+                     postProgress(`   … tool_call.delta (${toolCalls[info.id].name || 'tool'}) args += ${shown}`);
+                   }
+                   if (t === 'response.tool_call.completed' || info.completed) {
+                     toolCalls[info.id].completed = true;
+                     postProgress(`✅ tool_call.completed: ${toolCalls[info.id].name || 'tool'}`);
+                     // If this is a custom tool (no server output), submit a stub so the model can continue
+                     await trySubmitMissingToolOutputs();
+                   }
+                   continue;
+    -            } else if (t.startsWith('response.tool_output')) {
+    +            } else if (t === 'response.tool_output' || t.startsWith('response.tool_output')) {
+                   // Handle tool output events (may be delta/done or a single event)
+                   const toolCallId =
+                     (event as any)?.tool_call_id ||
+                     (event as any)?.tool_call?.id ||
+                     (event as any)?.id;
+                   const rec = toolCallId ? toolCalls[toolCallId] : undefined;
+                   const name = rec?.name || 'tool';
+    -              if (t === 'response.tool_output.delta') {
+    +              if (t === 'response.tool_output.delta') {
+                     // Streamed tool output chunk
+                     const delta =
+                       (event as any)?.delta ??
+                       (event as any)?.output_delta ??
+                       '';
+                     if (rec) {
+                       rec.output = (rec.output || '') + String(delta);
+                       rec.hasServerOutput = true;
+                     }
+                     const shown = this.safeStringify(delta, 400);
+                     postProgress(`📥 tool.output.delta (${name}): ${shown}`);
+                     continue;
+                   }
+                   // Final output or single-shot output
+                   let out = (event as any)?.output;
+                   if (!out && rec && rec.output) {
+                     out = rec.output;
+                   }
+                   if (rec) {
+                     rec.hasServerOutput = true;
+                   }
+                   const outStr = this.safeStringify(out ?? '', 2000);
+                   postProgress(`📥 tool.output (${name}): ${outStr}`);
+                   // Add to chat history as an assistant message (selectable for later context)
+                   this._messages?.push({
+                     role: "assistant",
+                     content: `Tool ${name} output:\n${outStr}`,
+                     selected: true
+                   });
+                   const chat_progress = this._updateChatMessages(0, 0);
+                   this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+                   continue;
+    -            } else if (t === 'response.error') {
+    +            } else if (t === 'response.error') {
+                   const msg = (event as any)?.error?.message || 'Responses stream error';
+                   throw new Error(msg);
+                 } else if (t === 'response.refusal.delta') {
+                   const d = (event as any)?.delta ?? '';
+                   postProgress(`⚠️ refusal.delta: ${d}`);
+                   continue;
+                 } else if (t === 'response.refusal.done') {
+                   postProgress('⚠️ refusal.done');
+                   continue;              
+                 } else {
+                   // handle other events silently (tool calls, etc.) for now
+                 }
+               }
+     
+               flushDelta(true);
+               this._view?.webview.postMessage({ type: 'streamEnd' });
+    -          this._messages?.push({ role: "assistant", content: full_message, selected:true });
+    -          const tokenList = this._enc.encode(full_message);
+    -          chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
+    -        } else if (typeof responsesClient.create === 'function') {
+    -          // Non-stream fallback
+    -          const resp = await responsesClient.create({
+    -            model: this._settings.model,
+    -            input: aggregatedInput,
+    -            ...(tools ? { tools } : {}),
+    -            ...(tool_choice ? { tool_choice } : {}),
+    -            ...restOptions
+    -          });
+    -          // Extract text from Responses payload
+    -          const text =
+    -            (resp as any)?.output_text ??
+    -            ((resp as any)?.output?.[0]?.content?.[0]?.text ?? '') ??
+    -            '';
+    -          full_message = String(text || '');
+    -          this._messages?.push({ role: "assistant", content: full_message, selected:true });
+    -          const tokenList = this._enc.encode(full_message);
+    -          chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
+    -        } else {
+    -          throw new Error('Responses API does not support stream() or create() in this SDK/version.');
+    -        }
+    +          // After streaming, fetch final response to extract reasoning summary if available
+    +          try {
+    +            const finalResp = await responsesStream.getFinalResponse();
+    +            const outputArr: any[] = (finalResp as any)?.output || [];
+    +            const reasoningItem = outputArr.find((o: any) => o?.type === 'reasoning');
+    +            const summaryText =
+    +              (reasoningItem?.summary || [])
+    +                .map((p: any) => p?.text || '')
+    +                .filter(Boolean)
+    +                .join('\n') || '';
+    +            if (summaryText || reasoningDelta) {
+    +              const thinkText = summaryText || reasoningDelta;
+    +              this._messages?.push({
+    +                role: "assistant",
+    +                content: `<think>${thinkText}</think>`,
+    +                selected: true
+    +              });
+    +            }
+    +          } catch (e) {
+    +            console.warn('Could not get final response for reasoning summary:', e);
+    +          }
+    +
+    +          // Add the final assistant answer as a message
+    +          this._messages?.push({ role: "assistant", content: full_message, selected:true });
+    +          const tokenList = this._enc.encode(full_message);
+    +          chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
+    +        } else {
+    +          throw new Error('Responses API stream() not available in this SDK/version.');
+    +        }
+           } else {
+             // Default Chat Completions flow
+             const stream = await this._openai.chat.completions.create({
+               model: this._settings.model,
+               messages: messagesToSend,
+               stream: true,
+               ...this._settings.options, // Spread operator to include all keys from options
+             });
+    ```
+  selected: true
+- role: user
+  content: Ok, and how do I update the extension so it uses the new version of the openai library?
+  selected: true
+- role: assistant
+  content: |-
+    You’re already set: your package.json depends on openai ^6.0.0, which is the recommended major for full Responses API support. No code changes are required to “use” the new version; just make sure your lockfile and node_modules are updated, then rebuild.
+
+    Brief:
+    - Confirm you’re on openai ^6.x: already present in package.json.
+    - Update/install deps: yarn install (or npm install), or explicitly upgrade with yarn add openai@^6 or npm i openai@^6.
+    - If switching versions, clear old artifacts: rm -rf node_modules && yarn install (or npm ci).
+    - Rebuild the extension bundle: yarn run package (or yarn run compile).
+    - Reload the VS Code window.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ```text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    ```
+  selected: true
+- role: user
+  content: I mean somthing like yarn run package
+  selected: true
+- role: assistant
+  content: |-
+    No code changes are needed. You already depend on openai ^6.0.0. To make the extension use the updated library, reinstall deps and rebuild the bundle, then reload VS Code.
+
+    Brief:
+    - Ensure lockfile picks up openai ^6.x: yarn add openai@^6 (or npm i openai@^6) if needed.
+    - Fresh install: rm -rf node_modules && yarn install (or npm ci).
+    - Build the extension bundle: yarn run package (or npm run package).
+    - Reload VS Code (Developer: Reload Window) or run the extension (F5).
+    - Optional verify: yarn why openai (or npm ls openai).
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ```text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    ```
+  selected: true

@@ -866,53 +866,80 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
       // Choose API flow based on settings.apiType
       if (this._settings.apiType === 'responses') {
-        // Aggregate messages into a single input string for Responses API
-        let aggregatedInput = "";
-        for (const msg of messagesToSend) {
-          const role = (msg as any).role?.toUpperCase?.() || 'USER';
-          if (typeof (msg as any).content === 'string') {
-            aggregatedInput += `\n# ${role}:\n${(msg as any).content}`;
-          } else if (Array.isArray((msg as any).content)) {
-            aggregatedInput += `\n# ${role}:\n`;
-            for (const part of (msg as any).content) {
-              if (this.isChatCompletionContentPartText(part)) {
-                aggregatedInput += part.text;
-              } else if (this.isChatCompletionContentPartImage(part)) {
-                aggregatedInput += `\n[Image: ${part.image_url.url}]\n`;
+        // Build Responses API "input" with images and text parts
+        const buildResponsesInput = (msgs: Array<Message>) => {
+          const input: any[] = [];
+          for (const m of msgs) {
+            const role = (m as any).role || 'user';
+            const parts: any[] = [];
+            const c: any = (m as any).content;
+            if (typeof c === 'string') {
+              if (c.trim()) {
+                parts.push({ type: 'input_text', text: c });
+              }
+            } else if (Array.isArray(c)) {
+              for (const part of c) {
+                if (this.isChatCompletionContentPartText(part)) {
+                  parts.push({ type: 'input_text', text: part.text });
+                } else if (this.isChatCompletionContentPartImage(part)) {
+                  const url: string = part.image_url.url;
+                  if (url.startsWith('data:')) {
+                    // data URL -> image_data + mime_type
+                    const m = url.match(/^data:(.+?);base64,(.*)$/);
+                    if (m) {
+                      parts.push({
+                        type: 'input_image',
+                        image_data: m[2],
+                        mime_type: m[1],
+                      });
+                    } else {
+                      // Fallback: send as text reference
+                      parts.push({ type: 'input_text', text: `[Image data URL omitted]` });
+                    }
+                  } else {
+                    // Non-data URL
+                    parts.push({ type: 'input_image', image_url: url });
+                  }
+                }
               }
             }
+            if (parts.length) {
+              input.push({ role, content: parts });
+            }
           }
+          return input;
+        };
+
+        const { tools, tool_choice, reasoning, ...restOptions } = this._settings.options || {};
+        const responsesInput = buildResponsesInput(messagesToSend);
+
+        // Use OpenAI v6 Responses client
+        const responsesClient: any = (this._openai as any).responses;
+        if (!responsesClient || typeof responsesClient.stream !== 'function') {
+          throw new Error('Responses API client not available. Ensure "openai" >= 6.0.0 is installed.');
         }
 
-        const { tools, tool_choice, ...restOptions } = this._settings.options || {};
-
-        // Resolve Responses client from stable or beta namespace
-        const oc: any = this._openai as any;
-        const responsesClient = oc?.responses ?? oc?.beta?.responses;
-        if (!responsesClient) {
-          throw new Error('Responses API client not available in the installed OpenAI SDK. Please upgrade the "openai" package or switch this model to Chat Completions.');
-        }
-
-        // Try streaming first (if supported); otherwise fall back to non-stream create()
         let responsesStream: any = null;
-        if (typeof responsesClient.stream === 'function') {
-          try {
-            responsesStream = await responsesClient.stream({
-              model: this._settings.model,
-              input: aggregatedInput,
-              ...(tools ? { tools } : {}),
-              ...(tool_choice ? { tool_choice } : {}),
-              ...restOptions
-            });
-          } catch (err) {
-            console.warn('Responses.stream failed; falling back to responses.create()', err);
-          }
+        try {
+          responsesStream = await responsesClient.stream({
+            model: this._settings.model,
+            input: responsesInput,
+            ...(tools ? { tools } : {}),
+            ...(tool_choice ? { tool_choice } : {}),
+            // Request reasoning summary unless explicitly provided in options
+            ...(reasoning ? { reasoning } : { reasoning: { summary: 'auto' } }),
+            ...restOptions,
+            stream: true
+          });
+        } catch (err) {
+          throw err;
         }
 
         if (responsesStream && (Symbol.asyncIterator in Object(responsesStream))) {
           console.log("Responses stream created");
           this._view?.webview.postMessage({ type: 'streamStart' });
-          // Track tool calls and outputs to avoid deadlocks on custom tools
+
+          // Track tool calls and outputs
           const toolCalls: Record<string, {
             id: string,
             name: string,
@@ -920,16 +947,15 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             completed: boolean,
             submitted: boolean,
             hasServerOutput: boolean,
-            // accumulate server-provided tool output (for delta streams)
             output?: string
           }> = {};
-          // Compatible submitter across SDK variants
           const submitToolOutputs =
             (responsesStream as any)?.inputToolOutputs?.bind(responsesStream) ||
             (responsesStream as any)?.submitToolOutputs?.bind(responsesStream);
 
           let completionTokens = 0;
           full_message = "";
+          let reasoningDelta = "";
 
           let deltaAccumulator = "";
           let lastSend = 0;
@@ -943,11 +969,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             }
           };
 
-          // Helper to post one-off progress lines immediately
           const postProgress = (line: string) => {
             this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
           };
-          // Try submitting stub outputs for any completed tool calls without server outputs
           const trySubmitMissingToolOutputs = async () => {
             if (typeof submitToolOutputs !== 'function') return;
             const ready = Object.values(toolCalls).filter(c => c.completed && !c.submitted && !c.hasServerOutput);
@@ -955,7 +979,6 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             try {
               const outs = await Promise.all(ready.map(async (c) => {
                 const out = await this.runToolCallStub(c.name || 'tool', c.args);
-                // Also add to chat history for later selection
                 this._messages?.push({
                   role: "assistant",
                   content: `Tool ${c.name || 'tool'} output (stub):\n${out}`,
@@ -975,24 +998,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
           for await (const event of responsesStream) {
             const t = (event && event.type) || '';
-            if (t === 'response.created') {
-              postProgress('▶️ response.created');
-              continue;
-            }
-            if (t === 'response.completed') {
-              postProgress('✅ response.completed');
-              continue;
-            }
-            if (t === 'step.started') {
-              const step = (event as any)?.step;
-              postProgress(`🟡 step.started: ${step?.type || 'unknown'}`);
-              continue;
-            }
-            if (t === 'step.completed') {
-              const step = (event as any)?.step;
-              postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`);
-              continue;
-            }            
+            if (t === 'response.created') { postProgress('▶️ response.created'); continue; }
+            if (t === 'response.completed') { postProgress('✅ response.completed'); continue; }
+            if (t === 'step.started') { const step = (event as any)?.step; postProgress(`🟡 step.started: ${step?.type || 'unknown'}`); continue; }
+            if (t === 'step.completed') { const step = (event as any)?.step; postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`); continue; }
             if (t === 'response.output_text.delta') {
               const content = (event as any).delta || "";
               if (!content) continue;
@@ -1003,9 +1012,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               flushDelta(false);
               continue;
             }
-            if (t === 'response.output_text.done') {
-              postProgress('--- output_text.done ---');
-              continue;              
+            if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
+            if (t === 'response.reasoning.delta') {
+              const d = (event as any)?.delta ?? '';
+              if (d) reasoningDelta += String(d);
+              continue;
             } else if (t.startsWith('response.tool_call')) {
               // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
               const info = this.extractToolEventInfo(event);
@@ -1045,7 +1056,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 await trySubmitMissingToolOutputs();
               }
               continue;
-            } else if (t.startsWith('response.tool_output')) {
+            } else if (t === 'response.tool_output' || t.startsWith('response.tool_output')) {
               // Handle tool output events (may be delta/done or a single event)
               const toolCallId =
                 (event as any)?.tool_call_id ||
@@ -1103,29 +1114,34 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
           flushDelta(true);
           this._view?.webview.postMessage({ type: 'streamEnd' });
-          this._messages?.push({ role: "assistant", content: full_message, selected:true });
-          const tokenList = this._enc.encode(full_message);
-          chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
-        } else if (typeof responsesClient.create === 'function') {
-          // Non-stream fallback
-          const resp = await responsesClient.create({
-            model: this._settings.model,
-            input: aggregatedInput,
-            ...(tools ? { tools } : {}),
-            ...(tool_choice ? { tool_choice } : {}),
-            ...restOptions
-          });
-          // Extract text from Responses payload
-          const text =
-            (resp as any)?.output_text ??
-            ((resp as any)?.output?.[0]?.content?.[0]?.text ?? '') ??
-            '';
-          full_message = String(text || '');
+          // After streaming, fetch final response to extract reasoning summary if available
+          try {
+            const finalResp = await responsesStream.getFinalResponse();
+            const outputArr: any[] = (finalResp as any)?.output || [];
+            const reasoningItem = outputArr.find((o: any) => o?.type === 'reasoning');
+            const summaryText =
+              (reasoningItem?.summary || [])
+                .map((p: any) => p?.text || '')
+                .filter(Boolean)
+                .join('\n') || '';
+            if (summaryText || reasoningDelta) {
+              const thinkText = summaryText || reasoningDelta;
+              this._messages?.push({
+                role: "assistant",
+                content: `<think>${thinkText}</think>`,
+                selected: true
+              });
+            }
+          } catch (e) {
+            console.warn('Could not get final response for reasoning summary:', e);
+          }
+
+          // Add the final assistant answer as a message
           this._messages?.push({ role: "assistant", content: full_message, selected:true });
           const tokenList = this._enc.encode(full_message);
           chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
         } else {
-          throw new Error('Responses API does not support stream() or create() in this SDK/version.');
+          throw new Error('Responses API stream() not available in this SDK/version.');
         }
       } else {
         // Default Chat Completions flow
