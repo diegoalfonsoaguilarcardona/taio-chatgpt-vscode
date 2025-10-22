@@ -52,14 +52,17 @@ export interface Prompt {
 
 export interface SystemMessage extends ChatCompletionSystemMessageParam {
   selected?: boolean;  // Additional property specific to Message
+  collapsed?: boolean; // UI-only: whether to render collapsed by default
 }
 
 export interface UserMessage extends ChatCompletionUserMessageParam {
   selected?: boolean;  // Additional property specific to Message
+  collapsed?: boolean; // UI-only: whether to render collapsed by default
 }
 
 export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
   selected?: boolean;  // Additional property specific to Message
+  collapsed?: boolean; // UI-only: whether to render collapsed by default
 }
 
 export type Message =

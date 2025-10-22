@@ -210,6 +210,22 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             console.log("messages:", this._messages);
             break;
           }
+        case 'collapseChanged':
+          {
+            // Persist collapsed state changes from the webview so YAML export reflects it
+            const index = Number(data.index);
+            const collapsed = !!data.collapsed;
+            if (Number.isInteger(index) && this._messages && index >= 0 && index < this._messages.length) {
+              (this._messages[index] as any).collapsed = collapsed;
+            } else {
+              console.error(
+                'collapseChanged: Index out of bounds or _messages undefined.',
+                { index, hasMessages: !!this._messages, length: this._messages?.length }
+              );
+            }
+            // No need to re-render; the webview already updated its UI.
+            break;
+          }          
         case "providerModelChanged":
           {
             const providerIndex = data.providerIndex;
@@ -344,8 +360,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     try {
       // Get the original _messages object
       // If you want to exclude any other properties from the YAML, you can map and remove them here
-      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({
-        role, content, selected
+      const messagesForYaml = this._messages?.map(({ role, content, selected, collapsed }) => ({
+        role,
+        content,
+        selected,
+        collapsed: !!collapsed // ensure boolean in YAML
       }));
   
       // Convert messages to a YAML string
@@ -400,8 +419,14 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
       }
 
+      // Normalize messages and default collapsed=false if missing
+      const normalized = parsedMessages.map((msg: any) => {
+        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+        return { ...msg, collapsed };
+      });
+
       // If valid, update the _messages array with new data
-      this._messages = parsedMessages;
+      this._messages = normalized;
 
       // Update the webview visualization
       const chat_response = this._updateChatMessages(
@@ -451,7 +476,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           throw new Error('Invalid message format. Each message must have role and content properties.');
         }
         const selected = ('selected' in msg) ? !!msg.selected : true;
-        return { ...msg, selected } as Message;
+        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+        return { ...msg, selected, collapsed } as Message;
       });
 
       // Append to the existing _messages
@@ -577,7 +603,16 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
       });
     }
-  
+
+    // Mark collapsed messages so the webview renders them collapsed by default
+    if (this._messages && this._messages.length > 0) {
+      this._messages.forEach((m, idx) => {
+        if ((m as any).collapsed) {
+          this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });
+        }
+      });
+    }
+    
     if (this._totalNumberOfTokens !== undefined) {
       this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
   
@@ -860,8 +895,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           //  };
           //} else {
             // Add the message as a new entry, omitting the 'selected' key
-            const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'
-            messagesToSend.push(messageWithoutSelected);
+            const { selected, collapsed, ...messageWithoutFlags } = message as any; // Omit UI-only flags
+            messagesToSend.push(messageWithoutFlags);
           //}
         }
       }
@@ -1194,7 +1229,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           // After streaming, add aggregated web searches (not selected)
           if (webSearchQueries.length) {
             const content = `Web searches executed:\n` + webSearchQueries.map(q => `- ${q}`).join('\n');
-            this._messages?.push({ role: "assistant", content, selected: false });
+            this._messages?.push({ role: "assistant", content, selected: false, collapsed: true });
             const chat_progress = this._updateChatMessages(0, 0);
             this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
           }
@@ -1203,7 +1238,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           for (const mi of messageOutputItems) {
             const contentJson = JSON.stringify(mi, null, 2);
             const content = `Responses message output item:\n\`\`\`json\n${contentJson}\n\`\`\``;
-            this._messages?.push({ role: "assistant", content, selected: false });
+            this._messages?.push({ role: "assistant", content, selected: false, collapsed: true });
             const chat_progress = this._updateChatMessages(0, 0);
             this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
           }
@@ -1223,7 +1258,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               this._messages?.push({
                 role: "assistant",
                 content: `<think>${thinkText}</think>`,
-                selected: false
+                selected: false,
+                collapsed: true
               });
             }
           } catch (e) {

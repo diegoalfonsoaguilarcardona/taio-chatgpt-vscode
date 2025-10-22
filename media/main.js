@@ -612,6 +612,13 @@
                 collapsed = !collapsed;
                 applyCollapsed(collapsed);
                 if (msgKey) collapseState.set(msgKey, collapsed);
+                // Notify extension to persist collapsed state for YAML export
+                if (msgKey) {
+                    vscode.postMessage({
+                        type: 'collapseChanged',
+                        index: parseInt(msgKey, 10), collapsed
+                    });
+                }
             });
     
             // Optional: clicking the header (not on the checkbox) toggles as well
@@ -622,6 +629,13 @@
                 collapsed = !collapsed;
                 applyCollapsed(collapsed);
                 if (msgKey) collapseState.set(msgKey, collapsed);
+                // Notify extension to persist collapsed state for YAML export
+                if (msgKey) {
+                    vscode.postMessage({
+                        type: 'collapseChanged',
+                        index: parseInt(msgKey, 10), collapsed
+                    });
+                }                
             });
         }
     }

@@ -1,0 +1,357 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal **pure unified diffs**.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+    INPUT: `sources` = list of { path: string, content: string (full file with 
+     newlines) }; `request` = natural language change description.
+    BEHAVIOR:
+    - Produce only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly; use LF newlines; never insert timestamps, hashes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer to the request and/or describe what is going to be done.  2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder: "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    2) Diffs: **one fenced diff block per affected file**, preceded by a `### FILE: <path>` heading; sort files alphabetically by path; within each file, sort hunks by ascending line number; include standard context lines.
+    PURE UNIFIED DIFF FORMAT PER FILE:
+    ### FILE: <path>
+    `diff
+    --- a/<path>
+    +++ b/<path>
+    @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+    <lines prefixed with ' ' for context, '-' for removals, '+' for additions>
+    `
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file: use `--- /dev/null` and `+++ b/<path>`; a single hunk from line 1 covering all added lines.
+    - Deleted file: use `--- a/<path>` and `+++ /dev/null`; a single hunk removing all lines.
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+    `text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    `
+    ERROR CASES (emit as their **own per-file fenced blocks** within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_NOT_FOUND_FOR_DELETE
+    `
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_WAS_DELETED_RECREATE_CONFIRM
+    `
+    - Impossible or contradictory request:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! REQUEST_CONFLICT
+    `
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code; never exceed the Brief plus the required per-file diff/code blocks; do not include commentary beyond the Brief.
+  selected: true
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+- role: user
+  content: Ok so I have this visual studio code extension code, It allows me to communicate with different llms providers.
+  selected: true
+- role: user
+  content: It is working perfect, the only thing is that when I have a way to save the chat and also to then restore the chat, I can go with command shift key on my computer and I go to paste chat gpt chat and in that way I generate a yaml file that I can use or I can save to use it later. Also then I can select all the text in that yaml file or in any yaml file and then I can go to use selection as chat gpt conversation and in that way I can restore the yaml file. That is working perfect, the only thing is that in that yaml file I am not saving the collapse information for each message, for the message from the assistant and for the message from the user. I don't have the collapse information so when I restore the chat I am not restoring it with the collapse information so all the chat is presented and is very annoying. So I want you to add that specific variable to the messages in the yaml generation but keep in mind that that variable is not going or shouldn't be sent to the LLM so you just have to remove it when you send it. Something close to what I am doing right now with the selected field because the selected also is a field that we can't send to the LLM. So keep that in mind.
+  selected: true
+- role: user
+  content: Also, there is another thing, and is that right now, when, for example, we use the responses API, I can, when the chat ends, and when the communication with the responses API ends, I generate multiple messages from the assistant. I have, for example, a brief message about the thinking, a process I have, if the specific model uses the web search tool, it shows like a brief of the web search tool usage, and so on, and that is working perfect, and it's working as I want to. Those messages are added, but are not selected, and that is perfect, but the only thing is that I also want those messages to be added, but in a collapsed way, so I don't want to see all the message, I just want to have it not selected and collapse it.
+  selected: true
+- role: user
+  content: Also, I need you to just keep in mind that this should be forward compatible or backward compatible, I think, because I have a lot of chats, previous chats, that are not going to have this new feature about the collapse part. So if the field doesn't exist in the file, just use a default. I think that a good default could be no collapse, but have a default.
+  selected: true
+- role: assistant
+  content: |-
+    Plan:
+    - Add a new per-message boolean property collapsed? to System/User/Assistant messages in types.ts.
+    - Include collapsed in YAML export (pasteChat). Default to false if missing.
+    - On YAML import (useSelectionAsChat and appendSelectionAsChat), accept missing collapsed and default to false.
+    - Ensure collapsed is never sent to the LLM (omit like selected in search()).
+    - Auto-collapse messages flagged collapsed when rendering by sending setCollapsedForIndex for those indices.
+    - For Responses API extras (reasoning summary, web search summary, message output items), mark them as selected: false and collapsed: true.
+
+    Brief summary of changes:
+    - types.ts: add collapsed?: boolean to message types.
+    - chatGptViewProvider.ts:
+      - pasteChat: include collapsed in YAML.
+      - useSelectionAsChat and appendSelectionAsChat: normalize collapsed default false.
+      - search(): omit collapsed when building messagesToSend.
+      - _updateChatMessages(): for messages with collapsed true, send setCollapsedForIndex to webview so they render collapsed by default.
+      - Responses API: mark trailing assistant messages (reasoning summary, web search summary, message output items) as collapsed: true and not selected.
+    - Backward compatibility: if collapsed is missing in YAML, it defaults to false. No protocol changes to LLM payloads.
+
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/types.ts
+    ```diff
+    --- a/src/types.ts
+    +++ b/src/types.ts
+    @@ -31,15 +31,18 @@
+       prompt: string;
+     }
+     
+     export interface SystemMessage extends ChatCompletionSystemMessageParam {
+       selected?: boolean;  // Additional property specific to Message
+    +  collapsed?: boolean; // UI-only: whether to render collapsed by default
+     }
+     
+     export interface UserMessage extends ChatCompletionUserMessageParam {
+       selected?: boolean;  // Additional property specific to Message
+    +  collapsed?: boolean; // UI-only: whether to render collapsed by default
+     }
+     
+     export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
+       selected?: boolean;  // Additional property specific to Message
+    +  collapsed?: boolean; // UI-only: whether to render collapsed by default
+     }
+     
+     export type Message =
+       | SystemMessage
+       | UserMessage
+    ```
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -214,9 +214,12 @@
+         try {
+           // Get the original _messages object
+           // If you want to exclude any other properties from the YAML, you can map and remove them here
+    -      const messagesForYaml = this._messages?.map(({ role, content, selected }) => ({
+    -        role, content, selected
+    -      }));
+    +      const messagesForYaml = this._messages?.map(({ role, content, selected, collapsed }) => ({
+    +        role,
+    +        content,
+    +        selected,
+    +        collapsed: !!collapsed // ensure boolean in YAML
+    +      }));
+       
+           // Convert messages to a YAML string
+           const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });
+    @@ -263,18 +266,24 @@
+           // Validate the parsed YAML structure
+           if (!Array.isArray(parsedMessages)) {
+             throw new Error('Selected text is not an array of messages.');
+           }
+     
+    -      // Validation of each message in the array
+    +      // Validation of each message in the array
+           for (const msg of parsedMessages) {
+             if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg) || !('selected' in msg)) {
+               throw new Error('Invalid message format. Each message must have role, content, and selected properties.');
+             }
+           }
+     
+    -      // If valid, update the _messages array with new data
+    -      this._messages = parsedMessages;
+    +      // Normalize messages and default collapsed=false if missing
+    +      const normalized = parsedMessages.map((msg: any) => {
+    +        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+    +        return { ...msg, collapsed };
+    +      });
+    +
+    +      // If valid, update the _messages array with new data
+    +      this._messages = normalized;
+     
+           // Update the webview visualization
+           const chat_response = this._updateChatMessages(
+             this._getMessagesNumberOfTokens(),
+             0
+    @@ -331,10 +340,12 @@
+           // Normalize and validate messages; default selected=true if missing
+           const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {
+             if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {
+               throw new Error('Invalid message format. Each message must have role and content properties.');
+             }
+    -        const selected = ('selected' in msg) ? !!msg.selected : true;
+    -        return { ...msg, selected } as Message;
+    +        const selected = ('selected' in msg) ? !!msg.selected : true;
+    +        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+    +        return { ...msg, selected, collapsed } as Message;
+           });
+     
+           // Append to the existing _messages
+           if (!this._messages) this._messages = [];
+           this._messages.push(...normalizedMessages);
+    @@ -479,6 +490,14 @@
+             }
+           });
+         }
+       
+    +    // Mark collapsed messages so the webview renders them collapsed by default
+    +    if (this._messages && this._messages.length > 0) {
+    +      this._messages.forEach((m, idx) => {
+    +        if ((m as any).collapsed) {
+    +          this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });
+    +        }
+    +      });
+    +    }
+         if (this._totalNumberOfTokens !== undefined) {
+           this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
+       
+           // NEW: send stats to the webview (always visible status row)
+           this._view?.webview.postMessage({
+    @@ -748,9 +767,10 @@
+               //} else {
+                 // Add the message as a new entry, omitting the 'selected' key
+    -            const { selected, ...messageWithoutSelected } = message; // Destructure and omit 'selected'
+    -            messagesToSend.push(messageWithoutSelected);
+    +            const { selected, collapsed, ...messageWithoutFlags } = message as any; // Omit UI-only flags
+    +            messagesToSend.push(messageWithoutFlags);
+               //}
+             }
+           }
+     
+    @@ -990,7 +1010,7 @@
+               // After streaming, add aggregated web searches (not selected)
+               if (webSearchQueries.length) {
+                 const content = `Web searches executed:\n` + webSearchQueries.map(q => `- ${q}`).join('\n');
+    -            this._messages?.push({ role: "assistant", content, selected: false });
+    +            this._messages?.push({ role: "assistant", content, selected: false, collapsed: true });
+                 const chat_progress = this._updateChatMessages(0, 0);
+                 this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+               }
+     
+    @@ -999,7 +1019,7 @@
+               for (const mi of messageOutputItems) {
+                 const contentJson = JSON.stringify(mi, null, 2);
+                 const content = `Responses message output item:\n\`\`\`json\n${contentJson}\n\`\`\``;
+    -            this._messages?.push({ role: "assistant", content, selected: false });
+    +            this._messages?.push({ role: "assistant", content, selected: false, collapsed: true });
+                 const chat_progress = this._updateChatMessages(0, 0);
+                 this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+               }
+    @@ -1020,7 +1040,8 @@
+                   const thinkText = summaryText || reasoningDelta;
+                   this._messages?.push({
+                     role: "assistant",
+                     content: `<think>${thinkText}</think>`,
+    -                selected: false
+    +                selected: false,
+    +                collapsed: true
+                   });
+                 }
+               } catch (e) {
+    ```
+  selected: true
+- role: user
+  content: Ok, it is working almost perfect, I did all the modifications that you suggested, as you can see in the files that I am sharing, now everything is updated. But the only thing is that I see that when I change the status of the collapse, so when I click the plus button, or the minus button, so I collapse, or I undo the collapse, and then I paste the chat to the YAML file, that is not reflected. So only when, for example, I, I don't know, I use the responses API and it provides me the brief of the thinking and things like that, those are going to be collapsed as default, and that collapse is going to be reflected in the YAML file and it works perfect. But if I change something, for example, if I undo a collapse in some part of the chat, or if I collapse again, it doesn't work. When I send the, when I paste the chat to the YAML file, the status is incorrect.
+  selected: true
+- role: assistant
+  content: |-
+    I will synchronize collapse state changes from the webview back to the extension so they’re reflected in YAML exports. This adds a new message from the webview when a message is collapsed/expanded and updates the corresponding message’s collapsed property in the extension. No LLM payloads are affected (collapsed is still stripped when sending).
+
+    Brief summary of changes:
+    - media/main.js: when user toggles collapse (via button or header), send collapseChanged with index and collapsed state to the extension.
+    - src/chatGptViewProvider.ts: handle collapseChanged, updating _messages[index].collapsed accordingly (bounds-checked).
+    - Keeps backward compatibility: missing collapsed defaults to false when importing; YAML export already includes collapsed.
+
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: media/main.js
+    ```diff
+    --- a/media/main.js
+    +++ b/media/main.js
+    @@ -370,6 +370,12 @@
+                 btn.addEventListener('click', (e) => {
+                     e.stopPropagation();
+                     collapsed = !collapsed;
+                     applyCollapsed(collapsed);
+                     if (msgKey) collapseState.set(msgKey, collapsed);
+    +                // Notify extension to persist collapsed state for YAML export
+    +                if (msgKey) {
+    +                    vscode.postMessage({
+    +                        type: 'collapseChanged',
+    +                        index: parseInt(msgKey, 10), collapsed
+    +                    });
+    +                }
+                 });
+         
+                 // Optional: clicking the header (not on the checkbox) toggles as well
+                 headingEl.addEventListener('click', (e) => {
+                     const target = e.target;
+    @@ -377,6 +383,12 @@
+                     if (target === btn) return; // already handled
+                     collapsed = !collapsed;
+                     applyCollapsed(collapsed);
+                     if (msgKey) collapseState.set(msgKey, collapsed);
+    +                // Notify extension to persist collapsed state for YAML export
+    +                if (msgKey) {
+    +                    vscode.postMessage({
+    +                        type: 'collapseChanged',
+    +                        index: parseInt(msgKey, 10), collapsed
+    +                    });
+    +                }
+                 });
+             }
+         }
+     
+    ```
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -174,6 +174,23 @@
+                 console.log("messages:", this._messages);
+                 break;
+               }
+    +        case 'collapseChanged':
+    +          {
+    +            // Persist collapsed state changes from the webview so YAML export reflects it
+    +            const index = Number(data.index);
+    +            const collapsed = !!data.collapsed;
+    +            if (Number.isInteger(index) && this._messages && index >= 0 && index < this._messages.length) {
+    +              (this._messages[index] as any).collapsed = collapsed;
+    +            } else {
+    +              console.error(
+    +                'collapseChanged: Index out of bounds or _messages undefined.',
+    +                { index, hasMessages: !!this._messages, length: this._messages?.length }
+    +              );
+    +            }
+    +            // No need to re-render; the webview already updated its UI.
+    +            break;
+    +          }
+             case "providerModelChanged":
+               {
+                 const providerIndex = data.providerIndex;
+                 const modelIndex = data.modelIndex;
+                 console.log("Provider Changed, providerIndex:", providerIndex, ", model:", modelIndex);
+    ```
+  selected: true
