@@ -4,7 +4,125 @@
             "name": "OpenAI",
             "apiKey": "OPENAI_API_KEY",
             "apiUrl": "https://api.openai.com/v1",
+            "chatCompletionsUrl": "https://api.openai.com/v1",
+            "responsesUrl": "https://api.openai.com/v1",            
             "models": [
+                {
+                    "name": "gpt-5 verbosity Low",
+                    "model_name": "gpt-5",
+                    "options": {
+                        "temperature": 1.0,
+                        "verbosity": "low"
+                    }
+                },
+                {
+                    "name": "gpt-5",
+                    "model_name": "gpt-5",
+                    "options": {
+                        "temperature": 1.0
+                    }
+                },
+                {
+                    "name": "gpt-5 with Web Search (Responses)",
+                    "model_name": "gpt-5",
+                    "api": "responses",
+                    "tools": [
+                        { "type": "web_search" }
+                    ],
+                    "options": {
+                        "temperature": 1.0,
+                        "tool_choice": "auto"
+                    }
+                },
+                {
+                    "name": "gpt-5 reasoning effort minimal with Web Search (Responses)",
+                    "model_name": "gpt-5",
+                    "api": "responses",
+                    "tools": [
+                        { "type": "web_search" }
+                    ],
+                    "options": {
+                        "temperature": 1.0,
+                        "tool_choice": "auto",
+                        "reasoning": {
+                            "effort": "low",
+                            "summary": "auto"
+                        }
+                    }
+                },
+                {
+                    "name": "gpt-4o with Web Search (Responses)",
+                    "model_name": "gpt-4o",
+                    "api": "responses",
+                    "tools": [
+                        { "type": "web_search" }
+                    ],
+                    "options": {
+                        "temperature": 1.0,
+                        "tool_choice": "auto"
+                    }
+                },
+                {
+                    "name": "gpt-4.1 with Web Search (Responses)",
+                    "model_name": "gpt-4.1",
+                    "api": "responses",
+                    "tools": [
+                        { "type": "web_search" }
+                    ],
+                    "options": {
+                        "temperature": 1.0,
+                        "tool_choice": "auto"
+                    }
+                },                
+                
+                {
+                    "name": "gpt-5 reasoning effort minimal",
+                    "model_name": "gpt-5",
+                    "options": {
+                        "temperature": 1.0,
+                        "reasoning_effort": "minimal",
+                    }
+                },
+                {
+                    "name": "gpt-5-codex (Responses)",
+                    "model_name": "gpt-5-codex",
+                    "api": "responses",
+                    "options": {
+                    }
+                },
+                {
+                    "name": "gpt-5-codex with Web Search (Responses)",
+                    "model_name": "gpt-5-codex",
+                    "api": "responses",
+                    "tools": [
+                        { "type": "web_search" }
+                    ],
+                    "options": {
+                        "temperature": 1.0,
+                        "tool_choice": "auto"
+                    }
+                },
+                {
+                    "name": "gpt-5-codex verbosity Low (Responses)",
+                    "model_name": "gpt-5-codex",
+                    "api": "responses",
+                    "options": {
+                        "temperature": 1.0,
+                        "verbosity": "low"
+                    }
+                },
+                {
+                    "name": "gpt-5-codex reasoning effort minimal (Responses)",
+                    "model_name": "gpt-5-codex",
+                    "api": "responses",
+                    "options": {
+                        "temperature": 1.0,
+                        "reasoning": {
+                            "effort": "low",
+                            "summary": "auto"
+                        }
+                    }
+                },
                 {
                     "name": "gpt-4o",
                     "model_name": "gpt-4o",
