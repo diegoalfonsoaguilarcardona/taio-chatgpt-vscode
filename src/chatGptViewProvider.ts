@@ -29,7 +29,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     keepConversation: true,
     timeoutLength: 60,
     apiUrl: BASE_URL,
-    apiType: 'chatCompletions',    
+    apiType: 'chatCompletions',
     model: 'gpt-3.5-turbo',
     options: {
     },
@@ -39,7 +39,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   // In the constructor, we store the URI of the extension
   constructor(private readonly _extensionUri: vscode.Uri) {
     this._messages = [];
-    this._messages?.push({ role: "system", content: this.getStartSystemPrompt(), selected:true });
+    this._messages?.push({ role: "system", content: this.getStartSystemPrompt(), selected: true });
     console.log("constructor....");
     console.log("messages:", this._messages);
   }
@@ -52,15 +52,15 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
   public setSettings(settings: Settings) {
     let changeModel = false;
-  
+
     // Check if there are any keys in the options object of the settings
     if (settings.apiUrl || settings.model || (settings.options && Object.keys(settings.options).length > 0)) {
       changeModel = true;
     }
-  
+
     // Update settings with the new values
     this._settings = { ...this._settings, ...settings };
-  
+
     if (changeModel) {
       //this._newAPI();
     }
@@ -113,7 +113,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     // add an event listener for messages received by the webview
-    webviewView.webview.onDidReceiveMessage(async data =>  {
+    webviewView.webview.onDidReceiveMessage(async data => {
       switch (data.type) {
         case 'ready':
           {
@@ -137,7 +137,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             vscode.window.activeTextEditor?.insertSnippet(snippet);
             break;
           }
-        case 'pasteImage': 
+        case 'pasteImage':
           {
             const base64Data = data.value;
             const imageType = base64Data.substring(base64Data.indexOf(':') + 1, base64Data.indexOf(';'));
@@ -157,8 +157,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             console.log("promptNoQuery");
 
             let searchPrompt = await this._generate_search_prompt(data.value);
-            
-            this._messages?.push({ role: "user", content: searchPrompt, selected:true })
+
+            this._messages?.push({ role: "user", content: searchPrompt, selected: true })
             let chat_response = this._updateChatMessages(
               this._getMessagesNumberOfTokens(),
               0
@@ -171,11 +171,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           {
             console.log("checkboxChanged:", data);
             const idParts = data.id.split('-'); // Split the id into parts
-            if(idParts.length === 3) {
+            if (idParts.length === 3) {
               const indexStr = idParts[2]; // Grab the last part, which should contain the index
               const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary
-            
-              if(this._messages && index >= 0 && index < this._messages.length) {
+
+              if (this._messages && index >= 0 && index < this._messages.length) {
                 // If the index is within the bounds of the array, update the checked status
                 this._messages[index].selected = data.checked;
               } else {
@@ -192,11 +192,11 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           {
             console.log("messageContentChanged:", data);
             const idParts = data.id.split('-'); // Split the id into parts
-            if(idParts.length === 3) {
+            if (idParts.length === 3) {
               const indexStr = idParts[2]; // Grab the last part, which should contain the index
               const index = parseInt(indexStr, 10); // Convert the index to an integer and adjust if necessary
-            
-              if(this._messages && index >= 0 && index < this._messages.length) {
+
+              if (this._messages && index >= 0 && index < this._messages.length) {
                 // If the index is within the bounds of the array, update the checked status
                 this._messages[index].content = data.value;
               } else {
@@ -225,7 +225,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             }
             // No need to re-render; the webview already updated its UI.
             break;
-          }          
+          }
         case "providerModelChanged":
           {
             const providerIndex = data.providerIndex;
@@ -234,7 +234,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
             const config = vscode.workspace.getConfiguration('chatgpt');
             let providers: Provider[] = config.get('providers') || [];
-      
+
             if (providers && providers.length > providerIndex) {
               const provider_data = providers[providerIndex];
               if (provider_data.models && provider_data.models.length > modelIndex) {
@@ -253,9 +253,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   apiKey: provider_data.apiKey,
                   apiType,
                   options: {
-                  ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
-                  // If tools are configured at model level, pass them via options for Responses API usage
-                  ...((model_data as any).tools ? { tools: (model_data as any).tools } : {})
+                    ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
+                    // If tools are configured at model level, pass them via options for Responses API usage
+                    ...((model_data as any).tools ? { tools: (model_data as any).tools } : {})
                   },
                 };
                 this.setSettings({
@@ -263,7 +263,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   model: provider_settings.model,
                   apiType: provider_settings.apiType,
                   options: {
-                  ...provider_settings.options, // Spread operator to include all keys from options
+                    ...provider_settings.options, // Spread operator to include all keys from options
                   },
                 });
                 // Put configuration settings into the provider
@@ -271,7 +271,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   apiKey: provider_settings.apiKey,
                   apiUrl: provider_settings.apiUrl
                 });
-              }						
+              }
             }
             break;
           }
@@ -282,15 +282,34 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
             const config = vscode.workspace.getConfiguration('chatgpt');
             let prompts: Prompt[] = config.get('prompts') || [];
-      
+
             if (prompts && prompts.length > systemPromptIndex) {
               const prompt_data = prompts[systemPromptIndex];
               if (prompt_data.name && prompt_data.prompt) {
                 this.set_prompt(prompt_data);
-              }						
+              }
             }
             break;
           }
+        case 'forceFinalizePartial': {
+          // Webview detected a stalled stream and is sending us the buffered text
+          try {
+            const partial = typeof data.value === 'string' ? data.value : '';
+            // Ensure UI streaming state is cleared
+            this._view?.webview.postMessage({ type: 'streamEnd' });
+            if (partial) {
+              this._messages?.push({ role: "assistant", content: partial, selected: true });
+              const tokenList = this._enc.encode(partial);
+              const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), tokenList.length);
+              this._response = chat_response;
+              this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+            }
+          } catch (e) {
+            console.warn('forceFinalizePartial handling failed:', e);
+            this._view?.webview.postMessage({ type: 'addResponse', value: '[WARN] Could not finalize partial output.' });
+          }
+          break;
+        }
         case 'fileClicked': {
           console.log("file Clicked!!!!!");
           const filePath = data.value; // e.g., 'src/extension.ts' (relative to workspace)
@@ -321,7 +340,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       const prompt_data = prompts[0];
       if (prompt_data.name && prompt_data.prompt) {
         start_system_prompt = prompt_data.prompt;
-      }						
+      }
     }
     return start_system_prompt;
   }
@@ -338,8 +357,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     this._totalNumberOfTokens = 0;
     this._view?.webview.postMessage({ type: 'setPrompt', value: '' });
     this._messages = [];
-    
-    this._messages?.push({ role: "system", content: this.getStartSystemPrompt(), selected:true });
+
+    this._messages?.push({ role: "system", content: this.getStartSystemPrompt(), selected: true });
     const chat_response = this._updateChatMessages(
       this._getMessagesNumberOfTokens(),
       0
@@ -350,13 +369,13 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
   public async pasteChat() {
     console.log("pasteChat");
-  
+
     // Ensure there is an active text editor where we can paste the YAML
     if (!vscode.window.activeTextEditor) {
       vscode.window.showErrorMessage('No active text editor!');
       return;
     }
-  
+
     try {
       // Get the original _messages object
       // If you want to exclude any other properties from the YAML, you can map and remove them here
@@ -366,24 +385,24 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         selected,
         collapsed: !!collapsed // ensure boolean in YAML
       }));
-  
+
       // Convert messages to a YAML string
       const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });
-  
+
       // Create a new snippet and append the YAML string
       const snippet = new vscode.SnippetString();
       snippet.appendText(messagesYaml);
-  
+
       // Insert the snippet into the active text editor
       await vscode.window.activeTextEditor.insertSnippet(snippet);
-  
+
       console.log("Chat pasted as YAML successfully.");
     } catch (error) {
       console.error("Failed to paste chat as YAML:", error);
       vscode.window.showErrorMessage('Failed to paste chat as YAML: ' + error);
     }
   }
-  
+
   public async useSelectionAsChat() {
     console.log("use selection as chat");
 
@@ -514,7 +533,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getMessagesNumberOfTokens() {
-    
+
     let full_promt = "";
     if (this._messages) {
       for (const message of this._messages) {
@@ -529,10 +548,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   }
 
 
-  
+
   public getSelectedMessagesWithoutSelectedProperty(): Omit<Message, 'selected'>[] {
     let ret = this._messages?.filter(message => message.selected).map(({ role, content }) => ({
-    role, content
+      role, content
     })) || [];
     return ret;
   }
@@ -540,10 +559,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   private _containsCodeBlockOrListItems(content: string): boolean {
     // Regex pattern to match code blocks.
     const codeBlockPattern = /```[\s\S]*?```/;
-  
+
     // Regex pattern to match bullet points or numbered list items.
     const listItemPattern = /^(?:\s*(?:[-*+]|\d+\.)\s+.+)$/m;
-  
+
     // Test if the content contains a code block or list items.
     return codeBlockPattern.test(content) || listItemPattern.test(content);
   }
@@ -552,8 +571,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   private isChatCompletionContentPart(value: any): value is ChatCompletionContentPart {
     return this.isChatCompletionContentPartImage(value);
   }
-  
-    
+
+
   private isChatCompletionContentPartText(value: any): value is ChatCompletionContentPartText {
     return typeof value === 'object'
       && value != null
@@ -567,8 +586,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       && typeof value.image_url.url === 'string'
       && value.type === 'image_url';
   }
-    
-  private _updateChatMessages(promtNumberOfTokens:number, completionTokens:number) {
+
+  private _updateChatMessages(promtNumberOfTokens: number, completionTokens: number) {
     let chat_response = "";
     if (this._messages) {
       this._messages.forEach((message, index) => {
@@ -612,10 +631,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
       });
     }
-    
+
     if (this._totalNumberOfTokens !== undefined) {
       this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
-  
+
       // NEW: send stats to the webview (always visible status row)
       this._view?.webview.postMessage({
         type: 'updateStats',
@@ -628,7 +647,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
       });
     }
-  
+
     return chat_response;
   }
 
@@ -761,8 +780,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
   private isServerSideToolName(name?: string): boolean {
     return typeof name === 'string' && /web_search/i.test(name);
   }
-  
-  private async _generate_search_prompt(prompt:string) {
+
+  private async _generate_search_prompt(prompt: string) {
     this._prompt = prompt;
     if (!prompt) {
       prompt = '';
@@ -776,7 +795,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     }
 
     // Initialize response and token count
-    
+
     if (!this._response) {
       this._response = '';
     }
@@ -843,24 +862,24 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       });
       return;
     }
-    
+
     let chat_response = '';
     let searchPrompt = "";
-    if (prompt!=undefined) {
+    if (prompt != undefined) {
       searchPrompt = await this._generate_search_prompt(prompt);
-    } 
+    }
     // Show loading indicator
     this._view?.webview.postMessage({ type: 'setPrompt', value: this._prompt });
     this._view?.webview.postMessage({ type: 'addResponse', value: '...' });
 
     if (searchPrompt != "") {
-      this._messages?.push({ role: "user", content: searchPrompt, selected:true })
+      this._messages?.push({ role: "user", content: searchPrompt, selected: true })
     }
 
     if (!this._openai) {
       throw new Error('OpenAI instance is not initialized.');
     }
-    
+
     if (typeof this._settings.model !== 'string') {
       throw new Error('Model identifier is not valid or not defined.');
     }
@@ -869,7 +888,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     const isValidRole = (role: any): role is 'user' | 'assistant' | 'system' => {
       return ['user', 'assistant', 'system'].includes(role);
     };
-    
+
     // Validate and type narrow `this._messages` before sending
     if (!this._messages || !Array.isArray(this._messages) ||
       (!this._messages.every(msg => isValidRole(msg.role)))) {
@@ -880,9 +899,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     let full_message = "";
     try {
       console.log("Creating message sender...");
-      
+
       let messagesToSend: Array<Message> = [];
-      
+
       // Assuming this._messages is defined and is an array
       for (const message of this._messages) {
         // Check if 'selected' is true; undefined or false values will be considered false
@@ -894,9 +913,9 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           //	content: messagesToSend[messagesToSend.length - 1].content + '\n' + message.content,
           //  };
           //} else {
-            // Add the message as a new entry, omitting the 'selected' key
-            const { selected, collapsed, ...messageWithoutFlags } = message as any; // Omit UI-only flags
-            messagesToSend.push(messageWithoutFlags);
+          // Add the message as a new entry, omitting the 'selected' key
+          const { selected, collapsed, ...messageWithoutFlags } = message as any; // Omit UI-only flags
+          messagesToSend.push(messageWithoutFlags);
           //}
         }
       }
@@ -956,7 +975,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
 
         let responsesStream: any = null;
-        
+
         console.log(">>>>>>>>>>>>>>>>> responsesInput:", responsesInput);
 
         try {
@@ -1012,7 +1031,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           // Collectors for post-stream insertion
           const webSearchQueries: string[] = [];
           const messageOutputItems: any[] = [];
-          
+
           const postProgress = (line: string) => {
             this._view?.webview.postMessage({ type: 'appendDelta', value: (line.endsWith('\n') ? line : line + '\n') });
           };
@@ -1052,179 +1071,182 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               console.warn('Submitting stub tool outputs failed:', e);
             }
           };
+          try {
 
-          for await (const event of responsesStream) {
-            const t = (event && event.type) || '';
-            if (t === 'response.created') { postProgress('▶️ response.created'); continue; }
-            if (t === 'response.completed') { postProgress('✅ response.completed'); continue; }
-            if (t === 'step.started') { const step = (event as any)?.step; postProgress(`🟡 step.started: ${step?.type || 'unknown'}`); continue; }
-            if (t === 'step.completed') { const step = (event as any)?.step; postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`); continue; }
-            if (t === 'response.output_text.delta') {
-              const content = (event as any).delta || "";
-              if (!content) continue;
-              const tokenList = this._enc.encode(content);
-              completionTokens += tokenList.length;
-              full_message += content;
-              deltaAccumulator += content;
-              flushDelta(false);
-              continue;
-            }
-            if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
-            // Reasoning summary text stream (new event names)
-            if (t === 'response.reasoning_summary_text.delta') {
-              const d = (event as any)?.delta ?? '';
-              if (d) {
-                reasoningDelta += String(d);
-                // Stream reasoning brief text to UI as it arrives (like stdout.write in example)
-                this._view?.webview.postMessage({ type: 'appendDelta', value: String(d) });
-              }
-              continue;
-            }
-            if (t === 'response.reasoning_summary_text.done') {
-              postProgress('📥 reasoning summary done');
-              continue;
-            }
-            // Web search tool progress (new event names) – concise messages only
-            if (t === 'response.web_search_call.in_progress') {
-              postProgress('🔎 web search: in progress');
-              continue;
-            }
-            if (t === 'response.web_search_call.searching') {
-              // Mark corresponding tool call (if tracked) as server-handled
-              const id = (event as any)?.item_id;
-              if (id && toolCalls[id]) {
-                toolCalls[id].hasServerOutput = true;
-              }              
-              postProgress('🔎 web search: searching');
-              continue;
-            }
-            if (t === 'response.web_search_call.completed') {
-              const id = (event as any)?.item_id;
-              if (id && toolCalls[id]) {
-                toolCalls[id].hasServerOutput = true;
-              }              
-              postProgress('🔎 web search: completed');
-              continue;
-            }
-            // Fallback: older/general tool events (kept for compatibility)
-            if (t.startsWith('response.tool_call')) {
-              // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
-              const info = this.extractToolEventInfo(event);
-              if (!info.id) {
+            for await (const event of responsesStream) {
+              const t = (event && event.type) || '';
+              if (t === 'response.created') { postProgress('▶️ response.created'); continue; }
+              if (t === 'response.completed') { postProgress('✅ response.completed'); continue; }
+              if (t === 'step.started') { const step = (event as any)?.step; postProgress(`🟡 step.started: ${step?.type || 'unknown'}`); continue; }
+              if (t === 'step.completed') { const step = (event as any)?.step; postProgress(`🟢 step.completed: ${step?.type || 'unknown'}`); continue; }
+              if (t === 'response.output_text.delta') {
+                const content = (event as any).delta || "";
+                if (!content) continue;
+                const tokenList = this._enc.encode(content);
+                completionTokens += tokenList.length;
+                full_message += content;
+                deltaAccumulator += content;
+                flushDelta(false);
                 continue;
               }
-              if (!toolCalls[info.id]) {
-                toolCalls[info.id] = {
-                  id: info.id,
-                  name: info.name || '',
-                  args: '',
-                  completed: false,
-                  submitted: false,
-                  hasServerOutput: false,
-                  // initialize accumulator
-                  output: ''
-                };
+              if (t === 'response.output_text.done') { postProgress('--- output_text.done ---'); continue; }
+              // Reasoning summary text stream (new event names)
+              if (t === 'response.reasoning_summary_text.delta') {
+                const d = (event as any)?.delta ?? '';
+                if (d) {
+                  reasoningDelta += String(d);
+                  // Stream reasoning brief text to UI as it arrives (like stdout.write in example)
+                  this._view?.webview.postMessage({ type: 'appendDelta', value: String(d) });
+                }
+                continue;
               }
-              if (info.name && !toolCalls[info.id].name) {
-                toolCalls[info.id].name = info.name;
+              if (t === 'response.reasoning_summary_text.done') {
+                postProgress('📥 reasoning summary done');
+                continue;
               }
-              // If this is a known server-side tool (e.g., web_search), don't submit client outputs
-              if (this.isServerSideToolName(toolCalls[info.id].name)) {
-                toolCalls[info.id].hasServerOutput = true;
-              }              
-              if (info.argumentsDelta) {
-                toolCalls[info.id].args += String(info.argumentsDelta);
+              // Web search tool progress (new event names) – concise messages only
+              if (t === 'response.web_search_call.in_progress') {
+                postProgress('🔎 web search: in progress');
+                continue;
               }
-              if (t === 'response.tool_call.started') {
-                postProgress(`🔧 tool_call.started: ${toolCalls[info.id].name || 'tool'}`);
+              if (t === 'response.web_search_call.searching') {
+                // Mark corresponding tool call (if tracked) as server-handled
+                const id = (event as any)?.item_id;
+                if (id && toolCalls[id]) {
+                  toolCalls[id].hasServerOutput = true;
+                }
+                postProgress('🔎 web search: searching');
+                continue;
               }
-              if (t === 'response.tool_call.delta') {
-                const argsDelta = (event as any)?.delta ?? '';
-                const shown = this.safeStringify(argsDelta, 400);
-                postProgress(`   … tool_call.delta (${toolCalls[info.id].name || 'tool'}) args += ${shown}`);
+              if (t === 'response.web_search_call.completed') {
+                const id = (event as any)?.item_id;
+                if (id && toolCalls[id]) {
+                  toolCalls[id].hasServerOutput = true;
+                }
+                postProgress('🔎 web search: completed');
+                continue;
               }
-              if (t === 'response.tool_call.completed' || info.completed) {
-                toolCalls[info.id].completed = true;
-                postProgress(`✅ tool_call.completed: ${toolCalls[info.id].name || 'tool'}`);
-                // If this is a custom tool (no server output), submit a stub so the model can continue
-                await trySubmitMissingToolOutputs();
-              }
-              continue;
-            } else if (t === 'response.tool_output' || t.startsWith('response.tool_output')) {
-              // Handle tool output events (may be delta/done or a single event)
-              const toolCallId =
-                (event as any)?.tool_call_id ||
-                (event as any)?.tool_call?.id ||
-                (event as any)?.id;
-              const rec = toolCallId ? toolCalls[toolCallId] : undefined;
-              const name = rec?.name || 'tool';
-              if (t === 'response.tool_output.delta') {
-                // Streamed tool output chunk
-                const delta =
-                  (event as any)?.delta ??
-                  (event as any)?.output_delta ??
-                  '';
+              // Fallback: older/general tool events (kept for compatibility)
+              if (t.startsWith('response.tool_call')) {
+                // Accumulate tool call info and arguments; when completed, we may need to submit outputs for custom tools.
+                const info = this.extractToolEventInfo(event);
+                if (!info.id) {
+                  continue;
+                }
+                if (!toolCalls[info.id]) {
+                  toolCalls[info.id] = {
+                    id: info.id,
+                    name: info.name || '',
+                    args: '',
+                    completed: false,
+                    submitted: false,
+                    hasServerOutput: false,
+                    // initialize accumulator
+                    output: ''
+                  };
+                }
+                if (info.name && !toolCalls[info.id].name) {
+                  toolCalls[info.id].name = info.name;
+                }
+                // If this is a known server-side tool (e.g., web_search), don't submit client outputs
+                if (this.isServerSideToolName(toolCalls[info.id].name)) {
+                  toolCalls[info.id].hasServerOutput = true;
+                }
+                if (info.argumentsDelta) {
+                  toolCalls[info.id].args += String(info.argumentsDelta);
+                }
+                if (t === 'response.tool_call.started') {
+                  postProgress(`🔧 tool_call.started: ${toolCalls[info.id].name || 'tool'}`);
+                }
+                if (t === 'response.tool_call.delta') {
+                  const argsDelta = (event as any)?.delta ?? '';
+                  const shown = this.safeStringify(argsDelta, 400);
+                  postProgress(`   … tool_call.delta (${toolCalls[info.id].name || 'tool'}) args += ${shown}`);
+                }
+                if (t === 'response.tool_call.completed' || info.completed) {
+                  toolCalls[info.id].completed = true;
+                  postProgress(`✅ tool_call.completed: ${toolCalls[info.id].name || 'tool'}`);
+                  // If this is a custom tool (no server output), submit a stub so the model can continue
+                  await trySubmitMissingToolOutputs();
+                }
+                continue;
+              } else if (t === 'response.tool_output' || t.startsWith('response.tool_output')) {
+                // Handle tool output events (may be delta/done or a single event)
+                const toolCallId =
+                  (event as any)?.tool_call_id ||
+                  (event as any)?.tool_call?.id ||
+                  (event as any)?.id;
+                const rec = toolCallId ? toolCalls[toolCallId] : undefined;
+                const name = rec?.name || 'tool';
+                if (t === 'response.tool_output.delta') {
+                  // Streamed tool output chunk
+                  const delta =
+                    (event as any)?.delta ??
+                    (event as any)?.output_delta ??
+                    '';
+                  if (rec) {
+                    rec.output = (rec.output || '') + String(delta);
+                    rec.hasServerOutput = true;
+                  }
+                  const shown = this.safeStringify(delta, 400);
+                  postProgress(`📥 tool.output.delta (${name}): ${shown}`);
+                  continue;
+                }
+                // Final output or single-shot output
+                let out = (event as any)?.output;
+                if (!out && rec && rec.output) {
+                  out = rec.output;
+                }
                 if (rec) {
-                  rec.output = (rec.output || '') + String(delta);
                   rec.hasServerOutput = true;
                 }
-                const shown = this.safeStringify(delta, 400);
-                postProgress(`📥 tool.output.delta (${name}): ${shown}`);
+                const outStr = this.safeStringify(out ?? '', 2000);
+                postProgress(`📥 tool.output (${name}): ${outStr}`);
+                // Add to chat history as an assistant message (selectable for later context)
+                this._messages?.push({
+                  role: "assistant",
+                  content: `Tool ${name} output:\n${outStr}`,
+                  selected: true
+                });
+                const chat_progress = this._updateChatMessages(0, 0);
+                this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
                 continue;
-              }
-              // Final output or single-shot output
-              let out = (event as any)?.output;
-              if (!out && rec && rec.output) {
-                out = rec.output;
-              }
-              if (rec) {
-                rec.hasServerOutput = true;
-              }
-              const outStr = this.safeStringify(out ?? '', 2000);
-              postProgress(`📥 tool.output (${name}): ${outStr}`);
-              // Add to chat history as an assistant message (selectable for later context)
-              this._messages?.push({
-                role: "assistant",
-                content: `Tool ${name} output:\n${outStr}`,
-                selected: true
-              });
-              const chat_progress = this._updateChatMessages(0, 0);
-              this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
-              continue;
-            } else if (t === 'response.output_item.done') {
-              // Display results of web_search (concise summary without raw object)
-              const item = (event as any)?.item;
-              if (item?.type === 'web_search_call') {
-                // Mark matching tool call (if present) as having server output
-                const tid = item?.id;
-                if (tid && toolCalls[tid]) toolCalls[tid].hasServerOutput = true;
-                
-                const q = item?.action?.query || '';
-                postProgress(`🔎 web search executed: ${q}`);
-                // Collect queries to aggregate later into a single message (not selected)
-                if (q) webSearchQueries.push(q);
-              } else if (item?.type === 'message') {
-                // Capture message output items (with annotations) to add after stream, not selected
-                messageOutputItems.push(item);
-              }
-              continue;              
-            } else if (t === 'response.error') {
-              const msg = (event as any)?.error?.message || 'Responses stream error';
-              throw new Error(msg);
-            } else if (t === 'response.refusal.delta') {
-              const d = (event as any)?.delta ?? '';
-              postProgress(`⚠️ refusal.delta: ${d}`);
-              continue;
-            } else if (t === 'response.refusal.done') {
-              postProgress('⚠️ refusal.done');
-              continue;              
-            } else {
-              // handle other events silently (tool calls, etc.) for now
-            }
-          }
+              } else if (t === 'response.output_item.done') {
+                // Display results of web_search (concise summary without raw object)
+                const item = (event as any)?.item;
+                if (item?.type === 'web_search_call') {
+                  // Mark matching tool call (if present) as having server output
+                  const tid = item?.id;
+                  if (tid && toolCalls[tid]) toolCalls[tid].hasServerOutput = true;
 
-          flushDelta(true);
-          this._view?.webview.postMessage({ type: 'streamEnd' });
+                  const q = item?.action?.query || '';
+                  postProgress(`🔎 web search executed: ${q}`);
+                  // Collect queries to aggregate later into a single message (not selected)
+                  if (q) webSearchQueries.push(q);
+                } else if (item?.type === 'message') {
+                  // Capture message output items (with annotations) to add after stream, not selected
+                  messageOutputItems.push(item);
+                }
+                continue;
+              } else if (t === 'response.error') {
+                const msg = (event as any)?.error?.message || 'Responses stream error';
+                throw new Error(msg);
+              } else if (t === 'response.refusal.delta') {
+                const d = (event as any)?.delta ?? '';
+                postProgress(`⚠️ refusal.delta: ${d}`);
+                continue;
+              } else if (t === 'response.refusal.done') {
+                postProgress('⚠️ refusal.done');
+                continue;
+              } else {
+                // handle other events silently (tool calls, etc.) for now
+              }
+            }
+
+          } finally {
+            flushDelta(true);
+            this._view?.webview.postMessage({ type: 'streamEnd' });
+          }
 
           // After streaming, add aggregated web searches (not selected)
           if (webSearchQueries.length) {
@@ -1242,7 +1264,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             const chat_progress = this._updateChatMessages(0, 0);
             this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
           }
-          
+
           // After streaming, fetch final response to extract reasoning summary if available
           try {
             const finalResp = await responsesStream.finalResponse();
@@ -1267,7 +1289,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           }
 
           // Add the final assistant answer as a message
-          this._messages?.push({ role: "assistant", content: full_message, selected:true });
+          this._messages?.push({ role: "assistant", content: full_message, selected: true });
           const tokenList = this._enc.encode(full_message);
           chat_response = this._updateChatMessages(promtNumberOfTokens, tokenList.length);
         } else {
@@ -1281,7 +1303,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           stream: true,
           ...this._settings.options, // Spread operator to include all keys from options
         });
-        
+
         console.log("Message sender created");
 
         this._view?.webview.postMessage({ type: 'streamStart' });
@@ -1302,27 +1324,30 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           }
         };
 
-        for await (const chunk of stream) {
-          const content = (chunk as any).choices?.[0]?.delta?.content || "";
-          console.log("chunk:", chunk);
-          console.log("content:", content);
-          if (!content) continue;
+        try {
+          for await (const chunk of stream) {
+            const content = (chunk as any).choices?.[0]?.delta?.content || "";
+            console.log("chunk:", chunk);
+            console.log("content:", content);
+            if (!content) continue;
 
-          const tokenList = this._enc.encode(content);
-          completionTokens += tokenList.length;
-          console.log("tokens:", completionTokens);
-          full_message += content;
+            const tokenList = this._enc.encode(content);
+            completionTokens += tokenList.length;
+            console.log("tokens:", completionTokens);
+            full_message += content;
 
-          // stream delta (throttled)
-          deltaAccumulator += content;
-          flushDelta(false);
+            // stream delta (throttled)
+            deltaAccumulator += content;
+            flushDelta(false);
+          }
+
+        } finally {
+          // Ensure last delta is flushed and end the stream even on errors
+          flushDelta(true);
+          this._view?.webview.postMessage({ type: 'streamEnd' });
         }
 
-        // Ensure last delta is flushed and end the stream
-        flushDelta(true);
-        this._view?.webview.postMessage({ type: 'streamEnd' });
-
-        this._messages?.push({ role: "assistant", content: full_message, selected:true })
+        this._messages?.push({ role: "assistant", content: full_message, selected: true })
         console.log("Full message:", full_message);
         console.log("Full Number of tokens:", completionTokens);
         const tokenList = this._enc.encode(full_message);
@@ -1331,8 +1356,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       }
     } catch (e: any) {
       console.error(e);
-      if (this._response!=undefined) {
-        this._messages?.push({ role: "assistant", content: full_message, selected:true })
+      if (this._response != undefined) {
+        this._messages?.push({ role: "assistant", content: full_message, selected: true })
         chat_response = this._response;
         chat_response += `\n\n---\n[ERROR] ${e}`;
       }
@@ -1349,7 +1374,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     const tailwindUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'tailwind.min.js'));
     const showdownUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'showdown.min.js'));
     const dompurifyUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'scripts', 'purify.min.js'));
-  
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -1396,8 +1421,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
   public addImageToChat(imageDataUrl: string, fileName: string) {
     const imageMarkdown = `![${fileName}](${imageDataUrl})`;
-    let newMessage: UserMessage = { 
-      role: "user", 
+    let newMessage: UserMessage = {
+      role: "user",
       content: [
         {
           "type": "text",
@@ -1409,30 +1434,30 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             "url": imageDataUrl
           }
         }
-      ], 
+      ],
       selected: true
     };
 
-    
+
     this._messages?.push(newMessage);
-  
+
     const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
   }
 
   public addFileToChat(relativePath: string, fileContent: string, fileExtension: string) {
     let codeBlock = `**${relativePath}**\n\`\`\`${fileExtension}\n${fileContent}\n\`\`\``;
-  
+
     let newMessage: UserMessage = {
       role: "user",
       content: codeBlock,
       selected: true
     };
-  
+
     this._messages?.push(newMessage);
     const idx = this._messages ? this._messages.length - 1 : 0;
-    this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });    
-  
+    this._view?.webview.postMessage({ type: 'setCollapsedForIndex', index: idx });
+
     const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
   }

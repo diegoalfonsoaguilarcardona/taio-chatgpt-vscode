@@ -1,0 +1,330 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal **pure unified diffs**.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+    INPUT: `sources` = list of { path: string, content: string (full file with 
+     newlines) }; `request` = natural language change description.
+    BEHAVIOR:
+    - Produce only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly; use LF newlines; never insert timestamps, hashes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer to the request and/or describe what is going to be done.  2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder: "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    2) Diffs: **one fenced diff block per affected file**, preceded by a `### FILE: <path>` heading; sort files alphabetically by path; within each file, sort hunks by ascending line number; include standard context lines.
+    PURE UNIFIED DIFF FORMAT PER FILE:
+    ### FILE: <path>
+    `diff
+    --- a/<path>
+    +++ b/<path>
+    @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+    <lines prefixed with ' ' for context, '-' for removals, '+' for additions>
+    `
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file: use `--- /dev/null` and `+++ b/<path>`; a single hunk from line 1 covering all added lines.
+    - Deleted file: use `--- a/<path>` and `+++ /dev/null`; a single hunk removing all lines.
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+    `text
+    === DIFF BEGIN ===
+    NO_CHANGES
+    === DIFF END ===
+    `
+    ERROR CASES (emit as their **own per-file fenced blocks** within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_NOT_FOUND_FOR_DELETE
+    `
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! FILE_WAS_DELETED_RECREATE_CONFIRM
+    `
+    - Impossible or contradictory request:
+    `diff
+    STATUS: error
+    @@ 0,0 0,0 @@
+    ! REQUEST_CONFLICT
+    `
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code; never exceed the Brief plus the required per-file diff/code blocks; do not include commentary beyond the Brief.
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+  collapsed: false
+- role: user
+  content: Ok so I have this visual studio code extension code, It allows me to communicate with different llms providers.
+  selected: true
+  collapsed: false
+- role: user
+  content: Okay, so I have this and it is working perfect. The only thing is that when I use the responses API, so there are some models that are set up to work with the responses API and not with the chat completions API. When I use the responses API, sometimes if something happens in the middle, I don't know, maybe it is using or it is consulting in the web or something is happening after I ask a query and sometimes the connection is lost in the middle or I don't know what happened, but I see that, for example, it is responding and it got stuck in some part. I'm thinking that the connection is lost for something, but I don't know if that is what is happening, but the thing is that I see that it got stuck and if that happens, I lost the response, so I'm not able to see the response and also I'm not able to clear the chat or to interact with the chat. The chat got stuck and I have to close Visual Studio and reopen it again. What I also see is that Visual Studio code is not blocked, it is just the chat that is blocked. So, for example, if I hit command shift p and say something like paste chat GPT chat, I'm able to see the chat until the part that got blocked, but if I try to reset the chat, so if I hit, for example, command shift p and then I click reset chat GPT conversation, nothing happens or if I try to write something else, nothing happens. If I select another model, nothing happens. The thing is that it got stuck, so I want to be able to, I don't know, to force to update the chat with the thing that it has and also I want you to see if are there any possible problems when I use the completion API and try to fix it. Problems like, I don't know, something is coming from the API that the chat doesn't understand or I don't know, just find out what are the maybe the problematic parts in the code and also provide me with some modifications to unblock the chat when it's blocked.
+  selected: true
+  collapsed: false
+- role: assistant
+  content: |-
+    Planned changes:
+    - Fix “stuck chat” when Responses API stream drops mid-flight by:
+      - Adding a watchdog in the webview that auto-aborts a stalled stream and asks the extension to finalize with the partial text.
+      - Allowing any incoming full “addResponse” to override a stuck streaming state immediately (no need to restart VS Code).
+    - Make both Responses API and Chat Completions API robust: always send streamEnd to the webview even if an error/abort happens (via try/finally).
+    - Add a new webview→extension message to finalize partial content, so the partial answer is preserved in the chat history.
+
+    Summary of edits:
+    - media/main.js:
+      - Add a streaming idle watchdog (default 12s). On timeout, cancel streaming locally and send forceFinalizePartial with buffered text to the extension.
+      - If addResponse arrives while streaming and it’s a final render (not just "..."), cancel streaming and render immediately.
+      - Track last delta time; clear watchdog on streamEnd.
+    - src/chatGptViewProvider.ts:
+      - Handle new message type forceFinalizePartial to push the current partial response into chat and finish the UI stream.
+      - Ensure streamEnd is always sent in both Responses and Chat Completions flows via try/finally around the for-await loops.
+
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: media/main.js
+    ```diff
+    --- a/media/main.js
+    +++ b/media/main.js
+    @@ -16,6 +16,10 @@
+         let pendingFinalResponse = false;
+         let renderScheduled = false;
+         const MAX_STREAM_LINES = 50;
+    +    // Watchdog to auto-abort stalled streams
+    +    const STREAM_IDLE_TIMEOUT_MS = 12000; // 12s without deltas => consider stalled
+    +    let lastDeltaAt = 0;
+    +    let streamWatchdog = null;
+     
+         // Remember per-message collapse state (keyed by message index)
+         const collapseState = new Map(); // key: "messageIndex", value: boolean (true = collapsed)
+    @@ -132,10 +136,21 @@
+             switch (message.type) {
+                 case "addResponse": {
+                     response = message.value;
+    -                // If we're still streaming, defer the full render until streamEnd
+    -                if (isStreaming) {
+    -                    pendingFinalResponse = true;
+    -                } else {
+    +                // If we're still streaming, decide whether to force-cancel or defer
+    +                if (isStreaming) {
+    +                    // If this looks like a final render (not the initial '...'),
+    +                    // cancel streaming state and render immediately to unblock the UI.
+    +                    if (typeof message.value === 'string' && message.value !== '...') {
+    +                        isStreaming = false;
+    +                        pendingDelta = '';
+    +                        streamBuffer = '';
+    +                        renderScheduled = false;
+    +                        // Clear watchdog
+    +                        if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+    +                        setResponse();
+    +                    } else {
+    +                        pendingFinalResponse = true;
+    +                    }
+    +                } else {
+                         setResponse();
+                     }
+                     break;
+    @@ -201,12 +216,27 @@
+                 }
+     
+                 case "streamStart": {
+                     isStreaming = true;
+                     streamBuffer = '';
+                     pendingDelta = '';
+    +                lastDeltaAt = Date.now();
+    +                // Start/Reset watchdog
+    +                if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+    +                streamWatchdog = setInterval(() => {
+    +                    if (!isStreaming) return;
+    +                    const now = Date.now();
+    +                    if (now - lastDeltaAt > STREAM_IDLE_TIMEOUT_MS) {
+    +                        // Consider the stream stalled; finalize with what we have
+    +                        const partial = (streamBuffer || '') + (pendingDelta || '');
+    +                        isStreaming = false;
+    +                        pendingDelta = '';
+    +                        renderScheduled = false;
+    +                        if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+    +                        vscode.postMessage({ type: 'forceFinalizePartial', value: partial });
+    +                    }
+    +                }, 1000);
+                     const responseDiv = document.getElementById("response");
+                     if (responseDiv) responseDiv.innerHTML = '...';
+                     break;
+                 }
+                 case "appendDelta": {
+                     if (!isStreaming) break;
+                     pendingDelta += message.value || '';
+    +                lastDeltaAt = Date.now();
+                     scheduleStreamRender();
+                     break;
+                 }
+                 case "streamEnd": {
+                     isStreaming = false;
+                     // Clear any pending streaming buffers and cancel scheduled render
+                     pendingDelta = '';
+                     streamBuffer = '';
+                     renderScheduled = false;
+    +                if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+                     // If a final full response was received during streaming, render it now
+                     if (pendingFinalResponse) {
+                         pendingFinalResponse = false;
+                         setResponse();
+                     }                
+                     break;
+    ```
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -120,6 +120,25 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+                 }
+                 break;
+               }
+    +        case 'forceFinalizePartial': {
+    +          // Webview detected a stalled stream and is sending us the buffered text
+    +          try {
+    +            const partial = typeof data.value === 'string' ? data.value : '';
+    +            // Ensure UI streaming state is cleared
+    +            this._view?.webview.postMessage({ type: 'streamEnd' });
+    +            if (partial) {
+    +              this._messages?.push({ role: "assistant", content: partial, selected: true });
+    +              const tokenList = this._enc.encode(partial);
+    +              const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), tokenList.length);
+    +              this._response = chat_response;
+    +              this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+    +            }
+    +          } catch (e) {
+    +            console.warn('forceFinalizePartial handling failed:', e);
+    +            this._view?.webview.postMessage({ type: 'addResponse', value: '[WARN] Could not finalize partial output.' });
+    +          }
+    +          break;
+    +        }
+             case 'fileClicked': {
+               console.log("file Clicked!!!!!");
+               const filePath = data.value; // e.g., 'src/extension.ts' (relative to workspace)
+               if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+                 vscode.window.showErrorMessage('No workspace folder open.');
+    @@ -532,7 +551,6 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+             if (responsesStream && (Symbol.asyncIterator in Object(responsesStream))) {
+               console.log("Responses stream created");
+               this._view?.webview.postMessage({ type: 'streamStart' });
+    -
+               // Track tool calls and outputs
+               const toolCalls: Record<string, {
+                 id: string,
+    @@ -594,7 +612,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+                   ready.forEach(c => { c.submitted = true; });
+                 } catch (e) {
+                   console.warn('Submitting stub tool outputs failed:', e);
+                 }
+               };
+    -
+    +          try {
+    +          
+               for await (const event of responsesStream) {
+                 const t = (event && event.type) || '';
+                 if (t === 'response.created') { postProgress('▶️ response.created'); continue; }
+                 if (t === 'response.completed') { postProgress('✅ response.completed'); continue; }
+                 if (t === 'step.started') { const step = (event as any)?.step; postProgress(`🟡 step.started: ${step?.type || 'unknown'}`); continue; }
+    @@ -748,12 +767,13 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+                   continue;              
+                 } else {
+                   // handle other events silently (tool calls, etc.) for now
+                 }
+               }
+    -
+    -          flushDelta(true);
+    -          this._view?.webview.postMessage({ type: 'streamEnd' });
+    +          
+    +          } finally {
+    +            flushDelta(true);
+    +            this._view?.webview.postMessage({ type: 'streamEnd' });
+    +          }
+     
+               // After streaming, add aggregated web searches (not selected)
+               if (webSearchQueries.length) {
+                 const content = `Web searches executed:\n` + webSearchQueries.map(q => `- ${q}`).join('\n');
+                 this._messages?.push({ role: "assistant", content, selected: false, collapsed: true });
+    @@ -807,7 +827,6 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+           } else {
+             // Default Chat Completions flow
+             const stream = await this._openai.chat.completions.create({
+               model: this._settings.model,
+               messages: messagesToSend,
+    @@ -820,7 +839,6 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+             
+             console.log("Message sender created");
+     
+             this._view?.webview.postMessage({ type: 'streamStart' });
+    -
+             let completionTokens = 0;
+             full_message = "";
+     
+    @@ -835,6 +853,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+               }
+             };
+     
+    +        try {
+             for await (const chunk of stream) {
+               const content = (chunk as any).choices?.[0]?.delta?.content || "";
+               console.log("chunk:", chunk);
+               console.log("content:", content);
+               if (!content) continue;
+    @@ -849,11 +868,12 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
+               // stream delta (throttled)
+               deltaAccumulator += content;
+               flushDelta(false);
+             }
+     
+    -        // Ensure last delta is flushed and end the stream
+    -        flushDelta(true);
+    -        this._view?.webview.postMessage({ type: 'streamEnd' });
+    +        } finally {
+    +          // Ensure last delta is flushed and end the stream even on errors
+    +          flushDelta(true);
+    +          this._view?.webview.postMessage({ type: 'streamEnd' });
+    +        }
+     
+             this._messages?.push({ role: "assistant", content: full_message, selected:true })
+             console.log("Full message:", full_message);
+             console.log("Full Number of tokens:", completionTokens);
+             const tokenList = this._enc.encode(full_message);
+    ```
+  selected: true
+  collapsed: false

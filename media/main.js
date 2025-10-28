@@ -18,6 +18,10 @@
     let pendingFinalResponse = false;
     let renderScheduled = false;
     const MAX_STREAM_LINES = 50;
+    // Watchdog to auto-abort stalled streams
+    const STREAM_IDLE_TIMEOUT_MS = 90000; // 90s without deltas => consider stalled
+    let lastDeltaAt = 0;
+    let streamWatchdog = null;
 
     // Remember per-message collapse state (keyed by message index)
     const collapseState = new Map(); // key: "messageIndex", value: boolean (true = collapsed)
@@ -148,9 +152,21 @@
         switch (message.type) {
             case "addResponse": {
                 response = message.value;
-                // If we're still streaming, defer the full render until streamEnd
+                // If we're still streaming, decide whether to force-cancel or defer
                 if (isStreaming) {
-                    pendingFinalResponse = true;
+                    // If this looks like a final render (not the initial '...'),
+                    // cancel streaming state and render immediately to unblock the UI.
+                    if (typeof message.value === 'string' && message.value !== '...') {
+                        isStreaming = false;
+                        pendingDelta = '';
+                        streamBuffer = '';
+                        renderScheduled = false;
+                        // Clear watchdog
+                        if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+                        setResponse();
+                    } else {
+                        pendingFinalResponse = true;
+                    }
                 } else {
                     setResponse();
                 }
@@ -218,6 +234,22 @@
                 isStreaming = true;
                 streamBuffer = '';
                 pendingDelta = '';
+                lastDeltaAt = Date.now();
+                // Start/Reset watchdog
+                if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+                streamWatchdog = setInterval(() => {
+                    if (!isStreaming) return;
+                    const now = Date.now();
+                    if (now - lastDeltaAt > STREAM_IDLE_TIMEOUT_MS) {
+                        // Consider the stream stalled; finalize with what we have
+                        const partial = (streamBuffer || '') + (pendingDelta || '');
+                        isStreaming = false;
+                        pendingDelta = '';
+                        renderScheduled = false;
+                        if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
+                        vscode.postMessage({ type: 'forceFinalizePartial', value: partial });
+                    }
+                }, 1000);                
                 const responseDiv = document.getElementById("response");
                 if (responseDiv) responseDiv.innerHTML = '...';
                 break;
@@ -225,6 +257,7 @@
             case "appendDelta": {
                 if (!isStreaming) break;
                 pendingDelta += message.value || '';
+                lastDeltaAt = Date.now();
                 scheduleStreamRender();
                 break;
             }
@@ -234,6 +267,7 @@
                 pendingDelta = '';
                 streamBuffer = '';
                 renderScheduled = false;
+                if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
                 // If a final full response was received during streaming, render it now
                 if (pendingFinalResponse) {
                     pendingFinalResponse = false;
