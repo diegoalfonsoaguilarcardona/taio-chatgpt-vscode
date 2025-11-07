@@ -515,6 +515,101 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  public async appendSelectionMarkdownAsChat() {
+    console.log("append markdown selection as chat");
+
+    // Ensure there is an active text editor with a selection
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+      vscode.window.showErrorMessage('No active text editor with a selection!');
+      return;
+    }
+
+    const selection = activeEditor.selection;
+    if (selection.isEmpty) {
+      vscode.window.showErrorMessage('No text selected!');
+      return;
+    }
+
+    // Get the selected markdown text
+    const selectedText = activeEditor.document.getText(selection);
+
+    try {
+      // Split markdown by images, capturing text and image segments
+      type Part = { type: 'text', text: string } | { type: 'image', url: string, alt: string };
+      const parts: Part[] = [];
+      const md = selectedText;
+      const imgRe = /!\[([^\]]*)\]\(([^)]+)\)/g;
+      let lastIndex = 0;
+      let m: RegExpExecArray | null;
+
+      while ((m = imgRe.exec(md)) !== null) {
+        const before = md.slice(lastIndex, m.index);
+        if (before && before.trim().length > 0) {
+          parts.push({ type: 'text', text: before });
+        }
+        // m[1] = alt text, m[2] = inside () which can be: url [optional title]
+        let inside = (m[2] || '').trim();
+        // Remove enclosing angle brackets if present
+        if (inside.startsWith('<') && inside.includes('>')) {
+          inside = inside.slice(1, inside.indexOf('>'));
+        }
+        // Extract URL (first token before whitespace), strip quotes if any
+        let url = inside.split(/\s+/)[0] || '';
+        url = url.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+        const alt = (m[1] || '').trim();
+        if (url) parts.push({ type: 'image', url, alt });
+        lastIndex = m.index + m[0].length;
+      }
+      const tail = md.slice(lastIndex);
+      if (tail && tail.trim().length > 0) {
+        parts.push({ type: 'text', text: tail });
+      }
+
+      if (!this._messages) this._messages = [];
+
+      for (const p of parts) {
+        if (p.type === 'text') {
+          const content = `\`\`\`markdown\n${p.text}\n\`\`\``;
+          const newMessage: UserMessage = { role: "user", content, selected: true };
+          this._messages.push(newMessage);
+        } else {
+          const url = p.url;
+          const alt = p.alt || 'image';
+          let fileName = alt;
+          // Derive a filename for display
+          const mData = url.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,/i);
+          if (mData) {
+            const ext = mData[1] || 'png';
+            fileName = `${alt || 'image'}.${ext}`;
+          } else {
+            try {
+              const u = new URL(url);
+              const base = (u.pathname || '').split('/').filter(Boolean).pop() || '';
+              if (base) fileName = base;
+            } catch { /* ignore URL parse errors */ }
+          }
+          const newMessage: UserMessage = {
+            role: "user",
+            content: [
+              { type: "text", text: `${fileName}:` },
+              { type: "image_url", image_url: { url } }
+            ] as any,
+            selected: true
+          };
+          this._messages.push(newMessage);
+        }
+      }
+
+      // Update the webview visualization once
+      const chat_response = this._updateChatMessages(this._getMessagesNumberOfTokens(), 0);
+      this._view?.webview.postMessage({ type: 'addResponse', value: chat_response });
+    } catch (error) {
+      console.error("Failed to append markdown selection as chat:", error);
+      vscode.window.showErrorMessage('Failed to append markdown selection as chat: ' + error);
+    }
+  }
+
   public fixCodeBlocks(response: string) {
     // Use a regular expression to find all occurrences of the substring in the string
     const REGEX_CODEBLOCK = new RegExp('\`\`\`', 'g');

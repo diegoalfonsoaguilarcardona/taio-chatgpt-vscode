@@ -37,7 +37,8 @@
     "onCommand:chatgpt.documentation",
     "onCommand:chatgpt.useSelectionAsChat",
     "onCommand:chatgpt.appendSelectionAsChat",
-    "onCommand:chatgpt.addFileReferenceToChat"
+    "onCommand:chatgpt.addFileReferenceToChat",
+    "onCommand:chatgpt.appendSelectionMarkdownAsChat"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -81,6 +82,10 @@
       {
         "command": "chatgpt.appendSelectionAsChat",
         "title": "Append selection to ChatGPT conversation"
+      },
+      {
+        "command": "chatgpt.appendSelectionMarkdownAsChat",
+        "title": "Append Markdown selection to ChatGPT conversation"
       },      
       {
         "command": "chatgpt.tryAgain",
@@ -140,6 +145,11 @@
           "command": "chatgpt.appendSelectionAsChat",
           "when": "editorHasSelection",
           "group": "chatgpt-menu-group@8"
+        },
+        {
+          "command": "chatgpt.appendSelectionMarkdownAsChat",
+          "when": "editorHasSelection",
+          "group": "chatgpt-menu-group@8"
         }
       ],
       "commandPalette": [
@@ -179,6 +189,10 @@
         {
           "command": "chatgpt.appendSelectionAsChat",
           "when": "editorHasSelection"          
+        },
+        {
+          "command": "chatgpt.appendSelectionMarkdownAsChat",
+          "when": "editorHasSelection"
         }
       ],
       "explorer/context": [
