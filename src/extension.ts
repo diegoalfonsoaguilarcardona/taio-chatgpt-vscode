@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { promises as fsp } from 'fs';
 import { Provider, Prompt, ProviderSettings } from './types';
 import { ChatGPTViewProvider } from './chatGptViewProvider';
 
@@ -9,6 +10,146 @@ const BASE_URL = 'https://api.openai.com/v1';
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('activating extension "chatgpt"');
+    // ---------- Helpers: type detection and parsing ----------
+    const IMG_SIG = {
+        png: { mime: 'image/png', sig: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },
+        jpg: { mime: 'image/jpeg', sig: [0xFF, 0xD8] },
+        gif87a: { mime: 'image/gif', str: 'GIF87a' },
+        gif89a: { mime: 'image/gif', str: 'GIF89a' },
+        webp: { mime: 'image/webp', riff: 'RIFF', webp: 'WEBP' },
+        bmp: { mime: 'image/bmp', str: 'BM' }
+    } as const;
+
+    function bufferStartsWith(buf: Buffer, sig: number[] | string): boolean {
+        if (Array.isArray(sig)) {
+            if (buf.length < sig.length) return false;
+            for (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;
+            return true;
+        }
+        const s = Buffer.from(sig, 'ascii');
+        if (buf.length < s.length) return false;
+        return buf.slice(0, s.length).equals(s);
+    }
+
+    function detectImageMimeFromBuffer(buf: Buffer): string | null {
+        if (bufferStartsWith(buf, IMG_SIG.png.sig)) return IMG_SIG.png.mime;
+        if (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;
+        if (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';
+        // WEBP: "RIFF" at 0..3 and "WEBP" at 8..11
+        if (buf.length >= 12 && Buffer.from('RIFF').equals(buf.slice(0, 4)) && Buffer.from('WEBP').equals(buf.slice(8, 12))) {
+            return IMG_SIG.webp.mime;
+        }
+        if (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;
+        // SVG (text): look for "<svg" early on
+        const head = buf.slice(0, Math.min(buf.length, 512)).toString('utf8');
+        if (/\<svg[\s>]/i.test(head)) return 'image/svg+xml';
+        return null;
+    }
+
+    function isProbablyTextBuffer(buf: Buffer): boolean {
+        // Fast binary checks
+        if (buf.includes(0x00)) return false; // NUL byte strongly indicates binary
+        const len = Math.min(buf.length, 4096);
+        let suspicious = 0;
+        for (let i = 0; i < len; i++) {
+            const c = buf[i];
+            // Allow TAB(9), LF(10), CR(13)
+            if (c === 9 || c === 10 || c === 13) continue;
+            // Printable ASCII
+            if (c >= 32 && c <= 126) continue;
+            // UTF-8 multi-byte: treat bytes >= 0xC2 as plausible text
+            if (c >= 0xC2) continue;
+            // Everything else is suspicious
+            suspicious++;
+        }
+        return suspicious / (len || 1) < 0.3;
+    }
+
+    async function isTextFile(absPath: string): Promise<boolean> {
+        try {
+            const fd = await fsp.open(absPath, 'r');
+            try {
+                const { buffer, bytesRead } = await fd.read(Buffer.alloc(4096), 0, 4096, 0);
+                return isProbablyTextBuffer(buffer.subarray(0, bytesRead));
+            } finally {
+                await fd.close();
+            }
+        } catch {
+            return false;
+        }
+    }
+
+    async function detectImageMime(absPath: string): Promise<string | null> {
+        try {
+            const fd = await fsp.open(absPath, 'r');
+            try {
+                const { buffer, bytesRead } = await fd.read(Buffer.alloc(64), 0, 64, 0);
+                return detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));
+            } finally {
+                await fd.close();
+            }
+        } catch {
+            return null;
+        }
+    }
+
+    async function readImageAsDataUrl(absPath: string, mime: string): Promise<string> {
+        const data = await fsp.readFile(absPath);
+        const b64 = data.toString('base64');
+        return `data:${mime};base64,${b64}`;
+    }
+
+    function extractPathsFromText(text: string): string[] {
+        // Capture ./foo, ../foo, or foo starting with ./ in tree output
+        // Also handle lines like "├── ./dir/file.ext"
+        const results: string[] = [];
+        const re = /(?:^|\s)(\.{1,2}[\/\\][^\s]+|\.{1}[\/\\][^\s]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(text)) !== null) {
+            let p = m[1].trim();
+            // Strip trailing punctuation
+            p = p.replace(/[,:;)]*$/, '');
+            // Normalize ././style occurrences
+            while (p.startsWith('././')) p = p.slice(2);
+            results.push(p);
+        }
+        // De-duplicate preserving order
+        const seen = new Set<string>();
+        return results.filter(p => {
+            const key = p;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    function getWorkspaceRelativeAndAbsolute(relOrDotPath: string, baseFolder: vscode.WorkspaceFolder): { rel: string, abs: string } {
+        let rel = relOrDotPath.replace(/^[.][\/\\]/, ''); // drop leading ./ or .\
+        const abs = path.join(baseFolder.uri.fsPath, rel);
+        return { rel: rel.replace(/\\/g, '/'), abs };
+    }
+
+    async function addPathAsReferenceOrImage(provider: ChatGPTViewProvider, abs: string, rel: string) {
+        try {
+            const st = await fsp.stat(abs);
+            if (!st.isFile()) return { added: false, reason: 'not-file' };
+        } catch {
+            return { added: false, reason: 'missing' };
+        }
+        const mime = await detectImageMime(abs);
+        if (mime) {
+            const dataUrl = await readImageAsDataUrl(abs, mime);
+            provider.addImageToChat(dataUrl, path.basename(abs));
+            return { added: true, kind: 'image' as const };
+        }
+        if (await isTextFile(abs)) {
+            const ext = path.extname(rel).substring(1);
+            provider.addFileReferenceToChat(rel, ext);
+            return { added: true, kind: 'text' as const };
+        }
+        return { added: false, reason: 'binary' };
+    }
+
 	// Get the settings from the extension's configuration
 	const config = vscode.workspace.getConfiguration('chatgpt');
 
@@ -126,7 +267,24 @@ export function activate(context: vscode.ExtensionContext) {
             relativePath = path.basename(uri.fsPath);
           }
           const fileExtension = path.extname(relativePath).substring(1);
-          provider.addFileReferenceToChat(relativePath, fileExtension);
+          // Use content-based detection: image => add as base64 image; text => add as reference; else warn.
+          const abs = uri.fsPath;
+          const ws = workspaceFolder;
+          if (!ws) {
+            vscode.window.showErrorMessage('No workspace folder for this file.');
+            return;
+          }
+          const mime = await detectImageMime(abs);
+          if (mime) {
+            const dataUrl = await readImageAsDataUrl(abs, mime);
+            provider.addImageToChat(dataUrl, path.basename(abs));
+            return;
+          }
+          if (await isTextFile(abs)) {
+            provider.addFileReferenceToChat(relativePath.replace(/\\/g, '/'), fileExtension);
+          } else {
+            vscode.window.showWarningMessage('Selected file appears to be binary; not added.');
+          }
         } catch (err) {
           vscode.window.showErrorMessage(`Failed to add file reference: ${err}`);
         }
@@ -243,6 +401,61 @@ export function activate(context: vscode.ExtensionContext) {
 		  }
 		})
 	  );
+
+    // Add multiple references/images from selected "tree" text
+    context.subscriptions.push(
+        vscode.commands.registerCommand('chatgpt.addSelectedPathsAsReferences', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showErrorMessage('No active editor.');
+                return;
+            }
+            const sel = editor.selection;
+            if (sel.isEmpty) {
+                vscode.window.showErrorMessage('No text selected.');
+                return;
+            }
+            const selectedText = editor.document.getText(sel);
+            const folders = vscode.workspace.workspaceFolders;
+            if (!folders || folders.length === 0) {
+                vscode.window.showErrorMessage('No workspace folder open.');
+                return;
+            }
+            const base = folders[0];
+            const paths = extractPathsFromText(selectedText);
+            if (paths.length === 0) {
+                vscode.window.showWarningMessage('No file paths found in selection.');
+                return;
+            }
+
+            let addedText = 0, addedImg = 0, skippedMissing = 0, skippedBinary = 0, skippedDir = 0;
+            for (const p of paths) {
+                const { rel, abs } = getWorkspaceRelativeAndAbsolute(p, base);
+                try {
+                    const st = await fsp.stat(abs);
+                    if (!st.isFile()) { skippedDir++; continue; }
+                } catch {
+                    skippedMissing++; continue;
+                }
+                const res = await addPathAsReferenceOrImage(provider, abs, rel);
+                if (res.added && res.kind === 'text') addedText++;
+                else if (res.added && res.kind === 'image') addedImg++;
+                else if (res.reason === 'missing') skippedMissing++;
+                else if (res.reason === 'binary') skippedBinary++;
+                else if (res.reason === 'not-file') skippedDir++;
+            }
+            const summaryParts: string[] = [];
+            if (addedText) summaryParts.push(`${addedText} text`);
+            if (addedImg) summaryParts.push(`${addedImg} image`);
+            if (!addedText && !addedImg) summaryParts.push('0');
+            const skippedParts: string[] = [];
+            if (skippedMissing) skippedParts.push(`${skippedMissing} missing`);
+            if (skippedDir) skippedParts.push(`${skippedDir} directories`);
+            if (skippedBinary) skippedParts.push(`${skippedBinary} binary`);
+            const msg = `Added ${summaryParts.join(' + ')} file(s)` + (skippedParts.length ? `; skipped ${skippedParts.join(', ')}` : '');
+            vscode.window.setStatusBarMessage(`[ChatGPT] ${msg}`, 4000);
+        })
+    );
 }
 
 // This method is called when your extension is deactivated

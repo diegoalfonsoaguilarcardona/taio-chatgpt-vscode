@@ -102,7 +102,11 @@
       {
         "command": "chatgpt.addFileReferenceToChat",
         "title": "Add File Reference to ChatGPT"        
-      }
+      },
+      {
+        "command": "chatgpt.addSelectedPathsAsReferences",
+        "title": "Add Selected File References to Chat"
+       }
     ],
     "menus": {
       "editor/context": [
@@ -150,6 +154,10 @@
           "command": "chatgpt.appendSelectionMarkdownAsChat",
           "when": "editorHasSelection",
           "group": "chatgpt-menu-group@8"
+        },
+        {
+          "command": "chatgpt.addSelectedPathsAsReferences",
+          "when": "editorHasSelection", "group": "chatgpt-menu-group@9"
         }
       ],
       "commandPalette": [
@@ -193,6 +201,10 @@
         {
           "command": "chatgpt.appendSelectionMarkdownAsChat",
           "when": "editorHasSelection"
+        },
+        {
+          "command": "chatgpt.addSelectedPathsAsReferences",
+          "when": "editorHasSelection"
         }
       ],
       "explorer/context": [
@@ -203,7 +215,7 @@
         },
         {
           "command": "chatgpt.addFileReferenceToChat",
-          "when": "resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/",
+          "when": "resourceScheme == file",
           "group": "navigation"
         },
         {

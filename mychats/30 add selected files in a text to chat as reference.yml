@@ -1,0 +1,250 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal pure unified diffs.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+
+    INPUT:
+    - `sources`: list of { path: string, content: string (full file with LF newlines) }
+    - `request`: natural language change description.
+
+    BEHAVIOR:
+    - Make only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly.
+    - Use LF newlines in all outputs. Do not insert timestamps, hashes, colors, ANSI codes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+
+    STRICT UNIFIED-DIFF FORMAT:
+    - Output one fenced diff block per affected file, preceded by a plain-text heading `### FILE: <path>` outside the fence.
+    - For each file, output pure unified diff only:
+      --- a/<path>
+      +++ b/<path>
+      @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+      <hunk lines>
+    - Always include both lengths in the hunk header, even when 1 (never use the shortened form).
+    - Hunk line prefixes:
+      - Context (unchanged): a single leading space ' ' followed by the exact line content.
+      - Removal: '-' followed by the exact old line content.
+      - Addition: '+' followed by the exact new line content.
+      - There must be exactly one prefix character per line and no extra leading spaces after the prefix.
+    - Preserve whitespace verbatim:
+      - Do not alter indentation, tabs, or trailing spaces in unchanged lines.
+      - Represent tabs as literal tab characters; do not convert tabs ↔ spaces.
+      - Empty lines must still carry their prefix (e.g., " " then newline for context-empty line).
+    - Newline-at-EOF handling:
+      - Mirror the source files’ newline-at-EOF status.
+      - If the last line of either old or new side lacks a trailing LF, include the canonical marker line:
+        "\ No newline at end of file" (exactly as shown, with no prefix), immediately after the affected hunk line.
+    - Context lines: include 3 lines of context before and after each change when available (fewer if at file boundaries).
+
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file:
+      --- /dev/null
+      +++ b/<path>
+      A single hunk starting at 1, covering all added lines.
+    - Deleted file:
+      --- a/<path>
+      +++ /dev/null
+      A single hunk removing all lines.
+
+    ORDERING:
+    - Sort files alphabetically by `<path>`.
+    - Within each file, sort hunks by ascending line number.
+    - Hunks must not overlap and must be separated by at least one blank line if two hunks are adjacent in output.
+
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer: brief direct answer to the request and/or what will be changed.
+    2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder:
+       "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    3) Diffs: one fenced ``​`diff code block per affected file, each preceded by `### FILE: <path>`.
+
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+      ``​`text
+      === DIFF BEGIN ===
+      NO_CHANGES
+      === DIFF END ===
+      ``​`
+
+    ERROR CASES (emit as their own per-file fenced blocks within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! FILE_NOT_FOUND_FOR_DELETE
+      ``​`
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! FILE_WAS_DELETED_RECREATE_CONFIRM
+      ``​`
+    - Impossible or contradictory request:
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! REQUEST_CONFLICT
+      ``​`
+
+    STRICT SELF-CHECK BEFORE OUTPUT (MANDATORY):
+    - For each file:
+      - Compute 1-based line numbers from `sources[path]` exactly as given (LF-separated).
+      - For every hunk:
+        - start_old is the line number in the old file of the first hunk context/removal line.
+        - len_old equals the count of lines in the hunk that are context or removals.
+        - start_new is the corresponding line number in the new file.
+        - len_new equals the count of lines in the hunk that are context or additions.
+        - All context lines must match the old and new file text exactly (including tabs and trailing spaces).
+      - After virtually applying all hunks in order to the old content, the resulting text must equal the intended new content byte-for-byte (LF newlines).
+      - Ensure no missing spaces, no extra spaces after prefix characters, and no omitted length values in headers.
+    - Do not emit the output if any self-check fails; instead, correct the diff deterministically and re-validate.
+
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code.
+    - Do not include commentary beyond the Answer, Brief, and the required per-file diff/code blocks.
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    I have this visual studio code extension that allows a user to comunicate with llms providers.  It is working perfect.  One of it's features is allow the user to right click a file and add a reference of that file to the chat.  That is working perfect, the only thing is that when I want to add multiple files, I want to have a way to add multiple files. I want to be able to use tree (as in the example), then copy that result into a text tab (in visual studio code), then select parts of that result, right click and add those selected files as reference to the chat.  Remember, I will select part of that tree output tree text and only those selected files are going to be added.  Another thing is that at the moment I am verifying the file extension so only text files can be added, but some extensions are not working, I have some extensions that are not in the list, but that are text files and are not allowed to be added; I want to be able to add any text file, so find out another way to determine if the file is realy a text file.  Also in the case on an image, add it as a base64 image (as it is happening right now with images).
+    ```ini
+    tree -f -I node_modules -I mychats -I mytests 
+    -I patcher 
+    .
+    ├── ./Applications
+    │   └── ./Applications/chat-builder.html
+    ├── ./CHANGELOG.md
+    ├── ./current_settings
+    │   ├── ./current_settings/prompts.json
+    │   └── ./current_settings/providers.json
+    ├── ./diegoaacchatgpt-1.1.0.vsix
+    ├── ./dist
+    │   ├── ./dist/extension.js
+    │   ├── ./dist/extension.js.LICENSE.txt
+    │   └── ./dist/extension.js.map
+    ├── ./examples
+    │   ├── ./examples/create.png
+    │   ├── ./examples/explain.png
+    │   ├── ./examples/main.png
+    │   └── ./examples/refactor.png
+    ├── ./media
+    │   ├── ./media/main.js
+    │   ├── ./media/scripts
+    │   │   ├── ./media/scripts/microlight.min.js
+    │   │   ├── ./media/scripts/purify.min.js
+    │   │   ├── ./media/scripts/showdown.min.js
+    │   │   └── ./media/scripts/tailwind.min.js
+    │   └── ./media/styles.css
+    ├── ./package-lock.json
+    ├── ./package.json
+    ├── ./project_description_for_ai_2.md
+    ├── ./project_description_for_ai_3.md
+    ├── ./project_description_for_ai.md
+    ├── ./README.md
+    ├── ./resources
+    │   ├── ./resources/buy-default-yellow-small.png
+    │   ├── ./resources/extensionIcon.png
+    │   └── ./resources/icon.png
+    ├── ./src
+    │   ├── ./src/chatGptViewProvider.ts
+    │   ├── ./src/extension.ts
+    │   └── ./src/types.ts
+    ├── ./toGenerateXSIX.txt
+    ├── ./tsconfig.json
+    ├── ./vsc-extension-quickstart.md
+    ├── ./webpack.config.js
+    └── ./yarn.lock
+
+    9 directories, 35 files
+    ```
+  selected: true
+  collapsed: false
+- role: assistant
+  content: |-
+    Responses message output item:
+    ```json
+    {
+      "id": "msg_0701a79aff218a2000691b150e745c81959f278b29e66b1cba",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Answer:\nI will add a new command “Add Selected File References to Chat” that parses the selected “tree” text and adds only the selected files: text files as references, images as base64 images. I’ll also make the Explorer “Add File Reference to Chat” work for any file by detecting text vs. image via content (no hardcoded extensions).\n\nBrief:\n- New command: chatgpt.addSelectedPathsAsReferences.\n- Editor context menu + Command Palette entry when text is selected.\n- Robust path extractor for “tree -f …” style lines; de-duplicates; ignores directories/missing files.\n- Content-based type detection:\n  - Images (PNG, JPG/JPEG, GIF, WebP, BMP, SVG) → added via addImageToChat as data URLs.\n  - Text files detected heuristically (no NULs, low control-bytes ratio) → added as lightweight references.\n  - Others/binary → skipped with a brief summary notice.\n- Explorer “Add File Reference to Chat” now works for any file (resourceScheme == file) and uses the same detection (images become base64, text becomes reference).\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: package.json\n```diff\n--- a/package.json\n+++ b/package.json\n@@ -61,6 +61,10 @@\n       {\n         \"command\": \"chatgpt.addFileReferenceToChat\",\n         \"title\": \"Add File Reference to Chat\"        \n+      },\n+      {\n+        \"command\": \"chatgpt.addSelectedPathsAsReferences\",\n+        \"title\": \"Add Selected File References to Chat\"\n       }\n     ],\n     \"menus\": {\n@@ -111,6 +115,11 @@\n           \"command\": \"chatgpt.appendSelectionMarkdownAsChat\",\n           \"when\": \"editorHasSelection\"\n         }\n+      ],\n+      \"editor/context\": [\n+        {\n+          \"command\": \"chatgpt.addSelectedPathsAsReferences\",\n+          \"when\": \"editorHasSelection\", \"group\": \"chatgpt-menu-group@9\"\n+        }\n       ],\n-      \"explorer/context\": [\n+      \"explorer/context\": [\n         {\n           \"command\": \"chatgpt.addImageToChat\",\n           \"when\": \"resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif\",\n@@ -118,12 +127,12 @@\n         },\n         {\n           \"command\": \"chatgpt.addFileReferenceToChat\",\n-          \"when\": \"resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/\",\n+          \"when\": \"resourceScheme == file\",\n           \"group\": \"navigation\"\n         },\n         {\n           \"command\": \"chatgpt.addFileToChat\",\n           \"when\": \"resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/\",\n           \"group\": \"navigation\"\n         }\n       ]\n     },\n@@ -223,6 +232,10 @@\n         },\n         {\n           \"command\": \"chatgpt.appendSelectionMarkdownAsChat\",\n           \"when\": \"editorHasSelection\"\n+        },\n+        {\n+          \"command\": \"chatgpt.addSelectedPathsAsReferences\",\n+          \"when\": \"editorHasSelection\"\n         }\n       ]\n     },\n```\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -1,6 +1,7 @@\n import * as vscode from 'vscode';\n import * as path from 'path';\n import * as fs from 'fs';\n+import { promises as fsp } from 'fs';\n import { Provider, Prompt, ProviderSettings } from './types';\n import { ChatGPTViewProvider } from './chatGptViewProvider';\n \n@@ -10,6 +11,139 @@\n \n export function activate(context: vscode.ExtensionContext) {\n \tconsole.log('activating extension \"chatgpt\"');\n+\t// ---------- Helpers: type detection and parsing ----------\n+\tconst IMG_SIG = {\n+\t\tpng: { mime: 'image/png', sig: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },\n+\t\tjpg: { mime: 'image/jpeg', sig: [0xFF, 0xD8] },\n+\t\tgif87a: { mime: 'image/gif', str: 'GIF87a' },\n+\t\tgif89a: { mime: 'image/gif', str: 'GIF89a' },\n+\t\twebp: { mime: 'image/webp', riff: 'RIFF', webp: 'WEBP' },\n+\t\tbmp: { mime: 'image/bmp', str: 'BM' }\n+\t} as const;\n+\n+\tfunction bufferStartsWith(buf: Buffer, sig: number[] | string): boolean {\n+\t\tif (Array.isArray(sig)) {\n+\t\t\tif (buf.length < sig.length) return false;\n+\t\t\tfor (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;\n+\t\t\treturn true;\n+\t\t}\n+\t\tconst s = Buffer.from(sig, 'ascii');\n+\t\tif (buf.length < s.length) return false;\n+\t\treturn buf.slice(0, s.length).equals(s);\n+\t}\n+\n+\tfunction detectImageMimeFromBuffer(buf: Buffer): string | null {\n+\t\tif (bufferStartsWith(buf, IMG_SIG.png.sig)) return IMG_SIG.png.mime;\n+\t\tif (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;\n+\t\tif (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';\n+\t\t// WEBP: \"RIFF\" at 0..3 and \"WEBP\" at 8..11\n+\t\tif (buf.length >= 12 && Buffer.from('RIFF').equals(buf.slice(0, 4)) && Buffer.from('WEBP').equals(buf.slice(8, 12))) {\n+\t\t\treturn IMG_SIG.webp.mime;\n+\t\t}\n+\t\tif (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;\n+\t\t// SVG (text): look for \"<svg\" early on\n+\t\tconst head = buf.slice(0, Math.min(buf.length, 512)).toString('utf8');\n+\t\tif (/\\<svg[\\s>]/i.test(head)) return 'image/svg+xml';\n+\t\treturn null;\n+\t}\n+\n+\tfunction isProbablyTextBuffer(buf: Buffer): boolean {\n+\t\t// Fast binary checks\n+\t\tif (buf.includes(0x00)) return false; // NUL byte strongly indicates binary\n+\t\tconst len = Math.min(buf.length, 4096);\n+\t\tlet suspicious = 0;\n+\t\tfor (let i = 0; i < len; i++) {\n+\t\t\tconst c = buf[i];\n+\t\t\t// Allow TAB(9), LF(10), CR(13)\n+\t\t\tif (c === 9 || c === 10 || c === 13) continue;\n+\t\t\t// Printable ASCII\n+\t\t\tif (c >= 32 && c <= 126) continue;\n+\t\t\t// UTF-8 multi-byte: treat bytes >= 0xC2 as plausible text\n+\t\t\tif (c >= 0xC2) continue;\n+\t\t\t// Everything else is suspicious\n+\t\t\tsuspicious++;\n+\t\t}\n+\t\treturn suspicious / (len || 1) < 0.3;\n+\t}\n+\n+\tasync function isTextFile(absPath: string): Promise<boolean> {\n+\t\ttry {\n+\t\t\tconst fd = await fsp.open(absPath, 'r');\n+\t\t\ttry {\n+\t\t\t\tconst { buffer, bytesRead } = await fd.read(Buffer.alloc(4096), 0, 4096, 0);\n+\t\t\t\treturn isProbablyTextBuffer(buffer.subarray(0, bytesRead));\n+\t\t\t} finally {\n+\t\t\t\tawait fd.close();\n+\t\t\t}\n+\t\t} catch {\n+\t\t\treturn false;\n+\t\t}\n+\t}\n+\n+\tasync function detectImageMime(absPath: string): Promise<string | null> {\n+\t\ttry {\n+\t\t\tconst fd = await fsp.open(absPath, 'r');\n+\t\t\ttry {\n+\t\t\t\tconst { buffer, bytesRead } = await fd.read(Buffer.alloc(64), 0, 64, 0);\n+\t\t\t\treturn detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));\n+\t\t\t} finally {\n+\t\t\t\tawait fd.close();\n+\t\t\t}\n+\t\t} catch {\n+\t\t\treturn null;\n+\t\t}\n+\t}\n+\n+\tasync function readImageAsDataUrl(absPath: string, mime: string): Promise<string> {\n+\t\tconst data = await fsp.readFile(absPath);\n+\t\tconst b64 = data.toString('base64');\n+\t\treturn `data:${mime};base64,${b64}`;\n+\t}\n+\n+\tfunction extractPathsFromText(text: string): string[] {\n+\t\t// Capture ./foo, ../foo, or foo starting with ./ in tree output\n+\t\t// Also handle lines like \"├── ./dir/file.ext\"\n+\t\tconst results: string[] = [];\n+\t\tconst re = /(?:^|\\s)(\\.{1,2}[\\/\\\\][^\\s]+|\\.{1}[\\/\\\\][^\\s]+)/g;\n+\t\tlet m: RegExpExecArray | null;\n+\t\twhile ((m = re.exec(text)) !== null) {\n+\t\t\tlet p = m[1].trim();\n+\t\t\t// Strip trailing punctuation\n+\t\t\tp = p.replace(/[,:;)]*$/, '');\n+\t\t\t// Normalize ././style occurrences\n+\t\t\twhile (p.startsWith('././')) p = p.slice(2);\n+\t\t\tresults.push(p);\n+\t\t}\n+\t\t// De-duplicate preserving order\n+\t\tconst seen = new Set<string>();\n+\t\treturn results.filter(p => {\n+\t\t\tconst key = p;\n+\t\t\tif (seen.has(key)) return false;\n+\t\t\tseen.add(key);\n+\t\t\treturn true;\n+\t\t});\n+\t}\n+\n+\tfunction getWorkspaceRelativeAndAbsolute(relOrDotPath: string, baseFolder: vscode.WorkspaceFolder): { rel: string, abs: string } {\n+\t\tlet rel = relOrDotPath.replace(/^[.][\\/\\\\]/, ''); // drop leading ./ or .\\\n+\t\tconst abs = path.join(baseFolder.uri.fsPath, rel);\n+\t\treturn { rel: rel.replace(/\\\\/g, '/'), abs };\n+\t}\n+\n+\tasync function addPathAsReferenceOrImage(provider: ChatGPTViewProvider, abs: string, rel: string) {\n+\t\ttry {\n+\t\t\tconst st = await fsp.stat(abs);\n+\t\t\tif (!st.isFile()) return { added: false, reason: 'not-file' };\n+\t\t} catch {\n+\t\t\treturn { added: false, reason: 'missing' };\n+\t\t}\n+\t\tconst mime = await detectImageMime(abs);\n+\t\tif (mime) {\n+\t\t\tconst dataUrl = await readImageAsDataUrl(abs, mime);\n+\t\t\tprovider.addImageToChat(dataUrl, path.basename(abs));\n+\t\t\treturn { added: true, kind: 'image' as const };\n+\t\t}\n+\t\tif (await isTextFile(abs)) {\n+\t\t\tconst ext = path.extname(rel).substring(1);\n+\t\t\tprovider.addFileReferenceToChat(rel, ext);\n+\t\t\treturn { added: true, kind: 'text' as const };\n+\t\t}\n+\t\treturn { added: false, reason: 'binary' };\n+\t}\n+\n \t// Get the settings from the extension's configuration\n \tconst config = vscode.workspace.getConfiguration('chatgpt');\n \n@@ -82,6 +216,7 @@\n \t);\n \n     context.subscriptions.push(\n       vscode.commands.registerCommand('chatgpt.addFileReferenceToChat', async (uri: vscode.Uri) => {\n         if (!uri || !uri.fsPath) {\n           vscode.window.showErrorMessage('No file selected!');\n           return;\n         }\n         try {\n           const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);\n           let relativePath: string;\n           if (workspaceFolder) {\n             relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);\n           } else {\n             relativePath = path.basename(uri.fsPath);\n           }\n-          const fileExtension = path.extname(relativePath).substring(1);\n-          provider.addFileReferenceToChat(relativePath, fileExtension);\n+          const fileExtension = path.extname(relativePath).substring(1);\n+          // Use content-based detection: image => add as base64 image; text => add as reference; else warn.\n+          const abs = uri.fsPath;\n+          const ws = workspaceFolder;\n+          if (!ws) {\n+            vscode.window.showErrorMessage('No workspace folder for this file.');\n+            return;\n+          }\n+          const mime = await detectImageMime(abs);\n+          if (mime) {\n+            const dataUrl = await readImageAsDataUrl(abs, mime);\n+            provider.addImageToChat(dataUrl, path.basename(abs));\n+            return;\n+          }\n+          if (await isTextFile(abs)) {\n+            provider.addFileReferenceToChat(relativePath.replace(/\\\\/g, '/'), fileExtension);\n+          } else {\n+            vscode.window.showWarningMessage('Selected file appears to be binary; not added.');\n+          }\n         } catch (err) {\n           vscode.window.showErrorMessage(`Failed to add file reference: ${err}`);\n         }\n       })\n     );\t\n@@ -169,6 +304,68 @@\n \t\t})\n \t  );\n+\n+\t// Add multiple references/images from selected \"tree\" text\n+\tcontext.subscriptions.push(\n+\t\tvscode.commands.registerCommand('chatgpt.addSelectedPathsAsReferences', async () => {\n+\t\t\tconst editor = vscode.window.activeTextEditor;\n+\t\t\tif (!editor) {\n+\t\t\t\tvscode.window.showErrorMessage('No active editor.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\t\t\tconst sel = editor.selection;\n+\t\t\tif (sel.isEmpty) {\n+\t\t\t\tvscode.window.showErrorMessage('No text selected.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\t\t\tconst selectedText = editor.document.getText(sel);\n+\t\t\tconst folders = vscode.workspace.workspaceFolders;\n+\t\t\tif (!folders || folders.length === 0) {\n+\t\t\t\tvscode.window.showErrorMessage('No workspace folder open.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\t\t\tconst base = folders[0];\n+\t\t\tconst paths = extractPathsFromText(selectedText);\n+\t\t\tif (paths.length === 0) {\n+\t\t\t\tvscode.window.showWarningMessage('No file paths found in selection.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\n+\t\t\tlet addedText = 0, addedImg = 0, skippedMissing = 0, skippedBinary = 0, skippedDir = 0;\n+\t\t\tfor (const p of paths) {\n+\t\t\t\tconst { rel, abs } = getWorkspaceRelativeAndAbsolute(p, base);\n+\t\t\t\ttry {\n+\t\t\t\t\tconst st = await fsp.stat(abs);\n+\t\t\t\t\tif (!st.isFile()) { skippedDir++; continue; }\n+\t\t\t\t} catch {\n+\t\t\t\t\tskippedMissing++; continue;\n+\t\t\t\t}\n+\t\t\t\tconst res = await addPathAsReferenceOrImage(provider, abs, rel);\n+\t\t\t\tif (res.added && res.kind === 'text') addedText++;\n+\t\t\t\telse if (res.added && res.kind === 'image') addedImg++;\n+\t\t\t\telse if (res.reason === 'missing') skippedMissing++;\n+\t\t\t\telse if (res.reason === 'binary') skippedBinary++;\n+\t\t\t\telse if (res.reason === 'not-file') skippedDir++;\n+\t\t\t}\n+\t\t\tconst summaryParts: string[] = [];\n+\t\t\tif (addedText) summaryParts.push(`${addedText} text`);\n+\t\t\tif (addedImg) summaryParts.push(`${addedImg} image`);\n+\t\t\tif (!addedText && !addedImg) summaryParts.push('0');\n+\t\t\tconst skippedParts: string[] = [];\n+\t\t\tif (skippedMissing) skippedParts.push(`${skippedMissing} missing`);\n+\t\t\tif (skippedDir) skippedParts.push(`${skippedDir} directories`);\n+\t\t\tif (skippedBinary) skippedParts.push(`${skippedBinary} binary`);\n+\t\t\tconst msg = `Added ${summaryParts.join(' + ')} file(s)` + (skippedParts.length ? `; skipped ${skippedParts.join(', ')}` : '');\n+\t\t\tvscode.window.setStatusBarMessage(`[ChatGPT] ${msg}`, 4000);\n+\t\t})\n+\t);\n }\n \n // This method is called when your extension is deactivated\n export function deactivate() { }\n```"
+        }
+      ],
+      "role": "assistant"
+    }
+    ```
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    <think>**Exploring file type detection**
+
+    I’m thinking about how to determine if a file is a text file. One approach is to read some bytes and look for null bytes and other control bytes. I could also consider using libraries like chardet or istextorbinary, but I prefer to avoid additional dependencies. A simple heuristic would be to read the first few bytes: if there are many 0x00 bytes or bytes outside the typical text range, treat it as binary. I also need to identify image file signatures for formats like PNG, JPEG, etc.
+    **Reviewing image and text detection**
+
+    I’m examining the current code for adding images. It uses `addImageToChat`, which takes data URLs for images like PNG, JPG, GIF, etc. For file detection, I can use magic numbers or file extensions. For example, PNG has the magic number 89 50 4E 47, and JPEG uses FF D8. I also need to handle SVG files, recognizing them as text by checking for `<?xml` or `<svg`. For text detection, I’ll implement a function that reads the first 4096 bytes and checks for high-ASCII or null bytes while considering binary buffers carefully.
+    **Implementing file reference handling**
+
+    I’m working on how to handle text files in the chat. I’ll use `provider.addFileReferenceToChat(relativePath, ext)` to add references rather than content, as that’s what the user wants. I’ll also need to update the `package.json` to include a new command: `chatgpt.addSelectedTreeFilesToChat` with the title "Add Selected File References to Chat." This should be accessible in the editor's context when there’s a selection. I need to ensure command registration in `extension.ts` to handle file paths effectively. Additionally, I'll implement a method to bulk add file references or images in `ChatGptViewProvider`.
+    **Considering workspace path handling**
+
+    I need to consider the workspace's relative paths. In the tree output, they are all relative to the root with the leading `./`. My plan is to join the workspace root with these paths to ensure paths are correctly mapped. It seems like there could be repeating entries, such as `/dir/file`, so I’ll treat tokens like `./` or `../` appropriately. I also need to update `package.json` to add a new command and an entry in the editor/context menu. Additionally, I'll modify the detection for "text files" to align with the existing `addFileReferenceToChat`.
+    **Planning code modifications**
+
+    I need to implement significant code updates. First, I’ll adjust `package.json` to add a new command for `addSelectedPathsAsReferences` and modify the commands in the editor context and command palette. Next, I'll update `extension.ts` to add handling for detecting text vs. images within the `chatgpt.addFileReferenceToChat` command. 
+
+    For this, I’ll create several helper functions, such as `isProbablyTextBuffer` and `detectImageMime`. I’ll ensure that the implemented functions can handle different file formats and correctly process paths across both Windows and Unix systems. It's essential to capture paths accurately, avoiding duplicates. Finally, I'll make sure to check for valid files and show summary messages after operations are completed.
+    **Creating code patches**
+
+    I’m working on crafting a code patch and need to ensure minimal diffs for the changes. I’m not sure if I need to import the `os` module, but let's focus on the patches for `package.json` and `src/extension.ts`. 
+
+    I'll first update `package.json` to add a new command and adjust the `explorer/context` entries to set the second `addFileReferenceToChat` to "resourceScheme == file." I’ll keep the group unchanged and add new menu items, including an editor/context entry and a command palette entry. 
+
+    Then, I’ll make the necessary modifications in `extension.ts` and generate the diffs for both files.</think>
+  selected: false
+  collapsed: true
+- role: assistant
+  content: "Answer:\nI will add a new command “Add Selected File References to Chat” that parses the selected “tree” text and adds only the selected files: text files as references, images as base64 images. I’ll also make the Explorer “Add File Reference to Chat” work for any file by detecting text vs. image via content (no hardcoded extensions).\n\nBrief:\n- New command: chatgpt.addSelectedPathsAsReferences.\n- Editor context menu + Command Palette entry when text is selected.\n- Robust path extractor for “tree -f …” style lines; de-duplicates; ignores directories/missing files.\n- Content-based type detection:\n  - Images (PNG, JPG/JPEG, GIF, WebP, BMP, SVG) → added via addImageToChat as data URLs.\n  - Text files detected heuristically (no NULs, low control-bytes ratio) → added as lightweight references.\n  - Others/binary → skipped with a brief summary notice.\n- Explorer “Add File Reference to Chat” now works for any file (resourceScheme == file) and uses the same detection (images become base64, text becomes reference).\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: package.json\n```diff\n--- a/package.json\n+++ b/package.json\n@@ -61,6 +61,10 @@\n       {\n         \"command\": \"chatgpt.addFileReferenceToChat\",\n         \"title\": \"Add File Reference to Chat\"        \n+      },\n+      {\n+        \"command\": \"chatgpt.addSelectedPathsAsReferences\",\n+        \"title\": \"Add Selected File References to Chat\"\n       }\n     ],\n     \"menus\": {\n@@ -111,6 +115,11 @@\n           \"command\": \"chatgpt.appendSelectionMarkdownAsChat\",\n           \"when\": \"editorHasSelection\"\n         }\n+      ],\n+      \"editor/context\": [\n+        {\n+          \"command\": \"chatgpt.addSelectedPathsAsReferences\",\n+          \"when\": \"editorHasSelection\", \"group\": \"chatgpt-menu-group@9\"\n+        }\n       ],\n-      \"explorer/context\": [\n+      \"explorer/context\": [\n         {\n           \"command\": \"chatgpt.addImageToChat\",\n           \"when\": \"resourceExtname == .png || resourceExtname == .jpg || resourceExtname == .jpeg || resourceExtname == .gif\",\n@@ -118,12 +127,12 @@\n         },\n         {\n           \"command\": \"chatgpt.addFileReferenceToChat\",\n-          \"when\": \"resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/\",\n+          \"when\": \"resourceScheme == file\",\n           \"group\": \"navigation\"\n         },\n         {\n           \"command\": \"chatgpt.addFileToChat\",\n           \"when\": \"resourceLangId =~ /^((javascript)|(typescript)|(python)|(json)|(markdown)|(plaintext)|(cpp)|(c)|(java)|(xml)|(html)|(css)|(shellscript)|(yaml)|(toml)|(ini)|(go)|(ruby)|(php)|(rust)|(csharp)|(plaintext))$/\",\n           \"group\": \"navigation\"\n         }\n       ]\n     },\n@@ -223,6 +232,10 @@\n         },\n         {\n           \"command\": \"chatgpt.appendSelectionMarkdownAsChat\",\n           \"when\": \"editorHasSelection\"\n+        },\n+        {\n+          \"command\": \"chatgpt.addSelectedPathsAsReferences\",\n+          \"when\": \"editorHasSelection\"\n         }\n       ]\n     },\n```\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -1,6 +1,7 @@\n import * as vscode from 'vscode';\n import * as path from 'path';\n import * as fs from 'fs';\n+import { promises as fsp } from 'fs';\n import { Provider, Prompt, ProviderSettings } from './types';\n import { ChatGPTViewProvider } from './chatGptViewProvider';\n \n@@ -10,6 +11,139 @@\n \n export function activate(context: vscode.ExtensionContext) {\n \tconsole.log('activating extension \"chatgpt\"');\n+\t// ---------- Helpers: type detection and parsing ----------\n+\tconst IMG_SIG = {\n+\t\tpng: { mime: 'image/png', sig: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },\n+\t\tjpg: { mime: 'image/jpeg', sig: [0xFF, 0xD8] },\n+\t\tgif87a: { mime: 'image/gif', str: 'GIF87a' },\n+\t\tgif89a: { mime: 'image/gif', str: 'GIF89a' },\n+\t\twebp: { mime: 'image/webp', riff: 'RIFF', webp: 'WEBP' },\n+\t\tbmp: { mime: 'image/bmp', str: 'BM' }\n+\t} as const;\n+\n+\tfunction bufferStartsWith(buf: Buffer, sig: number[] | string): boolean {\n+\t\tif (Array.isArray(sig)) {\n+\t\t\tif (buf.length < sig.length) return false;\n+\t\t\tfor (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;\n+\t\t\treturn true;\n+\t\t}\n+\t\tconst s = Buffer.from(sig, 'ascii');\n+\t\tif (buf.length < s.length) return false;\n+\t\treturn buf.slice(0, s.length).equals(s);\n+\t}\n+\n+\tfunction detectImageMimeFromBuffer(buf: Buffer): string | null {\n+\t\tif (bufferStartsWith(buf, IMG_SIG.png.sig)) return IMG_SIG.png.mime;\n+\t\tif (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;\n+\t\tif (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';\n+\t\t// WEBP: \"RIFF\" at 0..3 and \"WEBP\" at 8..11\n+\t\tif (buf.length >= 12 && Buffer.from('RIFF').equals(buf.slice(0, 4)) && Buffer.from('WEBP').equals(buf.slice(8, 12))) {\n+\t\t\treturn IMG_SIG.webp.mime;\n+\t\t}\n+\t\tif (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;\n+\t\t// SVG (text): look for \"<svg\" early on\n+\t\tconst head = buf.slice(0, Math.min(buf.length, 512)).toString('utf8');\n+\t\tif (/\\<svg[\\s>]/i.test(head)) return 'image/svg+xml';\n+\t\treturn null;\n+\t}\n+\n+\tfunction isProbablyTextBuffer(buf: Buffer): boolean {\n+\t\t// Fast binary checks\n+\t\tif (buf.includes(0x00)) return false; // NUL byte strongly indicates binary\n+\t\tconst len = Math.min(buf.length, 4096);\n+\t\tlet suspicious = 0;\n+\t\tfor (let i = 0; i < len; i++) {\n+\t\t\tconst c = buf[i];\n+\t\t\t// Allow TAB(9), LF(10), CR(13)\n+\t\t\tif (c === 9 || c === 10 || c === 13) continue;\n+\t\t\t// Printable ASCII\n+\t\t\tif (c >= 32 && c <= 126) continue;\n+\t\t\t// UTF-8 multi-byte: treat bytes >= 0xC2 as plausible text\n+\t\t\tif (c >= 0xC2) continue;\n+\t\t\t// Everything else is suspicious\n+\t\t\tsuspicious++;\n+\t\t}\n+\t\treturn suspicious / (len || 1) < 0.3;\n+\t}\n+\n+\tasync function isTextFile(absPath: string): Promise<boolean> {\n+\t\ttry {\n+\t\t\tconst fd = await fsp.open(absPath, 'r');\n+\t\t\ttry {\n+\t\t\t\tconst { buffer, bytesRead } = await fd.read(Buffer.alloc(4096), 0, 4096, 0);\n+\t\t\t\treturn isProbablyTextBuffer(buffer.subarray(0, bytesRead));\n+\t\t\t} finally {\n+\t\t\t\tawait fd.close();\n+\t\t\t}\n+\t\t} catch {\n+\t\t\treturn false;\n+\t\t}\n+\t}\n+\n+\tasync function detectImageMime(absPath: string): Promise<string | null> {\n+\t\ttry {\n+\t\t\tconst fd = await fsp.open(absPath, 'r');\n+\t\t\ttry {\n+\t\t\t\tconst { buffer, bytesRead } = await fd.read(Buffer.alloc(64), 0, 64, 0);\n+\t\t\t\treturn detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));\n+\t\t\t} finally {\n+\t\t\t\tawait fd.close();\n+\t\t\t}\n+\t\t} catch {\n+\t\t\treturn null;\n+\t\t}\n+\t}\n+\n+\tasync function readImageAsDataUrl(absPath: string, mime: string): Promise<string> {\n+\t\tconst data = await fsp.readFile(absPath);\n+\t\tconst b64 = data.toString('base64');\n+\t\treturn `data:${mime};base64,${b64}`;\n+\t}\n+\n+\tfunction extractPathsFromText(text: string): string[] {\n+\t\t// Capture ./foo, ../foo, or foo starting with ./ in tree output\n+\t\t// Also handle lines like \"├── ./dir/file.ext\"\n+\t\tconst results: string[] = [];\n+\t\tconst re = /(?:^|\\s)(\\.{1,2}[\\/\\\\][^\\s]+|\\.{1}[\\/\\\\][^\\s]+)/g;\n+\t\tlet m: RegExpExecArray | null;\n+\t\twhile ((m = re.exec(text)) !== null) {\n+\t\t\tlet p = m[1].trim();\n+\t\t\t// Strip trailing punctuation\n+\t\t\tp = p.replace(/[,:;)]*$/, '');\n+\t\t\t// Normalize ././style occurrences\n+\t\t\twhile (p.startsWith('././')) p = p.slice(2);\n+\t\t\tresults.push(p);\n+\t\t}\n+\t\t// De-duplicate preserving order\n+\t\tconst seen = new Set<string>();\n+\t\treturn results.filter(p => {\n+\t\t\tconst key = p;\n+\t\t\tif (seen.has(key)) return false;\n+\t\t\tseen.add(key);\n+\t\t\treturn true;\n+\t\t});\n+\t}\n+\n+\tfunction getWorkspaceRelativeAndAbsolute(relOrDotPath: string, baseFolder: vscode.WorkspaceFolder): { rel: string, abs: string } {\n+\t\tlet rel = relOrDotPath.replace(/^[.][\\/\\\\]/, ''); // drop leading ./ or .\\\n+\t\tconst abs = path.join(baseFolder.uri.fsPath, rel);\n+\t\treturn { rel: rel.replace(/\\\\/g, '/'), abs };\n+\t}\n+\n+\tasync function addPathAsReferenceOrImage(provider: ChatGPTViewProvider, abs: string, rel: string) {\n+\t\ttry {\n+\t\t\tconst st = await fsp.stat(abs);\n+\t\t\tif (!st.isFile()) return { added: false, reason: 'not-file' };\n+\t\t} catch {\n+\t\t\treturn { added: false, reason: 'missing' };\n+\t\t}\n+\t\tconst mime = await detectImageMime(abs);\n+\t\tif (mime) {\n+\t\t\tconst dataUrl = await readImageAsDataUrl(abs, mime);\n+\t\t\tprovider.addImageToChat(dataUrl, path.basename(abs));\n+\t\t\treturn { added: true, kind: 'image' as const };\n+\t\t}\n+\t\tif (await isTextFile(abs)) {\n+\t\t\tconst ext = path.extname(rel).substring(1);\n+\t\t\tprovider.addFileReferenceToChat(rel, ext);\n+\t\t\treturn { added: true, kind: 'text' as const };\n+\t\t}\n+\t\treturn { added: false, reason: 'binary' };\n+\t}\n+\n \t// Get the settings from the extension's configuration\n \tconst config = vscode.workspace.getConfiguration('chatgpt');\n \n@@ -82,6 +216,7 @@\n \t);\n \n     context.subscriptions.push(\n       vscode.commands.registerCommand('chatgpt.addFileReferenceToChat', async (uri: vscode.Uri) => {\n         if (!uri || !uri.fsPath) {\n           vscode.window.showErrorMessage('No file selected!');\n           return;\n         }\n         try {\n           const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);\n           let relativePath: string;\n           if (workspaceFolder) {\n             relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);\n           } else {\n             relativePath = path.basename(uri.fsPath);\n           }\n-          const fileExtension = path.extname(relativePath).substring(1);\n-          provider.addFileReferenceToChat(relativePath, fileExtension);\n+          const fileExtension = path.extname(relativePath).substring(1);\n+          // Use content-based detection: image => add as base64 image; text => add as reference; else warn.\n+          const abs = uri.fsPath;\n+          const ws = workspaceFolder;\n+          if (!ws) {\n+            vscode.window.showErrorMessage('No workspace folder for this file.');\n+            return;\n+          }\n+          const mime = await detectImageMime(abs);\n+          if (mime) {\n+            const dataUrl = await readImageAsDataUrl(abs, mime);\n+            provider.addImageToChat(dataUrl, path.basename(abs));\n+            return;\n+          }\n+          if (await isTextFile(abs)) {\n+            provider.addFileReferenceToChat(relativePath.replace(/\\\\/g, '/'), fileExtension);\n+          } else {\n+            vscode.window.showWarningMessage('Selected file appears to be binary; not added.');\n+          }\n         } catch (err) {\n           vscode.window.showErrorMessage(`Failed to add file reference: ${err}`);\n         }\n       })\n     );\t\n@@ -169,6 +304,68 @@\n \t\t})\n \t  );\n+\n+\t// Add multiple references/images from selected \"tree\" text\n+\tcontext.subscriptions.push(\n+\t\tvscode.commands.registerCommand('chatgpt.addSelectedPathsAsReferences', async () => {\n+\t\t\tconst editor = vscode.window.activeTextEditor;\n+\t\t\tif (!editor) {\n+\t\t\t\tvscode.window.showErrorMessage('No active editor.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\t\t\tconst sel = editor.selection;\n+\t\t\tif (sel.isEmpty) {\n+\t\t\t\tvscode.window.showErrorMessage('No text selected.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\t\t\tconst selectedText = editor.document.getText(sel);\n+\t\t\tconst folders = vscode.workspace.workspaceFolders;\n+\t\t\tif (!folders || folders.length === 0) {\n+\t\t\t\tvscode.window.showErrorMessage('No workspace folder open.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\t\t\tconst base = folders[0];\n+\t\t\tconst paths = extractPathsFromText(selectedText);\n+\t\t\tif (paths.length === 0) {\n+\t\t\t\tvscode.window.showWarningMessage('No file paths found in selection.');\n+\t\t\t\treturn;\n+\t\t\t}\n+\n+\t\t\tlet addedText = 0, addedImg = 0, skippedMissing = 0, skippedBinary = 0, skippedDir = 0;\n+\t\t\tfor (const p of paths) {\n+\t\t\t\tconst { rel, abs } = getWorkspaceRelativeAndAbsolute(p, base);\n+\t\t\t\ttry {\n+\t\t\t\t\tconst st = await fsp.stat(abs);\n+\t\t\t\t\tif (!st.isFile()) { skippedDir++; continue; }\n+\t\t\t\t} catch {\n+\t\t\t\t\tskippedMissing++; continue;\n+\t\t\t\t}\n+\t\t\t\tconst res = await addPathAsReferenceOrImage(provider, abs, rel);\n+\t\t\t\tif (res.added && res.kind === 'text') addedText++;\n+\t\t\t\telse if (res.added && res.kind === 'image') addedImg++;\n+\t\t\t\telse if (res.reason === 'missing') skippedMissing++;\n+\t\t\t\telse if (res.reason === 'binary') skippedBinary++;\n+\t\t\t\telse if (res.reason === 'not-file') skippedDir++;\n+\t\t\t}\n+\t\t\tconst summaryParts: string[] = [];\n+\t\t\tif (addedText) summaryParts.push(`${addedText} text`);\n+\t\t\tif (addedImg) summaryParts.push(`${addedImg} image`);\n+\t\t\tif (!addedText && !addedImg) summaryParts.push('0');\n+\t\t\tconst skippedParts: string[] = [];\n+\t\t\tif (skippedMissing) skippedParts.push(`${skippedMissing} missing`);\n+\t\t\tif (skippedDir) skippedParts.push(`${skippedDir} directories`);\n+\t\t\tif (skippedBinary) skippedParts.push(`${skippedBinary} binary`);\n+\t\t\tconst msg = `Added ${summaryParts.join(' + ')} file(s)` + (skippedParts.length ? `; skipped ${skippedParts.join(', ')}` : '');\n+\t\t\tvscode.window.setStatusBarMessage(`[ChatGPT] ${msg}`, 4000);\n+\t\t})\n+\t);\n }\n \n // This method is called when your extension is deactivated\n export function deactivate() { }\n```"
+  selected: true
+  collapsed: false
