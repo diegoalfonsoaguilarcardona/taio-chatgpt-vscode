@@ -20,8 +20,8 @@ export function activate(context: vscode.ExtensionContext) {
         bmp: { mime: 'image/bmp', str: 'BM' }
     } as const;
 
-    function bufferStartsWith(buf: Buffer, sig: number[] | string): boolean {
-        if (Array.isArray(sig)) {
+    function bufferStartsWith(buf: Buffer, sig: ReadonlyArray<number> | string): boolean {
+        if (typeof sig !== 'string') {
             if (buf.length < sig.length) return false;
             for (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;
             return true;
@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;
         if (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';
         // WEBP: "RIFF" at 0..3 and "WEBP" at 8..11
-        if (buf.length >= 12 && Buffer.from('RIFF').equals(buf.slice(0, 4)) && Buffer.from('WEBP').equals(buf.slice(8, 12))) {
+        if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {
             return IMG_SIG.webp.mime;
         }
         if (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;
