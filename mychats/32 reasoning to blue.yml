@@ -564,8 +564,8 @@
             //-----------------------------------Here
         }
     ```
-  selected: true
-  collapsed: false
+  selected: false
+  collapsed: true
 - role: assistant
   content: |-
     Responses message output item:
@@ -653,6 +653,313 @@
          }
      
          function detectImageMimeFromBuffer(buf: Buffer): string | null {
+    ```
+  selected: false
+  collapsed: true
+- role: user
+  content: |-
+    When I run vsce package I get this errors:
+    ```markdown
+    vsce package
+     INFO  Detected presence of yarn.lock. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).
+    Executing prepublish script 'yarn run vscode:prepublish'...
+    yarn run v1.22.22
+    $ yarn run package
+    $ webpack --mode production --devtool hidden-source-map
+        [webpack-cli] Compiler starting... 
+        [webpack-cli] Compiler is using config: '/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/webpack.config.js'
+        [webpack-cli] Compiler finished
+    assets by status 3.73 MiB [cached] 1 asset
+    orphan modules 126 bytes [orphan] 3 modules
+    runtime modules 670 bytes 3 modules
+    modules by path ./node_modules/ 4.07 MiB 152 modules
+    modules by path ./src/*.ts 96.1 KiB
+      ./src/extension.ts 20.7 KiB [built] [code generated]
+      ./src/chatGptViewProvider.ts 75.3 KiB [built] [code generated] [3 errors]
+      ./src/types.ts 152 bytes [built] [code generated]
+    + 11 modules
+
+    ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/chatGptViewProvider.ts
+    ./src/chatGptViewProvider.ts 266:18-86
+    [tsl] ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/chatGptViewProvider.ts(266,19)
+          TS2345: Argument of type '{ apiUrl: string; model: string; apiType: any; reasoningOutputDeltaPath: any; options: { tools?: any; }; }' is not assignable to parameter of type 'Settings'.
+      Object literal may only specify known properties, and 'reasoningOutputDeltaPath' does not exist in type 'Settings'.
+     @ ./src/extension.ts 8:30-62
+
+    ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/chatGptViewProvider.ts
+    ./src/chatGptViewProvider.ts 1454:31-55
+    [tsl] ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/chatGptViewProvider.ts(1454,32)
+          TS2339: Property 'reasoningOutputDeltaPath' does not exist on type 'Settings'.
+     @ ./src/extension.ts 8:30-62
+
+    ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/chatGptViewProvider.ts
+    ./src/chatGptViewProvider.ts 1456:69-93
+    [tsl] ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/chatGptViewProvider.ts(1456,70)
+          TS2339: Property 'reasoningOutputDeltaPath' does not exist on type 'Settings'.
+     @ ./src/extension.ts 8:30-62
+
+    3 errors have detailed information that is not shown.
+    Use 'stats.errorDetails: true' resp. '--stats-error-details' to show it.
+
+    webpack 5.78.0 compiled with 3 errors in 3614 ms
+    error Command failed with exit code 1.
+    info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+    error Command failed with exit code 1.
+    info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+     ERROR  yarn failed with exit code 1
+    ```
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    Responses message output item:
+    ```json
+    {
+      "id": "msg_0bb7dffee7759f68006921fab40e6c8197b595b68b52d2dc86",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Answer:\nI will fix the Buffer vs Uint8Array type error in extension.ts by switching helper functions to operate on Uint8Array and adjust calls accordingly, and add the missing reasoningOutputDeltaPath to the Settings type to resolve the webpack errors.\n\nBrief:\n- In src/extension.ts:\n  - Change helper functions (bufferStartsWith, detectImageMimeFromBuffer, isProbablyTextBuffer) to use Uint8Array throughout.\n  - Replace Buffer.from(...) usage in short reads with Uint8Array subarray to avoid the SharedArrayBuffer vs ArrayBuffer type mismatch.\n  - Add a small asciiMatchAt helper for string checks.\n- In src/types.ts:\n  - Add reasoningOutputDeltaPath?: string to Settings so setSettings and reads compile.\n- No behavior change except fixing the type errors; logic remains equivalent.\n\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -20,17 +20,31 @@\n         bmp: { mime: 'image/bmp', str: 'BM' }\n     } as const;\n \n-    function bufferStartsWith(buf: Buffer, sig: ReadonlyArray<number> | string): boolean {\n+    function bufferStartsWith(buf: Uint8Array, sig: ReadonlyArray<number> | string): boolean {\n         if (typeof sig !== 'string') {\n             if (buf.length < sig.length) return false;\n             for (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;\n             return true;\n         }\n-        const s = Buffer.from(sig, 'ascii');\n-        if (buf.length < s.length) return false;\n-        for (let i = 0; i < s.length; i++) if (buf[i] !== s[i]) return false;\n+        if (buf.length < sig.length) return false;\n+        for (let i = 0; i < sig.length; i++) if (buf[i] !== sig.charCodeAt(i)) return false;\n         return true;\n     }\n \n-    function detectImageMimeFromBuffer(buf: Buffer): string | null {\n+    function asciiMatchAt(buf: Uint8Array, offset: number, str: string): boolean {\n+        if (offset < 0) return false;\n+        if (buf.length < offset + str.length) return false;\n+        for (let i = 0; i < str.length; i++) {\n+            if (buf[offset + i] !== str.charCodeAt(i)) return false;\n+        }\n+        return true;\n+    }\n+\n+    function detectImageMimeFromBuffer(buf: Uint8Array): string | null {\n         if (bufferStartsWith(buf, IMG_SIG.png.sig)) return IMG_SIG.png.mime;\n         if (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;\n         if (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';\n         // WEBP: \"RIFF\" at 0..3 and \"WEBP\" at 8..11\n-        if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {\n+        if (buf.length >= 12 && asciiMatchAt(buf, 0, 'RIFF') && asciiMatchAt(buf, 8, 'WEBP')) {\n             return IMG_SIG.webp.mime;\n         }\n         if (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;\n         // SVG (text): look for \"<svg\" early on\n-        const head = buf.slice(0, Math.min(buf.length, 512)).toString('utf8');\n+        const head = new TextDecoder('utf-8').decode(buf.slice(0, Math.min(buf.length, 512)));\n         if (/\\<svg[\\s>]/i.test(head)) return 'image/svg+xml';\n         return null;\n     }\n \n-    function isProbablyTextBuffer(buf: Buffer): boolean {\n+    function isProbablyTextBuffer(buf: Uint8Array): boolean {\n         // Fast binary checks\n         if (buf.includes(0x00)) return false; // NUL byte strongly indicates binary\n         const len = Math.min(buf.length, 4096);\n@@ -52,11 +66,11 @@\n     async function isTextFile(absPath: string): Promise<boolean> {\n         try {\n             const fd = await fsp.open(absPath, 'r');\n             try {\n                 const { buffer, bytesRead } = await fd.read(new Uint8Array(4096), 0, 4096, 0);\n-                return isProbablyTextBuffer(Buffer.from(buffer.subarray(0, bytesRead)));\n+                return isProbablyTextBuffer(buffer.subarray(0, bytesRead));\n             } finally {\n                 await fd.close();\n             }\n         } catch {\n             return false;\n@@ -66,11 +80,11 @@\n     async function detectImageMime(absPath: string): Promise<string | null> {\n         try {\n             const fd = await fsp.open(absPath, 'r');\n             try {\n                 const { buffer, bytesRead } = await fd.read(new Uint8Array(64), 0, 64, 0);\n-                return detectImageMimeFromBuffer(Buffer.from(buffer.subarray(0, bytesRead)));\n+                return detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));\n             } finally {\n                 await fd.close();\n             }\n         } catch {\n             return null;\n```\n\n### FILE: src/types.ts\n```diff\n--- a/src/types.ts\n+++ b/src/types.ts\n@@ -11,6 +11,7 @@\n   model?: string;\n   apiUrl?: string;\n   apiType?: 'chatCompletions' | 'responses';  \n+  reasoningOutputDeltaPath?: string;\n   options?: {\n     [key: string]: any; // Allows for any number of properties with any value type\n   };\n```"
+        }
+      ],
+      "role": "assistant"
+    }
+    ```
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    <think>**Reviewing buffer and file handling**
+
+    I'm looking into the extension.ts code, specifically for the use of `fd.read`. There are three helper functions mentioned: `isTextFile`, `detectImageMime`, and `readImageAsDataUrl`, which use different buffer sizes. The error at line 31 suggests a mismatch in the `bufferStartsWith` function, which takes a Buffer and a signature as parameters. This could be causing the issue since there's a type argument problem with Buffer and Uint8Array, particularly when `fd.read` is involved.
+    **Examining buffer usage**
+
+    I'm analyzing how we pass `new Uint8Array(4096)`, which seems fine, and then we wrap it in `Buffer.from(...)`, which also successfully converts it to a Buffer. Calling `isProbablyTextBuffer` with this Buffer is okay. I'm wondering where else we might be using Buffer incorrectly. In `detectImageMime`, we read `new Uint8Array(64)` and pass it wrapped to `detectImageMimeFromBuffer`, which also looks fine. The error points to `extension.ts`, possibly indicating an issue with `bufferStartsWith`, but it mentions a type assignment error with Uint8Array, so I need to count the lines to identify the exact error location.
+    **Counting lines accurately**
+
+    I'm going through the code to count the lines, and I find that the bufferStartsWith function starts at line 23 and specifically line 31 contains the code that says, "for (let i = 0; i < s.length; i++) if (buf[i] !== s[i]) return false;". This line iterates through the signature and checks against the buffer values. It's important to pinpoint this because the error may relate to how we're comparing Buffer objects or mismatched lengths. I need to ensure that I'm addressing the potential type issues correctly.
+    **Analyzing type mismatches**
+
+    I'm focusing on the error related to mismatched Buffer and Uint8Array types. The comparison happening with `s`, which is a Buffer, seems okay, so that doesn't seem to be the issue. The TypeScript error usually pops up when there’s an expectation for a BufferSource, but that's not what we're doing. I wonder if there's a compilation issue with DOM libraries. I need to clarify that the error at line 31, column 45, might refer to a character position within that comparison. I'm also considering how `IMG_SIG.webp` gets used and if I might be inadvertently passing a Buffer to a function expecting a Uint8Array.
+    **Investigating type errors**
+
+    In `detectImageMimeFromBuffer`, I'm noticing that we call `buf.toString`, and in `bufferStartsWith`, we pass Buffer where it expects Buffer. The error about slice and includes might hint at using `includes` incorrectly. It seems the real issue may arise from encoding when using `fs.promises.readFile`, but the mismatch really looks like it’s happening with `buf.includes(0x00)` in `isProbablyTextBuffer`. This function might be expecting Uint8Array, and my next steps will likely involve either converting to Uint8Array or using `Buffer.indexOf(0)` instead to sidestep this problem!
+    **Simplifying type compatibility**
+
+    I think the best way to resolve these type issues is to avoid using Buffer entirely in my helper functions and stick with Uint8Array instead. I could change `bufferStartsWith` to take a `Uint8Array` and use a `TextEncoder` to handle strings. For `detectImageMimeFromBuffer`, I'll also adjust it to accept a `Uint8Array`. However, I see that using Buffer's `includes` method might still cause conflicts with TypeScript's expectations around typed arrays. To simplify, I could replace Buffer uses with Uint8Array and perhaps change my function signatures to ensure compatibility across the board.
+    **Updating helper functions**
+
+    To improve type compatibility, I’m planning to switch from using Buffer to Uint8Array in my helper functions. I’ll update `bufferStartsWith` to accept a `Uint8Array` and implement conversion of strings to ASCII codes. For `detectImageMimeFromBuffer`, I’ll similarly adjust its signature and remove any Buffer usages. 
+
+    I’ll also add an `asciiMatch` helper function to streamline comparisons. My goal is to make minimal changes while ensuring all references are correctly updated, which will hopefully fix any compile errors. I need to ensure clear, consistent property naming, too.
+    **Adjusting image handling functions**
+
+    I need to use `asciiMatchAt` for RIFF and WEBP detection in `detectImageMimeFromBuffer`. For formats like BMP and GIF, I can still call `bufferStartsWith` with their respective strings. I’ll update `isTextFile` and `detectImageMime` to pass `Uint8Array` directly instead of using Buffer. Additionally, I’m adding a property called `reasoningOutputDeltaPath` to `Settings` in `types.ts`. I’ll ensure everything is done with minimal disruption, including confirming correct line numbering for the diffs I’m preparing.</think>
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    Answer:
+    I will fix the Buffer vs Uint8Array type error in extension.ts by switching helper functions to operate on Uint8Array and adjust calls accordingly, and add the missing reasoningOutputDeltaPath to the Settings type to resolve the webpack errors.
+
+    Brief:
+    - In src/extension.ts:
+      - Change helper functions (bufferStartsWith, detectImageMimeFromBuffer, isProbablyTextBuffer) to use Uint8Array throughout.
+      - Replace Buffer.from(...) usage in short reads with Uint8Array subarray to avoid the SharedArrayBuffer vs ArrayBuffer type mismatch.
+      - Add a small asciiMatchAt helper for string checks.
+    - In src/types.ts:
+      - Add reasoningOutputDeltaPath?: string to Settings so setSettings and reads compile.
+    - No behavior change except fixing the type errors; logic remains equivalent.
+
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/extension.ts
+    ```diff
+    --- a/src/extension.ts
+    +++ b/src/extension.ts
+    @@ -20,17 +20,31 @@
+             bmp: { mime: 'image/bmp', str: 'BM' }
+         } as const;
+     
+    -    function bufferStartsWith(buf: Buffer, sig: ReadonlyArray<number> | string): boolean {
+    +    function bufferStartsWith(buf: Uint8Array, sig: ReadonlyArray<number> | string): boolean {
+             if (typeof sig !== 'string') {
+                 if (buf.length < sig.length) return false;
+                 for (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;
+                 return true;
+             }
+    -        const s = Buffer.from(sig, 'ascii');
+    -        if (buf.length < s.length) return false;
+    -        for (let i = 0; i < s.length; i++) if (buf[i] !== s[i]) return false;
+    +        if (buf.length < sig.length) return false;
+    +        for (let i = 0; i < sig.length; i++) if (buf[i] !== sig.charCodeAt(i)) return false;
+             return true;
+         }
+     
+    -    function detectImageMimeFromBuffer(buf: Buffer): string | null {
+    +    function asciiMatchAt(buf: Uint8Array, offset: number, str: string): boolean {
+    +        if (offset < 0) return false;
+    +        if (buf.length < offset + str.length) return false;
+    +        for (let i = 0; i < str.length; i++) {
+    +            if (buf[offset + i] !== str.charCodeAt(i)) return false;
+    +        }
+    +        return true;
+    +    }
+    +
+    +    function detectImageMimeFromBuffer(buf: Uint8Array): string | null {
+             if (bufferStartsWith(buf, IMG_SIG.png.sig)) return IMG_SIG.png.mime;
+             if (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;
+             if (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';
+             // WEBP: "RIFF" at 0..3 and "WEBP" at 8..11
+    -        if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {
+    +        if (buf.length >= 12 && asciiMatchAt(buf, 0, 'RIFF') && asciiMatchAt(buf, 8, 'WEBP')) {
+                 return IMG_SIG.webp.mime;
+             }
+             if (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;
+             // SVG (text): look for "<svg" early on
+    -        const head = buf.slice(0, Math.min(buf.length, 512)).toString('utf8');
+    +        const head = new TextDecoder('utf-8').decode(buf.slice(0, Math.min(buf.length, 512)));
+             if (/\<svg[\s>]/i.test(head)) return 'image/svg+xml';
+             return null;
+         }
+     
+    -    function isProbablyTextBuffer(buf: Buffer): boolean {
+    +    function isProbablyTextBuffer(buf: Uint8Array): boolean {
+             // Fast binary checks
+             if (buf.includes(0x00)) return false; // NUL byte strongly indicates binary
+             const len = Math.min(buf.length, 4096);
+    @@ -52,11 +66,11 @@
+         async function isTextFile(absPath: string): Promise<boolean> {
+             try {
+                 const fd = await fsp.open(absPath, 'r');
+                 try {
+                     const { buffer, bytesRead } = await fd.read(new Uint8Array(4096), 0, 4096, 0);
+    -                return isProbablyTextBuffer(Buffer.from(buffer.subarray(0, bytesRead)));
+    +                return isProbablyTextBuffer(buffer.subarray(0, bytesRead));
+                 } finally {
+                     await fd.close();
+                 }
+             } catch {
+                 return false;
+    @@ -66,11 +80,11 @@
+         async function detectImageMime(absPath: string): Promise<string | null> {
+             try {
+                 const fd = await fsp.open(absPath, 'r');
+                 try {
+                     const { buffer, bytesRead } = await fd.read(new Uint8Array(64), 0, 64, 0);
+    -                return detectImageMimeFromBuffer(Buffer.from(buffer.subarray(0, bytesRead)));
+    +                return detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));
+                 } finally {
+                     await fd.close();
+                 }
+             } catch {
+                 return null;
+    ```
+
+    ### FILE: src/types.ts
+    ```diff
+    --- a/src/types.ts
+    +++ b/src/types.ts
+    @@ -11,6 +11,7 @@
+       model?: string;
+       apiUrl?: string;
+       apiType?: 'chatCompletions' | 'responses';  
+    +  reasoningOutputDeltaPath?: string;
+       options?: {
+         [key: string]: any; // Allows for any number of properties with any value type
+       };
+    ```
+  selected: false
+  collapsed: true
+- role: user
+  content: |-
+    When I run vsce package I get this errors:
+    ```diff
+    vsce package        
+     INFO  Detected presence of yarn.lock. Using 'yarn' instead of 'npm' (to override this pass '--no-yarn' on the command line).
+    Executing prepublish script 'yarn run vscode:prepublish'...
+    yarn run v1.22.22
+    $ yarn run package
+    $ webpack --mode production --devtool hidden-source-map
+        [webpack-cli] Compiler starting... 
+        [webpack-cli] Compiler is using config: '/Users/diegoaguilar/pruebas/taio-chatgpt-vscode/webpack.config.js'
+        [webpack-cli] Compiler finished
+    assets by status 3.73 MiB [cached] 1 asset
+    orphan modules 126 bytes [orphan] 3 modules
+    runtime modules 670 bytes 3 modules
+    modules by path ./node_modules/ 4.07 MiB 152 modules
+    modules by path ./src/*.ts 96.4 KiB
+      ./src/extension.ts 21 KiB [built] [code generated] [1 error]
+      ./src/chatGptViewProvider.ts 75.3 KiB [built] [code generated]
+      ./src/types.ts 152 bytes [built] [code generated]
+    + 11 modules
+
+    ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/extension.ts
+    ./src/extension.ts 53:25-36
+    [tsl] ERROR in /Users/diegoaguilar/pruebas/taio-chatgpt-vscode/src/extension.ts(53,26)
+          TS2304: Cannot find name 'TextDecoder'.
+    ts-loader-default_e3b0c44298fc1c14
+
+    webpack 5.78.0 compiled with 1 error in 3620 ms
+    error Command failed with exit code 1.
+    info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+    error Command failed with exit code 1.
+    info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+     ERROR  yarn failed with exit code 1
+    ```
+  selected: true
+  collapsed: false
+- role: assistant
+  content: |-
+    Responses message output item:
+    ```json
+    {
+      "id": "msg_0657cbdcb3e621cc006921fbc77e40819ea9c6774b79f304a4",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Answer:\nI will fix the build error by importing TextDecoder from Node’s util module so TypeScript recognizes it in a Node environment.\n\nBrief:\n- The webpack/TypeScript error arises because TextDecoder is not declared in the current TS libs (no DOM), causing TS2304.\n- In Node 16, TextDecoder is available via util. Importing it resolves the type error.\n- No behavior changes; just a type-safe import for Node.\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -1,9 +1,10 @@\n import * as vscode from 'vscode';\n import * as path from 'path';\n import * as fs from 'fs';\n import { promises as fsp } from 'fs';\n import { Provider, Prompt, ProviderSettings } from './types';\n import { ChatGPTViewProvider } from './chatGptViewProvider';\n+import { TextDecoder } from 'util';\n \n // Base URL for OpenAI API\n const BASE_URL = 'https://api.openai.com/v1';\n```"
+        }
+      ],
+      "role": "assistant"
+    }
+    ```
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    Answer:
+    I will fix the build error by importing TextDecoder from Node’s util module so TypeScript recognizes it in a Node environment.
+
+    Brief:
+    - The webpack/TypeScript error arises because TextDecoder is not declared in the current TS libs (no DOM), causing TS2304.
+    - In Node 16, TextDecoder is available via util. Importing it resolves the type error.
+    - No behavior changes; just a type-safe import for Node.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/extension.ts
+    ```diff
+    --- a/src/extension.ts
+    +++ b/src/extension.ts
+    @@ -1,9 +1,10 @@
+     import * as vscode from 'vscode';
+     import * as path from 'path';
+     import * as fs from 'fs';
+     import { promises as fsp } from 'fs';
+     import { Provider, Prompt, ProviderSettings } from './types';
+     import { ChatGPTViewProvider } from './chatGptViewProvider';
+    +import { TextDecoder } from 'util';
+     
+     // Base URL for OpenAI API
+     const BASE_URL = 'https://api.openai.com/v1';
     ```
   selected: true
   collapsed: false

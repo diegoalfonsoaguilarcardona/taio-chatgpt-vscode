@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { promises as fsp } from 'fs';
 import { Provider, Prompt, ProviderSettings } from './types';
 import { ChatGPTViewProvider } from './chatGptViewProvider';
+import { TextDecoder } from 'util';
 
 // Base URL for OpenAI API
 const BASE_URL = 'https://api.openai.com/v1';
@@ -20,34 +21,42 @@ export function activate(context: vscode.ExtensionContext) {
         bmp: { mime: 'image/bmp', str: 'BM' }
     } as const;
 
-    function bufferStartsWith(buf: Buffer, sig: ReadonlyArray<number> | string): boolean {
+    function bufferStartsWith(buf: Uint8Array, sig: ReadonlyArray<number> | string): boolean {
         if (typeof sig !== 'string') {
             if (buf.length < sig.length) return false;
             for (let i = 0; i < sig.length; i++) if (buf[i] !== sig[i]) return false;
             return true;
         }
-        const s = Buffer.from(sig, 'ascii');
-        if (buf.length < s.length) return false;
-        for (let i = 0; i < s.length; i++) if (buf[i] !== s[i]) return false;
+        if (buf.length < sig.length) return false;
+        for (let i = 0; i < sig.length; i++) if (buf[i] !== sig.charCodeAt(i)) return false;
         return true;
     }
 
-    function detectImageMimeFromBuffer(buf: Buffer): string | null {
+    function asciiMatchAt(buf: Uint8Array, offset: number, str: string): boolean {
+        if (offset < 0) return false;
+        if (buf.length < offset + str.length) return false;
+        for (let i = 0; i < str.length; i++) {
+            if (buf[offset + i] !== str.charCodeAt(i)) return false;
+        }
+        return true;
+    }
+
+    function detectImageMimeFromBuffer(buf: Uint8Array): string | null {
         if (bufferStartsWith(buf, IMG_SIG.png.sig)) return IMG_SIG.png.mime;
         if (bufferStartsWith(buf, IMG_SIG.jpg.sig)) return IMG_SIG.jpg.mime;
         if (bufferStartsWith(buf, IMG_SIG.gif87a.str) || bufferStartsWith(buf, IMG_SIG.gif89a.str)) return 'image/gif';
         // WEBP: "RIFF" at 0..3 and "WEBP" at 8..11
-        if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {
+        if (buf.length >= 12 && asciiMatchAt(buf, 0, 'RIFF') && asciiMatchAt(buf, 8, 'WEBP')) {
             return IMG_SIG.webp.mime;
         }
         if (bufferStartsWith(buf, IMG_SIG.bmp.str)) return IMG_SIG.bmp.mime;
         // SVG (text): look for "<svg" early on
-        const head = buf.slice(0, Math.min(buf.length, 512)).toString('utf8');
+        const head = new TextDecoder('utf-8').decode(buf.slice(0, Math.min(buf.length, 512)));
         if (/\<svg[\s>]/i.test(head)) return 'image/svg+xml';
         return null;
     }
 
-    function isProbablyTextBuffer(buf: Buffer): boolean {
+    function isProbablyTextBuffer(buf: Uint8Array): boolean {
         // Fast binary checks
         if (buf.includes(0x00)) return false; // NUL byte strongly indicates binary
         const len = Math.min(buf.length, 4096);
@@ -71,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
             const fd = await fsp.open(absPath, 'r');
             try {
                 const { buffer, bytesRead } = await fd.read(new Uint8Array(4096), 0, 4096, 0);
-                return isProbablyTextBuffer(Buffer.from(buffer.subarray(0, bytesRead)));
+                return isProbablyTextBuffer(buffer.subarray(0, bytesRead));
             } finally {
                 await fd.close();
             }
@@ -85,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
             const fd = await fsp.open(absPath, 'r');
             try {
                 const { buffer, bytesRead } = await fd.read(new Uint8Array(64), 0, 64, 0);
-                return detectImageMimeFromBuffer(Buffer.from(buffer.subarray(0, bytesRead)));
+                return detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));
             } finally {
                 await fd.close();
             }

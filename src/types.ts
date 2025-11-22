@@ -11,6 +11,7 @@ export type Settings = {
   model?: string;
   apiUrl?: string;
   apiType?: 'chatCompletions' | 'responses';  
+  reasoningOutputDeltaPath?: string;
   options?: {
     [key: string]: any; // Allows for any number of properties with any value type
   };
