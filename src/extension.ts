@@ -28,7 +28,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
         const s = Buffer.from(sig, 'ascii');
         if (buf.length < s.length) return false;
-        return buf.slice(0, s.length).equals(s);
+        for (let i = 0; i < s.length; i++) if (buf[i] !== s[i]) return false;
+        return true;
     }
 
     function detectImageMimeFromBuffer(buf: Buffer): string | null {
@@ -69,8 +70,8 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const fd = await fsp.open(absPath, 'r');
             try {
-                const { buffer, bytesRead } = await fd.read(Buffer.alloc(4096), 0, 4096, 0);
-                return isProbablyTextBuffer(buffer.subarray(0, bytesRead));
+                const { buffer, bytesRead } = await fd.read(new Uint8Array(4096), 0, 4096, 0);
+                return isProbablyTextBuffer(Buffer.from(buffer.subarray(0, bytesRead)));
             } finally {
                 await fd.close();
             }
@@ -83,8 +84,8 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const fd = await fsp.open(absPath, 'r');
             try {
-                const { buffer, bytesRead } = await fd.read(Buffer.alloc(64), 0, 64, 0);
-                return detectImageMimeFromBuffer(buffer.subarray(0, bytesRead));
+                const { buffer, bytesRead } = await fd.read(new Uint8Array(64), 0, 64, 0);
+                return detectImageMimeFromBuffer(Buffer.from(buffer.subarray(0, bytesRead)));
             } finally {
                 await fd.close();
             }
@@ -194,6 +195,7 @@ export function activate(context: vscode.ExtensionContext) {
 				...firstModel.options, // Spread operator to include all keys from options
                 // If tools are defined at model level, include them in options for convenience
                 ...(firstModel.tools ? { tools: firstModel.tools } : {}),
+                ...(firstModel as any).reasoning_output_delta_path ? { reasoning_output_delta_path: (firstModel as any).reasoning_output_delta_path } : {},
 			  },
 			};
 		}
@@ -339,6 +341,7 @@ export function activate(context: vscode.ExtensionContext) {
 					  options: {
 						...firstModel.options, // Use spread operator to include all options
                         ...(firstModel.tools ? { tools: firstModel.tools } : {}),
+                        ...(firstModel as any).reasoning_output_delta_path ? { reasoning_output_delta_path: (firstModel as any).reasoning_output_delta_path } : {},
 					  },
 					};
 				}

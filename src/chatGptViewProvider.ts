@@ -252,6 +252,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   apiUrl: selectedApiUrl,
                   apiKey: provider_data.apiKey,
                   apiType,
+                  reasoningOutputDeltaPath: (model_data as any).reasoning_output_delta_path,
                   options: {
                     ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
                     // If tools are configured at model level, pass them via options for Responses API usage
@@ -262,6 +263,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                   apiUrl: provider_settings.apiUrl,
                   model: provider_settings.model,
                   apiType: provider_settings.apiType,
+                  reasoningOutputDeltaPath: provider_settings.reasoningOutputDeltaPath,
                   options: {
                     ...provider_settings.options, // Spread operator to include all keys from options
                   },
@@ -837,6 +839,28 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     return s;
   }
 
+  // Get nested value from an object using a dot/bracket path, e.g. "choices[0].delta.reasoning"
+  private getValueAtPath(obj: any, path: string | undefined): any {
+    if (!obj || !path) return undefined;
+    const tokens: Array<string | number> = [];
+    const re = /([^[.\]]+)|\[(\d+)\]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(path)) !== null) {
+      if (m[1] !== undefined) tokens.push(m[1]);
+      else if (m[2] !== undefined) tokens.push(Number(m[2]));
+    }
+    let cur: any = obj;
+    for (const t of tokens) {
+      if (cur == null) return undefined;
+      if (typeof t === 'number') {
+        if (!Array.isArray(cur) || t < 0 || t >= cur.length) return undefined;
+        cur = cur[t];
+      } else {
+        cur = cur[t];
+      }
+    }
+    return cur;
+  }
   // Minimal tool-call runner: if a tool requires client output (custom tool),
   // provide a deterministic stub so the model can proceed. We do NOT implement
   // external tools here (e.g., web search).
@@ -1191,7 +1215,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
                 if (d) {
                   reasoningDelta += String(d);
                   // Stream reasoning brief text to UI as it arrives (like stdout.write in example)
-                  this._view?.webview.postMessage({ type: 'appendDelta', value: String(d) });
+                  this._view?.webview.postMessage({ type: 'appendReasoningDelta', value: String(d) });
                 }
                 continue;
               }
@@ -1405,6 +1429,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
         let completionTokens = 0;
         full_message = "";
+        // Collect reasoning deltas if configured (e.g., OpenRouter reasoning models)
+        let reasoningDeltaCC = "";
 
         // Throttled delta accumulator to reduce IPC messages
         let deltaAccumulator = "";
@@ -1424,6 +1450,21 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             const content = (chunk as any).choices?.[0]?.delta?.content || "";
             console.log("chunk:", chunk);
             console.log("content:", content);
+            // Extract reasoning delta if a path was configured
+            if (this._settings.reasoningOutputDeltaPath) {
+              try {
+                const rv = this.getValueAtPath(chunk, this._settings.reasoningOutputDeltaPath);
+                if (rv !== undefined && rv !== null) {
+                  const piece = (typeof rv === 'string') ? rv : this.safeStringify(rv, 1000);
+                  reasoningDeltaCC += piece;
+                  // Stream reasoning delta to the UI with special styling
+                  this._view?.webview.postMessage({
+                    type: 'appendReasoningDelta',
+                    value: piece
+                  });
+                }
+              } catch (_) { /* ignore */ }
+            }
             if (!content) continue;
 
             const tokenList = this._enc.encode(content);
@@ -1440,6 +1481,16 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           // Ensure last delta is flushed and end the stream even on errors
           flushDelta(true);
           this._view?.webview.postMessage({ type: 'streamEnd' });
+        }
+
+        // If we captured reasoning deltas, add them as a separate unselected/collapsed assistant message
+        if (reasoningDeltaCC && reasoningDeltaCC.trim()) {
+          this._messages?.push({
+            role: "assistant",
+            content: `<think><p>${reasoningDeltaCC}</p></think>`,
+            selected: false,
+            collapsed: true
+          });
         }
 
         this._messages?.push({ role: "assistant", content: full_message, selected: true })

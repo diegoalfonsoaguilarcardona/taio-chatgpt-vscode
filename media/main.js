@@ -18,6 +18,9 @@
     let pendingFinalResponse = false;
     let renderScheduled = false;
     const MAX_STREAM_LINES = 50;
+    // Markers to denote reasoning segments inside the streaming buffer (not persisted)
+    const REASON_START = '[[[__REASON_START__]]]';
+    const REASON_END = '[[[__REASON_END__]]]';
     // Watchdog to auto-abort stalled streams
     const STREAM_IDLE_TIMEOUT_MS = 90000; // 90s without deltas => consider stalled
     let lastDeltaAt = 0;
@@ -68,6 +71,45 @@
         });
     }
 
+    function escapeHtml(s) {
+        return s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function markersToHtml(textWithMarkers) {
+        // Convert our reasoning markers to colored spans, escaping all user text
+        let html = '';
+        let i = 0;
+        while (i < textWithMarkers.length) {
+            const start = textWithMarkers.indexOf(REASON_START, i);
+            if (start === -1) {
+                html += escapeHtml(textWithMarkers.slice(i));
+                renderScheduled = false;
+                break;
+            }
+            // normal segment before reasoning
+            if (start > i) {
+                html += escapeHtml(textWithMarkers.slice(i, start));
+            }
+            const end = textWithMarkers.indexOf(REASON_END, start + REASON_START.length);
+            if (end === -1) {
+                // No closing marker yet; treat rest as reasoning
+                const reasonText = textWithMarkers.slice(start + REASON_START.length);
+                html += `<span class="reasoning-delta">${escapeHtml(reasonText)}</span>`;
+                break;
+            } else {
+                const reasonText = textWithMarkers.slice(start + REASON_START.length, end);
+                html += `<span class="reasoning-delta">${escapeHtml(reasonText)}</span>`;
+                i = end + REASON_END.length;
+            }
+        }
+        return html;
+    }
+
     function renderTruncatedStream(fullText) {
         const lines = fullText.split(/\r?\n/);
         const over = lines.length > MAX_STREAM_LINES;
@@ -75,10 +117,10 @@
         const tailLines = over ? lines.slice(-MAX_STREAM_LINES) : lines;
 
         // If the tail starts inside a code fence, open a fence to keep rendering consistent
-        const backticksInPrefix = (prefixLines.join('\n').match(/```/g) || []).length;
+        const backticksInPrefix = (prefixLines.join('\n').match(/``​`/g) || []).length;
         const needsOpenFence = backticksInPrefix % 2 === 1;
 
-        let snippet = (over ? '...\n' : '') + (needsOpenFence ? '```\n' : '') + tailLines.join('\n');
+        let snippet = (over ? '...\n' : '') + (needsOpenFence ? '``​`\n' : '') + tailLines.join('\n');
         snippet = fixCodeBlocks(snippet);
 
         // Plain text render (no Markdown conversion, no event handlers)
@@ -87,7 +129,8 @@
         responseDiv.innerHTML = '';
         const pre = document.createElement('pre');
         pre.style.whiteSpace = 'pre-wrap';
-        pre.textContent = snippet;
+        // Render with minimal HTML to colorize reasoning segments, escaping all user content
+        pre.innerHTML = markersToHtml(snippet);
         responseDiv.appendChild(pre);
 
         responseDiv.scrollTop = responseDiv.scrollHeight;
@@ -242,7 +285,12 @@
                     const now = Date.now();
                     if (now - lastDeltaAt > STREAM_IDLE_TIMEOUT_MS) {
                         // Consider the stream stalled; finalize with what we have
-                        const partial = (streamBuffer || '') + (pendingDelta || '');
+                        const raw = (streamBuffer || '') + (pendingDelta || '');
+                        // Strip reasoning markers before sending partial back to extension,
+                        // so they never leak into saved chat history.
+                        const stripMarkers = (s) =>
+                            s.replaceAll(REASON_START, '').replaceAll(REASON_END, '');
+                        const partial = stripMarkers(raw);
                         isStreaming = false;
                         pendingDelta = '';
                         renderScheduled = false;
@@ -257,6 +305,14 @@
             case "appendDelta": {
                 if (!isStreaming) break;
                 pendingDelta += message.value || '';
+                lastDeltaAt = Date.now();
+                scheduleStreamRender();
+                break;
+            }
+            case "appendReasoningDelta": {
+                if (!isStreaming) break;
+                // Wrap reasoning chunks with markers for colored rendering
+                pendingDelta += REASON_START + (message.value || '') + REASON_END;
                 lastDeltaAt = Date.now();
                 scheduleStreamRender();
                 break;

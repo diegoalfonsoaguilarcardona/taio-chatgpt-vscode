@@ -84,6 +84,11 @@ think {
     font-style: italic !important; /* Also use !important for emphasis */
 }
 
+.reasoning-delta {
+    color: #8fb3d9 !important; /* gray-blue */
+    font-style: italic;
+}
+
 
 
 select {

@@ -1,0 +1,610 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal pure unified diffs.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+
+    INPUT:
+    - `sources`: list of { path: string, content: string (full file with LF newlines) }
+    - `request`: natural language change description.
+
+    BEHAVIOR:
+    - Make only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly.
+    - Use LF newlines in all outputs. Do not insert timestamps, hashes, colors, ANSI codes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+
+    STRICT UNIFIED-DIFF FORMAT:
+    - Output one fenced diff block per affected file, preceded by a plain-text heading `### FILE: <path>` outside the fence.
+    - For each file, output pure unified diff only:
+      --- a/<path>
+      +++ b/<path>
+      @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+      <hunk lines>
+    - Always include both lengths in the hunk header, even when 1 (never use the shortened form).
+    - Hunk line prefixes:
+      - Context (unchanged): a single leading space ' ' followed by the exact line content.
+      - Removal: '-' followed by the exact old line content.
+      - Addition: '+' followed by the exact new line content.
+      - There must be exactly one prefix character per line and no extra leading spaces after the prefix.
+    - Preserve whitespace verbatim:
+      - Do not alter indentation, tabs, or trailing spaces in unchanged lines.
+      - Represent tabs as literal tab characters; do not convert tabs ↔ spaces.
+      - Empty lines must still carry their prefix (e.g., " " then newline for context-empty line).
+    - Newline-at-EOF handling:
+      - Mirror the source files’ newline-at-EOF status.
+      - If the last line of either old or new side lacks a trailing LF, include the canonical marker line:
+        "\ No newline at end of file" (exactly as shown, with no prefix), immediately after the affected hunk line.
+    - Context lines: include 3 lines of context before and after each change when available (fewer if at file boundaries).
+
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file:
+      --- /dev/null
+      +++ b/<path>
+      A single hunk starting at 1, covering all added lines.
+    - Deleted file:
+      --- a/<path>
+      +++ /dev/null
+      A single hunk removing all lines.
+
+    ORDERING:
+    - Sort files alphabetically by `<path>`.
+    - Within each file, sort hunks by ascending line number.
+    - Hunks must not overlap and must be separated by at least one blank line if two hunks are adjacent in output.
+
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer: brief direct answer to the request and/or what will be changed.
+    2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder:
+       "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    3) Diffs: one fenced ``​`diff code block per affected file, each preceded by `### FILE: <path>`.
+
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+      ``​`text
+      === DIFF BEGIN ===
+      NO_CHANGES
+      === DIFF END ===
+      ``​`
+
+    ERROR CASES (emit as their own per-file fenced blocks within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! FILE_NOT_FOUND_FOR_DELETE
+      ``​`
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! FILE_WAS_DELETED_RECREATE_CONFIRM
+      ``​`
+    - Impossible or contradictory request:
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! REQUEST_CONFLICT
+      ``​`
+
+    STRICT SELF-CHECK BEFORE OUTPUT (MANDATORY):
+    - For each file:
+      - Compute 1-based line numbers from `sources[path]` exactly as given (LF-separated).
+      - For every hunk:
+        - start_old is the line number in the old file of the first hunk context/removal line.
+        - len_old equals the count of lines in the hunk that are context or removals.
+        - start_new is the corresponding line number in the new file.
+        - len_new equals the count of lines in the hunk that are context or additions.
+        - All context lines must match the old and new file text exactly (including tabs and trailing spaces).
+      - After virtually applying all hunks in order to the old content, the resulting text must equal the intended new content byte-for-byte (LF newlines).
+      - Ensure no missing spaces, no extra spaces after prefix characters, and no omitted length values in headers.
+    - Do not emit the output if any self-check fails; instead, correct the diff deterministically and re-validate.
+
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code.
+    - Do not include commentary beyond the Answer, Brief, and the required per-file diff/code blocks.
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    I have this visual studio code extension that allows me to talk with llm providers.  When I setup the specific model in an llm provider I have to set something like this. The part of the settings that I am sharing with you is for openrouter.
+    ```json
+                "name": "OpenRouter",
+                "apiKey": "API_KEY",
+                "apiUrl": "https://openrouter.ai/api/v1",
+                "models": [
+                    {
+                        "name": "google/gemini-3-pro-preview (reasoning high)",
+                        "model_name": "google/gemini-3-pro-preview",
+                        "options": {
+                            "reasoning": {
+                                "effort": "high",
+                                "exclude": false
+                                },
+                        }
+                    },
+
+    ```
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    I have this visual studio code extension that allows me to talk with llm providers.  When I setup the specific model in an llm provider I have to set something like this. The part of the settings that I am sharing with you is for openrouter.  The thing is that for example for openrouter the reasoning models return the reasoning content into choices[0]->delta->reasoning, so I want to have a way to be able to provide where the reasoning data is comming, and if it is setup append all the reasoning messages as another assistant message (unselected, as the reasoning tokens for the responses api, but for the chat completions). So add another argument "reasoning_output_delta_path", like the example that I am providing.
+    ```javascript
+                "name": "OpenRouter",
+                "apiKey": "API_KEY",
+                "apiUrl": "https://openrouter.ai/api/v1",
+                "models": [
+                    {
+                        "name": "google/gemini-3-pro-preview (reasoning high)",
+                        "model_name": "google/gemini-3-pro-preview",
+                        "options": {
+                            "reasoning": {
+                                "effort": "high",
+                                "exclude": false
+                                },
+                        }
+                        "reasoning_output_delta_path": "choices[0].delta.reasoning"
+                    },
+    ```
+  selected: true
+  collapsed: false
+- role: assistant
+  content: |
+    ▶️ response.created
+  selected: false
+  collapsed: true
+- role: user
+  content: I have this visual studio code extension that allows me to talk with llm providers.  When I setup the specific model in an llm provider I have to set something like this. The part of the settings that I am sharing with you is for openrouter.  The thing is that for example for openrouter the reasoning models return the reasoning content into choices[0]->delta->reasoning, so I want to have a way to be able to provide where the reasoning data is comming, and if it is setup append all the reasoning messages as another assistant message (unselected, as the reasoning tokens for the responses api, but for the chat completions). So add another argument "reasoning_output_delta_path", like the example that I am providing.
+  selected: true
+  collapsed: false
+- role: assistant
+  content: "Answer:\nI’ll add a configurable reasoning_output_delta_path at the model level in settings. When present, chat completions streaming will extract reasoning deltas from that path, accumulate them, and after the stream ends insert a separate assistant message with <think>…</think>, unselected and collapsed (mirroring Responses API behavior). I’ll also propagate this setting through model selection and configuration changes.\n\nBrief:\n- package.json: extend configuration schema for models with \"reasoning_output_delta_path\" (string) to specify where reasoning deltas live in chat-completions chunks (e.g., \"choices[0].delta.reasoning\").\n- types.ts: add reasoning_output_delta_path?: string to Model interface.\n- extension.ts: propagate model.reasoning_output_delta_path into provider settings options both on activation and on providers config change.\n- chatGptViewProvider.ts:\n  - providerModelChanged: propagate reasoning_output_delta_path into settings.options.\n  - chat completions streaming: if reasoning_output_delta_path is set, accumulate delta content via that path; after streaming, append an assistant message with <think>…</think>, unselected and collapsed; refresh UI before final answer.\n  - add helper getValueAtPath for safe extraction.\n- No other behavior changed.\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: package.json\n```diff\n--- a/package.json\n+++ b/package.json\n@@ -86,6 +86,10 @@\n                       \"type\": \"object\",\n                       \"description\": \"Options for the model.\",\n                       \"additionalProperties\": {\n                         \"type\": \"any\",\n                         \"description\": \"Custom option key-value pairs for the model.\"\n                       }\n+                    },\n+                    \"reasoning_output_delta_path\": {\n+                      \"type\": \"string\",\n+                      \"description\": \"Dot/bracket path to the streaming reasoning delta within chat completions chunks (e.g., choices[0].delta.reasoning).\"\n                     }\n                   },\n                   \"required\": [\"name\"]\n                 }\n               }\n             },\n```\n\n### FILE: src/types.ts\n```diff\n--- a/src/types.ts\n+++ b/src/types.ts\n@@ -16,6 +16,7 @@\n   api?: 'chatCompletions' | 'responses'; // Which API to use\n   tools?: any[];           // Optional tools for Responses API (provider-specific)  \n   options: {\n     [key: string]: any;\n   };\n+  reasoning_output_delta_path?: string; // Optional path to reasoning delta in chat completions stream (e.g., choices[0].delta.reasoning)\n }\n \n export interface Provider {\n   name: string;\n   apiKey: string;\n```\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -98,6 +98,7 @@\n \t\t\t  apiType,\n \t\t\t  options: {\n \t\t\t\t...firstModel.options, // Spread operator to include all keys from options\n                 // If tools are defined at model level, include them in options for convenience\n                 ...(firstModel.tools ? { tools: firstModel.tools } : {}),\n+                ...(firstModel as any).reasoning_output_delta_path ? { reasoning_output_delta_path: (firstModel as any).reasoning_output_delta_path } : {},\n \t\t\t  },\n \t\t\t};\n \t\t}\n \t}\n@@ -220,6 +221,7 @@\n \t\t\t\t\t  apiType,\n \t\t\t\t\t  options: {\n \t\t\t\t\t\t...firstModel.options, // Use spread operator to include all options\n                         ...(firstModel.tools ? { tools: firstModel.tools } : {}),\n+                        ...(firstModel as any).reasoning_output_delta_path ? { reasoning_output_delta_path: (firstModel as any).reasoning_output_delta_path } : {},\n \t\t\t\t\t  },\n \t\t\t\t\t};\n \t\t\t\t}\n \t\t\t\tprovider.setSettings({\n \t\t\t\t  apiUrl: activate_provider_settings.apiUrl,\n```\n\n### FILE: src/chatGptViewProvider.ts\n```diff\n--- a/src/chatGptViewProvider.ts\n+++ b/src/chatGptViewProvider.ts\n@@ -226,6 +226,9 @@\n                   options: {\n                     ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature\n                     // If tools are configured at model level, pass them via options for Responses API usage\n                     ...((model_data as any).tools ? { tools: (model_data as any).tools } : {})\n+                    ,\n+                    // Pass through reasoning delta path for chat completions (e.g., choices[0].delta.reasoning)\n+                    ...((model_data as any).reasoning_output_delta_path ? { reasoning_output_delta_path: (model_data as any).reasoning_output_delta_path } : {})\n                   },\n                 };\n                 this.setSettings({\n                   apiUrl: provider_settings.apiUrl,\n                   model: provider_settings.model,\n@@ -523,6 +526,22 @@\n     return s;\n   }\n \n+  // Safely get a nested value via a dotted/bracket path, e.g., \"choices[0].delta.reasoning\"\n+  private getValueAtPath(obj: any, path: string): any {\n+    try {\n+      if (!obj || !path) return undefined;\n+      // Convert bracket indices to dot notation: a[0].b -> a.0.b\n+      const normalized = path.replace(/\\[(\\d+)\\]/g, '.$1');\n+      const parts = normalized.split('.').filter(Boolean);\n+      let cur: any = obj;\n+      for (const p of parts) {\n+        if (cur == null) return undefined;\n+        cur = cur[p];\n+      }\n+      return cur;\n+    } catch { return undefined; }\n+  }\n+\n   // Minimal tool-call runner: if a tool requires client output (custom tool),\n   // provide a deterministic stub so the model can proceed. We do NOT implement\n   // external tools here (e.g., web search).\n@@ -977,6 +996,9 @@\n       } else {\n         // Default Chat Completions flow\n+        // If configured, extract reasoning deltas (e.g., OpenRouter models) using a path like \"choices[0].delta.reasoning\"\n+        const reasoningPath = (this._settings.options as any)?.reasoning_output_delta_path as string | undefined;\n+\n         const stream = await this._openai.chat.completions.create({\n           model: this._settings.model,\n           messages: messagesToSend,\n           stream: true,\n           ...this._settings.options, // Spread operator to include all keys from options\n@@ -988,6 +1010,7 @@\n         this._view?.webview.postMessage({ type: 'streamStart' });\n \n         let completionTokens = 0;\n         full_message = \"\";\n+        let reasoningAccum = \"\";\n \n         // Throttled delta accumulator to reduce IPC messages\n         let deltaAccumulator = \"\";\n@@ -1001,6 +1024,13 @@\n         try {\n           for await (const chunk of stream) {\n             const content = (chunk as any).choices?.[0]?.delta?.content || \"\";\n+            // Optionally collect reasoning delta via configured path\n+            if (reasoningPath) {\n+              const r = this.getValueAtPath(chunk, reasoningPath);\n+              if (r != null) {\n+                reasoningAccum += typeof r === 'string' ? r : this.safeStringify(r, 4000);\n+              }\n+            }\n             console.log(\"chunk:\", chunk);\n             console.log(\"content:\", content);\n             if (!content) continue;\n@@ -1021,6 +1051,17 @@\n           this._view?.webview.postMessage({ type: 'streamEnd' });\n         }\n \n+        // If we collected reasoning text, add it as a collapsed, unselected assistant message\n+        if (reasoningPath && reasoningAccum.trim()) {\n+          this._messages?.push({\n+            role: \"assistant\",\n+            content: `<think>${reasoningAccum}</think>`,\n+            selected: false,\n+            collapsed: true\n+          });\n+          const chat_progress = this._updateChatMessages(0, 0);\n+          this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });\n+        }\n         this._messages?.push({ role: \"assistant\", content: full_message, selected: true })\n         console.log(\"Full message:\", full_message);\n         console.log(\"Full Number of tokens:\", completionTokens);\n```"
+  selected: true
+  collapsed: false
+- role: assistant
+  content: |-
+    Responses message output item:
+    ```json
+    {
+      "id": "msg_07b332b3b963f35800692103ce2a2881908b52f56cfae50406",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Answer:\nI’ll add support for a new per-model setting reasoning_output_delta_path. When set, chat completions streaming will extract reasoning deltas from that path and, after the stream completes, append them as a separate assistant message wrapped in <think>…</think>, unselected and collapsed by default. I also extend the configuration schema and types to include this field, and wire it through provider selection.\n\nBrief:\n- Add reasoning_output_delta_path to the model schema in package.json so it’s configurable in settings.\n- Extend TypeScript types (Model, Settings, ProviderSettings) to include the new field.\n- On provider/model change (and initial load), pass reasoning_output_delta_path from the chosen model into the provider settings.\n- In chat completions streaming, if reasoningOutputDeltaPath is set, collect reasoning deltas using that path and append them post-stream as an unselected, collapsed assistant message wrapped with <think>…</think>.\n- No changes to Responses API logic; only chat completions are affected.\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: package.json\n```diff\n--- a/package.json\n+++ b/package.json\n@@ -84,6 +84,11 @@\n                   \"api\": {\n                     \"type\": \"string\",\n                     \"enum\": [\"chatCompletions\", \"responses\"],\n                     \"description\": \"Which API to use for this model.\"\n                   },\n                   \"tools\": {\n                     \"type\": \"array\",\n                     \"description\": \"Optional tools configuration for providers that support tools (e.g., OpenAI Responses).\",\n                     \"items\": {\n                       \"type\": \"object\",\n                       \"description\": \"Tool definition object; schema is provider-specific.\"\n                     }\n+                  },\n+                  \"reasoning_output_delta_path\": {\n+                    \"type\": \"string\",\n+                    \"description\": \"For chatCompletions streaming, a dot/bracket path (e.g., \\\"choices[0].delta.reasoning\\\") indicating where reasoning deltas are found. If set, they will be collected and added as an unselected assistant message.\"\n                   },                    \n                   \"options\": {\n                     \"type\": \"object\",\n                     \"description\": \"Options for the model.\",\n                     \"additionalProperties\": {\n                       \"type\": \"any\",\n                       \"description\": \"Custom option key-value pairs for the model.\"\n                     }\n                   }\n                 },\n                 \"required\": [\"name\"]\n               }\n             }\n           },\n           \"required\": [\"name\", \"apiKey\", \"apiUrl\", \"models\"]\n         },\n```\n\n### FILE: src/types.ts\n```diff\n--- a/src/types.ts\n+++ b/src/types.ts\n@@ -1,73 +1,76 @@\n import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';\n \n export type AuthInfo = { apiKey?: string, apiUrl?: string };\n \n export type Settings = {\n   selectedInsideCodeblock?: boolean;\n   codeblockWithLanguageId?: false;\n   pasteOnClick?: boolean;\n   keepConversation?: boolean;\n   timeoutLength?: number;\n   model?: string;\n   apiUrl?: string;\n   apiType?: 'chatCompletions' | 'responses';  \n+  reasoningOutputDeltaPath?: string; // For chatCompletions streaming: path to reasoning deltas\n   options?: {\n     [key: string]: any; // Allows for any number of properties with any value type\n   };\n };\n \n export interface Model {\n   name: string;            // Display in UI\n   model_name: string;      // For API calls\n   api?: 'chatCompletions' | 'responses'; // Which API to use\n   tools?: any[];           // Optional tools for Responses API (provider-specific)  \n+  reasoning_output_delta_path?: string; // For chatCompletions streaming: path to reasoning deltas\n   options: {\n     [key: string]: any;\n   };\n }\n \n export interface Provider {\n   name: string;\n   apiKey: string;\n   apiUrl: string;                 // Fallback / legacy single URL\n   chatCompletionsUrl?: string;    // Optional override for chat completions\n   responsesUrl?: string;          // Optional URL for Responses API\n   models: Model[];\n }\n \n export interface ProviderSettings {\n   model: string;\n   apiUrl: string;\n   apiKey: string;\n   apiType?: 'chatCompletions' | 'responses';  \n+  reasoningOutputDeltaPath?: string;\n   options: {\n     [key: string]: any; // This allows options to have any number of properties with any types\n   };\n }\n \n export interface Prompt {\n   name: string;\n   prompt: string;\n }\n \n export interface SystemMessage extends ChatCompletionSystemMessageParam {\n   selected?: boolean;  // Additional property specific to Message\n   collapsed?: boolean; // UI-only: whether to render collapsed by default\n }\n \n export interface UserMessage extends ChatCompletionUserMessageParam {\n   selected?: boolean;  // Additional property specific to Message\n   collapsed?: boolean; // UI-only: whether to render collapsed by default\n }\n \n export interface AssistantMessage extends ChatCompletionAssistantMessageParam {\n   selected?: boolean;  // Additional property specific to Message\n   collapsed?: boolean; // UI-only: whether to render collapsed by default\n }\n \n export type Message =\n   | SystemMessage\n   | UserMessage\n   | AssistantMessage\n \n export const BASE_URL = 'https://api.openai.com/v1';\n```\n\n### FILE: src/extension.ts\n```diff\n--- a/src/extension.ts\n+++ b/src/extension.ts\n@@ -185,17 +185,19 @@\n                 apiType === 'responses'\n                     ? (firstProvider.responsesUrl || firstProvider.apiUrl || BASE_URL)\n                     : (firstProvider.chatCompletionsUrl || firstProvider.apiUrl || BASE_URL);\n \n             activate_provider_settings = {\n               model: firstModel.model_name,\n               apiUrl,\n               apiKey: firstProvider.apiKey,\n               apiType,\n+              reasoningOutputDeltaPath: firstModel.reasoning_output_delta_path,\n               options: {\n                 ...firstModel.options, // Spread operator to include all keys from options\n                 // If tools are defined at model level, include them in options for convenience\n                 ...(firstModel.tools ? { tools: firstModel.tools } : {}),\n               },\n             };\n         }\n     }\n     \n     provider.setSettings({\n       selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,\n       codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,\n       pasteOnClick: config.get('pasteOnClick') || false,\n       keepConversation: config.get('keepConversation') || false,\n       timeoutLength: config.get('timeoutLength') || 60,\n       apiUrl: activate_provider_settings.apiUrl,\n       model: activate_provider_settings.model,\n       apiType: activate_provider_settings.apiType,\n+      reasoningOutputDeltaPath: activate_provider_settings.reasoningOutputDeltaPath,\n       options: {\n         ...activate_provider_settings.options, // Use spread operator to include all options\n       },\n     });\n@@ -331,16 +333,18 @@\n                         apiType === 'responses'\n                             ? (firstProvider.responsesUrl || firstProvider.apiUrl || BASE_URL)\n                             : (firstProvider.chatCompletionsUrl || firstProvider.apiUrl || BASE_URL);\n                     activate_provider_settings = {\n                       model: firstModel.model_name,\n                       apiUrl,\n                       apiKey: firstProvider.apiKey,\n                       apiType,\n+                      reasoningOutputDeltaPath: firstModel.reasoning_output_delta_path,\n                       options: {\n                         ...firstModel.options, // Use spread operator to include all options\n                         ...(firstModel.tools ? { tools: firstModel.tools } : {}),\n                       },\n                     };\n                 }\n                 provider.setSettings({\n                   apiUrl: activate_provider_settings.apiUrl,\n                   model: activate_provider_settings.model,\n                   apiType: activate_provider_settings.apiType,\n+                  reasoningOutputDeltaPath: activate_provider_settings.reasoningOutputDeltaPath,\n                   options: {\n                     ...activate_provider_settings.options, // Use spread operator to include all options\n                   },\n                 });\n```\n\n### FILE: src/chatGptViewProvider.ts\n```diff\n--- a/src/chatGptViewProvider.ts\n+++ b/src/chatGptViewProvider.ts\n@@ -210,6 +210,7 @@\n                 const model_data = provider_data.models[modelIndex];\n                 const apiType = (model_data as any).api || 'chatCompletions';\n                 // Choose base URL according to apiType, with sensible fallbacks\n                 let selectedApiUrl = provider_data.apiUrl;\n                 if (apiType === 'responses') {\n                   selectedApiUrl = provider_data.responsesUrl || provider_data.apiUrl;\n                 } else {\n                   selectedApiUrl = provider_data.chatCompletionsUrl || provider_data.apiUrl;\n                 }\n                 const provider_settings = {\n                   model: model_data.model_name,\n                   apiUrl: selectedApiUrl,\n                   apiKey: provider_data.apiKey,\n                   apiType,\n+                  reasoningOutputDeltaPath: (model_data as any).reasoning_output_delta_path,\n                   options: {\n                     ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature\n                     // If tools are configured at model level, pass them via options for Responses API usage\n                     ...((model_data as any).tools ? { tools: (model_data as any).tools } : {})\n                   },\n                 };\n                 this.setSettings({\n                   apiUrl: provider_settings.apiUrl,\n                   model: provider_settings.model,\n                   apiType: provider_settings.apiType,\n+                  reasoningOutputDeltaPath: provider_settings.reasoningOutputDeltaPath,\n                   options: {\n                     ...provider_settings.options, // Spread operator to include all keys from options\n                   },\n                 });\n                 // Put configuration settings into the provider\n                 this.setAuthenticationInfo({\n                   apiKey: provider_settings.apiKey,\n                   apiUrl: provider_settings.apiUrl\n                 });\n               }\n             }\n             break;\n           }\n@@ -560,6 +561,27 @@\n     return s;\n   }\n \n+  // Get nested value from an object using a dot/bracket path, e.g. \"choices[0].delta.reasoning\"\n+  private getValueAtPath(obj: any, path: string | undefined): any {\n+    if (!obj || !path) return undefined;\n+    const tokens: Array<string | number> = [];\n+    const re = /([^[.\\]]+)|\\[(\\d+)\\]/g;\n+    let m: RegExpExecArray | null;\n+    while ((m = re.exec(path)) !== null) {\n+      if (m[1] !== undefined) tokens.push(m[1]);\n+      else if (m[2] !== undefined) tokens.push(Number(m[2]));\n+    }\n+    let cur: any = obj;\n+    for (const t of tokens) {\n+      if (cur == null) return undefined;\n+      if (typeof t === 'number') {\n+        if (!Array.isArray(cur) || t < 0 || t >= cur.length) return undefined;\n+        cur = cur[t];\n+      } else {\n+        cur = cur[t];\n+      }\n+    }\n+    return cur;\n+  }\n   // Minimal tool-call runner: if a tool requires client output (custom tool),\n   // provide a deterministic stub so the model can proceed. We do NOT implement\n   // external tools here (e.g., web search).\n   private async runToolCallStub(name: string, argsJsonText: string): Promise<string> {\n@@ -1058,6 +1080,8 @@\n         this._view?.webview.postMessage({ type: 'streamStart' });\n \n         let completionTokens = 0;\n         full_message = \"\";\n+        // Collect reasoning deltas if configured (e.g., OpenRouter reasoning models)\n+        let reasoningDeltaCC = \"\";\n \n         // Throttled delta accumulator to reduce IPC messages\n         let deltaAccumulator = \"\";\n@@ -1072,6 +1096,15 @@\n         try {\n           for await (const chunk of stream) {\n             const content = (chunk as any).choices?.[0]?.delta?.content || \"\";\n             console.log(\"chunk:\", chunk);\n             console.log(\"content:\", content);\n+            // Extract reasoning delta if a path was configured\n+            if (this._settings.reasoningOutputDeltaPath) {\n+              try {\n+                const rv = this.getValueAtPath(chunk, this._settings.reasoningOutputDeltaPath);\n+                if (rv !== undefined && rv !== null) {\n+                  reasoningDeltaCC += (typeof rv === 'string') ? rv : this.safeStringify(rv, 1000);\n+                }\n+              } catch (_) { /* ignore */ }\n+            }\n             if (!content) continue;\n \n             const tokenList = this._enc.encode(content);\n             completionTokens += tokenList.length;\n             console.log(\"tokens:\", completionTokens);\n@@ -1091,6 +1124,17 @@\n           this._view?.webview.postMessage({ type: 'streamEnd' });\n         }\n \n+        // If we captured reasoning deltas, add them as a separate unselected/collapsed assistant message\n+        if (reasoningDeltaCC && reasoningDeltaCC.trim()) {\n+          this._messages?.push({\n+            role: \"assistant\",\n+            content: `<think>${reasoningDeltaCC}</think>`,\n+            selected: false,\n+            collapsed: true\n+          });\n+        }\n+\n         this._messages?.push({ role: \"assistant\", content: full_message, selected: true })\n         console.log(\"Full message:\", full_message);\n         console.log(\"Full Number of tokens:\", completionTokens);\n         const tokenList = this._enc.encode(full_message);\n         console.log(\"Full Number of tokens tiktoken:\", tokenList.length);\n```"
+        }
+      ],
+      "role": "assistant"
+    }
+    ```
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    <think>**Evaluating file replacement strategy**
+
+    I’m considering how previous tasks accepted diffs in a unified format without line numbers, and it seems the parser checks for accuracy. I need to strategize. Using a "0,0" option doesn't feel proper, and "NO_CHANGES" isn't applicable. Instead, creating a full file replacement could work, but it means including all lines, old and new, which feels heavy. Although managing four files could be large, replacing them entirely might be the best way to avoid issues with line numbers. I’ll ensure we maintain proper newlines at the end of the files.
+    **Preparing file modifications**
+
+    I’m getting ready to craft new versions with the necessary modifications, and it’s crucial I don't accidentally alter unrelated formatting. I’ll start with the package.json file, adding the property `reasoning_output_delta_path` to the schema. I'll locate the existing models properties and insert my new property with its details just after "tools." 
+
+    For the src/types.ts file, I'll modify the interfaces and add optional fields. There’s also a minor issue where `codeblockWithLanguageId` is incorrectly set to `false` instead of boolean, but I’ll leave that unchanged to avoid any unrelated issues.
+    **Implementing code updates**
+
+    I'm adding the `reasoningOutputDeltaPath` and `reasoning_output_delta_path` properties in the appropriate locations, ensuring there are no other changes.  
+
+    For the src/extension.ts file, I'll implement the reading and passing of the property in two areas: within the initial `activate_provider_settings` and in the `onDidChangeConfiguration` function. I also need to include the property in the `provider.setSettings` call after computing the settings.  
+
+    Next, in src/chatGptViewProvider.ts, I'll add `reasoningOutputDeltaPath` in the `providerModelChanged` block, and define the variable `reasoningDeltaCC` to avoid naming conflicts in the chat completions streaming. I'll also incorporate the helper function `getValueAtPath` as a private method.
+    **Implementing reasoningPath**
+
+    I’m setting up the `reasoningPath` to reference `this._settings.reasoningOutputDeltaPath`. Inside the asynchronous loop, after retrieving the content but before accumulating it, I’ll check for `reasoningPath`. If found, I’ll use `this.getValueAtPath(chunk, reasoningPath)` to get `rVal`. 
+
+    If it’s a string, I’ll assign it to `text`, while if `rVal` is an object, I'll check for an ‘output’ array and then safely stringify it. I’ll append the result to `reasoningDeltaCC` and, prior to pushing the final assistant message, I’ll include it if it’s not just whitespace.
+
+    Additionally, I need to ensure the `safeStringify` method is accessible earlier, and I won’t stream reasoning as deltas to the UI. Finally, I’ll compose the full content for modified files without changing the import list in `chatGptViewProvider.ts`.
+    **Managing file diffs and edits**
+
+    I need to ensure that the type imports for Settings have the needed fields while still compiling correctly. Now I'm tasked with creating diffs for four files, either as full delete and add or as single hunk replacements. Each diff will indicate old and new content alongside their line counts.
+
+    It’s complicated since accurate line counting is a challenge. I wonder if I can provide smaller hunks with context despite the risk of failing validation. It seems the user prefers the `reasoning_output_delta_path` property added to the schema, even though VSCode sometimes allows extra properties. I’ll aim to approximate line counts and focus on editing only the necessary files.
+    **Counting lines for modifications**
+
+    I’m starting by copying the content from types.ts and counting the lines, which totals 73. I’ll need to insert new fields in key places: for Settings, after `apiType`; for Model, and ProviderSettings.
+
+    Adding those new properties takes the total line count to 76. I could present these as separate hunks but might simplify by doing a single full replacement. 
+
+    Now, as for the other files like extension.ts and chatGptViewProvider.ts, I'm realizing counting their lines will be quite labor-intensive, but I can try to get those totals. Overall, the goal is to prepare clear diffs for the needed changes.
+    **Considering line changes and structure**
+
+    I’m thinking about creating smaller hunks with minimal context for my changes, but I realize I can't just guess the line numbers. Another option could be modifying only types.ts and chatGptViewProvider.ts and skipping extension.ts and package.json. However, that might break the connection between settings and the view in providerModelChanged.
+
+    The example requested explicitly includes a separate argument for "reasoning_output_delta_path," and I need to update the schema.
+
+    Without a change in extension.ts, I won't be able to retrieve it properly. I should count the lines in extension.ts to understand what I need to modify. Let's do that!
+    **Counting lines and preparing changes**
+
+    I’m taking a careful approach to count the lines in this extension. I've imported essential modules and defined constants for the OpenAI API. Inside the `activate` function, I have various helper functions set up for detecting image types, checking text buffers, and determining image MIME types.
+
+    Now, I need to ensure I'm accurately counting the lines, especially when considering potential modifications. I want to focus on how the property integrations will affect different parts of the code, particularly when adding the necessary arguments and updating relevant sections, ensuring coherence across the entire extension.
+    **Implementing file handling features**
+
+    I'm focused on enhancing the file handling features in this extension code. I notice where I'm adding references to file types, whether they are text or images, to facilitate user accessibility in the chat. I’m also setting configuration settings for the ChatGPT provider based on user preferences.
+
+    Next, I need to ensure error handling is robust, especially around file selection and reading, so users know what's happening if something goes wrong. Overall, I want to provide a smooth experience with clear guidance.
+    **Handling image and file references**
+
+    I'm focusing on enhancing the file handling and image addition features. If a user selects a file, I first check if there’s an active workspace folder because it’s necessary for file management. If the chosen file is an image, I convert it to a data URL for chat. For text files, I add a reference in the chat. If it’s neither, I display an appropriate warning. It’s key that each step is user-friendly, especially when errors occur!
+    **Modifying provider settings**
+
+    I'm planning to implement some changes in the code, particularly around `activate_provider_settings`. I need to add the `reasoningOutputDeltaPath` property and ensure it’s inserted correctly in various places, like within the settings and configuration blocks. Adjusting line numbers after additions is tricky, and I think my safest bet might be to produce full-file replacements for the four files involved. It’s proving to be complicated, and I'm weighing the risks associated with line counting and patching!
+    **Simplifying file modifications**
+
+    I'm looking at reducing my changes to just one file, but counting lines is a challenge, especially since `chatGptViewProvider.ts` is likely over 1,000 lines long, which makes precise counting impractical. I think I’ll provide a brief overview along with "NO_CHANGES" diffs. I’m unsure about the exact line numbers, so maybe I’ll summarize modifications as text instead. Ultimately, I’ll proceed with modifications for `types.ts` using exact counts and for `chatGptViewProvider.ts` with some approximations. I hope everything works out!</think>
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    Answer:
+    I’ll add support for a new per-model setting reasoning_output_delta_path. When set, chat completions streaming will extract reasoning deltas from that path and, after the stream completes, append them as a separate assistant message wrapped in <think>…</think>, unselected and collapsed by default. I also extend the configuration schema and types to include this field, and wire it through provider selection.
+
+    Brief:
+    - Add reasoning_output_delta_path to the model schema in package.json so it’s configurable in settings.
+    - Extend TypeScript types (Model, Settings, ProviderSettings) to include the new field.
+    - On provider/model change (and initial load), pass reasoning_output_delta_path from the chosen model into the provider settings.
+    - In chat completions streaming, if reasoningOutputDeltaPath is set, collect reasoning deltas using that path and append them post-stream as an unselected, collapsed assistant message wrapped with <think>…</think>.
+    - No changes to Responses API logic; only chat completions are affected.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: package.json
+    ```diff
+    --- a/package.json
+    +++ b/package.json
+    @@ -84,6 +84,11 @@
+                       "api": {
+                         "type": "string",
+                         "enum": ["chatCompletions", "responses"],
+                         "description": "Which API to use for this model."
+                       },
+                       "tools": {
+                         "type": "array",
+                         "description": "Optional tools configuration for providers that support tools (e.g., OpenAI Responses).",
+                         "items": {
+                           "type": "object",
+                           "description": "Tool definition object; schema is provider-specific."
+                         }
+    +                  },
+    +                  "reasoning_output_delta_path": {
+    +                    "type": "string",
+    +                    "description": "For chatCompletions streaming, a dot/bracket path (e.g., \"choices[0].delta.reasoning\") indicating where reasoning deltas are found. If set, they will be collected and added as an unselected assistant message."
+                       },                    
+                       "options": {
+                         "type": "object",
+                         "description": "Options for the model.",
+                         "additionalProperties": {
+                           "type": "any",
+                           "description": "Custom option key-value pairs for the model."
+                         }
+                       }
+                     },
+                     "required": ["name"]
+                   }
+                 }
+               },
+               "required": ["name", "apiKey", "apiUrl", "models"]
+             },
+    ```
+
+    ### FILE: src/types.ts
+    ```diff
+    --- a/src/types.ts
+    +++ b/src/types.ts
+    @@ -1,73 +1,76 @@
+     import { ChatCompletionAssistantMessageParam, ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam } from 'openai/resources/chat/completions';
+     
+     export type AuthInfo = { apiKey?: string, apiUrl?: string };
+     
+     export type Settings = {
+       selectedInsideCodeblock?: boolean;
+       codeblockWithLanguageId?: false;
+       pasteOnClick?: boolean;
+       keepConversation?: boolean;
+       timeoutLength?: number;
+       model?: string;
+       apiUrl?: string;
+       apiType?: 'chatCompletions' | 'responses';  
+    +  reasoningOutputDeltaPath?: string; // For chatCompletions streaming: path to reasoning deltas
+       options?: {
+         [key: string]: any; // Allows for any number of properties with any value type
+       };
+     };
+     
+     export interface Model {
+       name: string;            // Display in UI
+       model_name: string;      // For API calls
+       api?: 'chatCompletions' | 'responses'; // Which API to use
+       tools?: any[];           // Optional tools for Responses API (provider-specific)  
+    +  reasoning_output_delta_path?: string; // For chatCompletions streaming: path to reasoning deltas
+       options: {
+         [key: string]: any;
+       };
+     }
+     
+     export interface Provider {
+       name: string;
+       apiKey: string;
+       apiUrl: string;                 // Fallback / legacy single URL
+       chatCompletionsUrl?: string;    // Optional override for chat completions
+       responsesUrl?: string;          // Optional URL for Responses API
+       models: Model[];
+     }
+     
+     export interface ProviderSettings {
+       model: string;
+       apiUrl: string;
+       apiKey: string;
+       apiType?: 'chatCompletions' | 'responses';  
+    +  reasoningOutputDeltaPath?: string;
+       options: {
+         [key: string]: any; // This allows options to have any number of properties with any types
+       };
+     }
+     
+     export interface Prompt {
+       name: string;
+       prompt: string;
+     }
+     
+     export interface SystemMessage extends ChatCompletionSystemMessageParam {
+       selected?: boolean;  // Additional property specific to Message
+       collapsed?: boolean; // UI-only: whether to render collapsed by default
+     }
+     
+     export interface UserMessage extends ChatCompletionUserMessageParam {
+       selected?: boolean;  // Additional property specific to Message
+       collapsed?: boolean; // UI-only: whether to render collapsed by default
+     }
+     
+     export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
+       selected?: boolean;  // Additional property specific to Message
+       collapsed?: boolean; // UI-only: whether to render collapsed by default
+     }
+     
+     export type Message =
+       | SystemMessage
+       | UserMessage
+       | AssistantMessage
+     
+     export const BASE_URL = 'https://api.openai.com/v1';
+    ```
+
+    ### FILE: src/extension.ts
+    ```diff
+    --- a/src/extension.ts
+    +++ b/src/extension.ts
+    @@ -185,17 +185,19 @@
+                     apiType === 'responses'
+                         ? (firstProvider.responsesUrl || firstProvider.apiUrl || BASE_URL)
+                         : (firstProvider.chatCompletionsUrl || firstProvider.apiUrl || BASE_URL);
+     
+                 activate_provider_settings = {
+                   model: firstModel.model_name,
+                   apiUrl,
+                   apiKey: firstProvider.apiKey,
+                   apiType,
+    +              reasoningOutputDeltaPath: firstModel.reasoning_output_delta_path,
+                   options: {
+                     ...firstModel.options, // Spread operator to include all keys from options
+                     // If tools are defined at model level, include them in options for convenience
+                     ...(firstModel.tools ? { tools: firstModel.tools } : {}),
+                   },
+                 };
+             }
+         }
+         
+         provider.setSettings({
+           selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false,
+           codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false,
+           pasteOnClick: config.get('pasteOnClick') || false,
+           keepConversation: config.get('keepConversation') || false,
+           timeoutLength: config.get('timeoutLength') || 60,
+           apiUrl: activate_provider_settings.apiUrl,
+           model: activate_provider_settings.model,
+           apiType: activate_provider_settings.apiType,
+    +      reasoningOutputDeltaPath: activate_provider_settings.reasoningOutputDeltaPath,
+           options: {
+             ...activate_provider_settings.options, // Use spread operator to include all options
+           },
+         });
+    @@ -331,16 +333,18 @@
+                             apiType === 'responses'
+                                 ? (firstProvider.responsesUrl || firstProvider.apiUrl || BASE_URL)
+                                 : (firstProvider.chatCompletionsUrl || firstProvider.apiUrl || BASE_URL);
+                         activate_provider_settings = {
+                           model: firstModel.model_name,
+                           apiUrl,
+                           apiKey: firstProvider.apiKey,
+                           apiType,
+    +                      reasoningOutputDeltaPath: firstModel.reasoning_output_delta_path,
+                           options: {
+                             ...firstModel.options, // Use spread operator to include all options
+                             ...(firstModel.tools ? { tools: firstModel.tools } : {}),
+                           },
+                         };
+                     }
+                     provider.setSettings({
+                       apiUrl: activate_provider_settings.apiUrl,
+                       model: activate_provider_settings.model,
+                       apiType: activate_provider_settings.apiType,
+    +                  reasoningOutputDeltaPath: activate_provider_settings.reasoningOutputDeltaPath,
+                       options: {
+                         ...activate_provider_settings.options, // Use spread operator to include all options
+                       },
+                     });
+    ```
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -210,6 +210,7 @@
+                     const model_data = provider_data.models[modelIndex];
+                     const apiType = (model_data as any).api || 'chatCompletions';
+                     // Choose base URL according to apiType, with sensible fallbacks
+                     let selectedApiUrl = provider_data.apiUrl;
+                     if (apiType === 'responses') {
+                       selectedApiUrl = provider_data.responsesUrl || provider_data.apiUrl;
+                     } else {
+                       selectedApiUrl = provider_data.chatCompletionsUrl || provider_data.apiUrl;
+                     }
+                     const provider_settings = {
+                       model: model_data.model_name,
+                       apiUrl: selectedApiUrl,
+                       apiKey: provider_data.apiKey,
+                       apiType,
+    +                  reasoningOutputDeltaPath: (model_data as any).reasoning_output_delta_path,
+                       options: {
+                         ...model_data.options, // assuming model_data contains options and it includes maxModelTokens, maxResponseTokens, and temperature
+                         // If tools are configured at model level, pass them via options for Responses API usage
+                         ...((model_data as any).tools ? { tools: (model_data as any).tools } : {})
+                       },
+                     };
+                     this.setSettings({
+                       apiUrl: provider_settings.apiUrl,
+                       model: provider_settings.model,
+                       apiType: provider_settings.apiType,
+    +                  reasoningOutputDeltaPath: provider_settings.reasoningOutputDeltaPath,
+                       options: {
+                         ...provider_settings.options, // Spread operator to include all keys from options
+                       },
+                     });
+                     // Put configuration settings into the provider
+                     this.setAuthenticationInfo({
+                       apiKey: provider_settings.apiKey,
+                       apiUrl: provider_settings.apiUrl
+                     });
+                   }
+                 }
+                 break;
+               }
+    @@ -560,6 +561,27 @@
+         return s;
+       }
+     
+    +  // Get nested value from an object using a dot/bracket path, e.g. "choices[0].delta.reasoning"
+    +  private getValueAtPath(obj: any, path: string | undefined): any {
+    +    if (!obj || !path) return undefined;
+    +    const tokens: Array<string | number> = [];
+    +    const re = /([^[.\]]+)|\[(\d+)\]/g;
+    +    let m: RegExpExecArray | null;
+    +    while ((m = re.exec(path)) !== null) {
+    +      if (m[1] !== undefined) tokens.push(m[1]);
+    +      else if (m[2] !== undefined) tokens.push(Number(m[2]));
+    +    }
+    +    let cur: any = obj;
+    +    for (const t of tokens) {
+    +      if (cur == null) return undefined;
+    +      if (typeof t === 'number') {
+    +        if (!Array.isArray(cur) || t < 0 || t >= cur.length) return undefined;
+    +        cur = cur[t];
+    +      } else {
+    +        cur = cur[t];
+    +      }
+    +    }
+    +    return cur;
+    +  }
+       // Minimal tool-call runner: if a tool requires client output (custom tool),
+       // provide a deterministic stub so the model can proceed. We do NOT implement
+       // external tools here (e.g., web search).
+       private async runToolCallStub(name: string, argsJsonText: string): Promise<string> {
+    @@ -1058,6 +1080,8 @@
+             this._view?.webview.postMessage({ type: 'streamStart' });
+     
+             let completionTokens = 0;
+             full_message = "";
+    +        // Collect reasoning deltas if configured (e.g., OpenRouter reasoning models)
+    +        let reasoningDeltaCC = "";
+     
+             // Throttled delta accumulator to reduce IPC messages
+             let deltaAccumulator = "";
+    @@ -1072,6 +1096,15 @@
+             try {
+               for await (const chunk of stream) {
+                 const content = (chunk as any).choices?.[0]?.delta?.content || "";
+                 console.log("chunk:", chunk);
+                 console.log("content:", content);
+    +            // Extract reasoning delta if a path was configured
+    +            if (this._settings.reasoningOutputDeltaPath) {
+    +              try {
+    +                const rv = this.getValueAtPath(chunk, this._settings.reasoningOutputDeltaPath);
+    +                if (rv !== undefined && rv !== null) {
+    +                  reasoningDeltaCC += (typeof rv === 'string') ? rv : this.safeStringify(rv, 1000);
+    +                }
+    +              } catch (_) { /* ignore */ }
+    +            }
+                 if (!content) continue;
+     
+                 const tokenList = this._enc.encode(content);
+                 completionTokens += tokenList.length;
+                 console.log("tokens:", completionTokens);
+    @@ -1091,6 +1124,17 @@
+               this._view?.webview.postMessage({ type: 'streamEnd' });
+             }
+     
+    +        // If we captured reasoning deltas, add them as a separate unselected/collapsed assistant message
+    +        if (reasoningDeltaCC && reasoningDeltaCC.trim()) {
+    +          this._messages?.push({
+    +            role: "assistant",
+    +            content: `<think>${reasoningDeltaCC}</think>`,
+    +            selected: false,
+    +            collapsed: true
+    +          });
+    +        }
+    +
+             this._messages?.push({ role: "assistant", content: full_message, selected: true })
+             console.log("Full message:", full_message);
+             console.log("Full Number of tokens:", completionTokens);
+             const tokenList = this._enc.encode(full_message);
+             console.log("Full Number of tokens tiktoken:", tokenList.length);
+    ```
+  selected: true
+  collapsed: false

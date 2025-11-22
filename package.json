@@ -307,6 +307,10 @@
                         "type": "any",
                         "description": "Custom option key-value pairs for the model."
                       }
+                    },
+                    "reasoning_output_delta_path": {
+                      "type": "string",
+                      "description": "Dot/bracket path to the streaming reasoning delta within chat completions chunks (e.g., choices[0].delta.reasoning)."
                     }
                   },
                   "required": ["name"]

@@ -24,6 +24,7 @@ export interface Model {
   options: {
     [key: string]: any;
   };
+  reasoning_output_delta_path?: string; // Optional path to reasoning delta in chat completions stream (e.g., choices[0].delta.reasoning)
 }
 
 export interface Provider {
