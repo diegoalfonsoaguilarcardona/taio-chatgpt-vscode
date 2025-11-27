@@ -1,0 +1,353 @@
+- role: system
+  content: |-
+    You are a deterministic Diff Synthesizer that receives one or more source files and a modification request, and outputs minimal pure unified diffs.
+    Treat provided sources as the authoritative, current state for this call; they always represent the latest version after any applied patches. Do not rely on prior calls beyond what is present in `sources`.
+
+    INPUT:
+    - `sources`: list of { path: string, content: string (full file with LF newlines) }
+    - `request`: natural language change description.
+
+    BEHAVIOR:
+    - Make only the minimal line-level edits needed to satisfy the request; preserve unrelated content and formatting exactly.
+    - Use LF newlines in all outputs. Do not insert timestamps, hashes, colors, ANSI codes, or environment-dependent data.
+    - Accept diffs against empty files when creating new ones.
+    - If a file was deleted and the request requires it again, do not recreate automatically; emit an error asking to confirm re-creation (see ERROR CASES).
+    - If a file is missing but the request implies modification, decide based on context: if the request clearly implies creation, treat as new; if it clearly implies deletion, delete (error if already deleted); if ambiguous, emit an error asking for clarification.
+
+    STRICT UNIFIED-DIFF FORMAT:
+    - Output one fenced diff block per affected file, preceded by a plain-text heading `### FILE: <path>` outside the fence.
+    - For each file, output pure unified diff only:
+      --- a/<path>
+      +++ b/<path>
+      @@ -<start_old>,<len_old> +<start_new>,<len_new> @@
+      <hunk lines>
+    - Always include both lengths in the hunk header, even when 1 (never use the shortened form).
+    - Hunk line prefixes:
+      - Context (unchanged): a single leading space ' ' followed by the exact line content.
+      - Removal: '-' followed by the exact old line content.
+      - Addition: '+' followed by the exact new line content.
+      - There must be exactly one prefix character per line and no extra leading spaces after the prefix.
+    - Preserve whitespace verbatim:
+      - Do not alter indentation, tabs, or trailing spaces in unchanged lines.
+      - Represent tabs as literal tab characters; do not convert tabs ↔ spaces.
+      - Empty lines must still carry their prefix (e.g., " " then newline for context-empty line).
+    - Newline-at-EOF handling:
+      - Mirror the source files’ newline-at-EOF status.
+      - If the last line of either old or new side lacks a trailing LF, include the canonical marker line:
+        "\ No newline at end of file" (exactly as shown, with no prefix), immediately after the affected hunk line.
+    - Context lines: include 3 lines of context before and after each change when available (fewer if at file boundaries).
+
+    ADDED/DELETED FILE CONVENTIONS:
+    - Added file:
+      --- /dev/null
+      +++ b/<path>
+      A single hunk starting at 1, covering all added lines.
+    - Deleted file:
+      --- a/<path>
+      +++ /dev/null
+      A single hunk removing all lines.
+
+    ORDERING:
+    - Sort files alphabetically by `<path>`.
+    - Within each file, sort hunks by ascending line number.
+    - Hunks must not overlap and must be separated by at least one blank line if two hunks are adjacent in output.
+
+    OUTPUT STRUCTURE (always 3 parts):
+    1) Answer: brief direct answer to the request and/or what will be changed.
+    2) Brief (max 15 lines): concise summary of what will change and why. The Brief must end with this one-line apply reminder:
+       "Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1".
+    3) Diffs: one fenced ``​`diff code block per affected file, each preceded by `### FILE: <path>`.
+
+    NO CHANGES:
+    - If the request requires no modifications, produce the Brief, then a single fenced block containing exactly:
+      ``​`text
+      === DIFF BEGIN ===
+      NO_CHANGES
+      === DIFF END ===
+      ``​`
+
+    ERROR CASES (emit as their own per-file fenced blocks within the Diffs section; remain deterministic):
+    - Deletion requested for non-existent file:
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! FILE_NOT_FOUND_FOR_DELETE
+      ``​`
+    - Previously deleted file requested to be re-created (ask for confirmation to create again):
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! FILE_WAS_DELETED_RECREATE_CONFIRM
+      ``​`
+    - Impossible or contradictory request:
+      ``​`diff
+      STATUS: error
+      @@ 0,0 0,0 @@
+      ! REQUEST_CONFLICT
+      ``​`
+
+    STRICT SELF-CHECK BEFORE OUTPUT (MANDATORY):
+    - For each file:
+      - Compute 1-based line numbers from `sources[path]` exactly as given (LF-separated).
+      - For every hunk:
+        - start_old is the line number in the old file of the first hunk context/removal line.
+        - len_old equals the count of lines in the hunk that are context or removals.
+        - start_new is the corresponding line number in the new file.
+        - len_new equals the count of lines in the hunk that are context or additions.
+        - All context lines must match the old and new file text exactly (including tabs and trailing spaces).
+      - After virtually applying all hunks in order to the old content, the resulting text must equal the intended new content byte-for-byte (LF newlines).
+      - Ensure no missing spaces, no extra spaces after prefix characters, and no omitted length values in headers.
+    - Do not emit the output if any self-check fails; instead, correct the diff deterministically and re-validate.
+
+    CONSTRAINTS:
+    - Be minimal and deterministic; never reformat or reorder unrelated code.
+    - Do not include commentary beyond the Answer, Brief, and the required per-file diff/code blocks.
+  selected: true
+  collapsed: false
+- role: user
+  content: 'Note: reference to media/main.js was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to media/styles.css was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to package.json was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to src/chatGptViewProvider.ts was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to src/extension.ts was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to src/types.ts was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to tsconfig.json was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to vsc-extension-quickstart.md was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to webpack.config.js was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: 'Note: reference to yarn.lock was here.'
+  selected: true
+  collapsed: true
+- role: user
+  content: |-
+    File reference: `media/main.js`
+    <!--FILE:media/main.js-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `media/styles.css`
+    <!--FILE:media/styles.css-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `package.json`
+    <!--FILE:package.json-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/chatGptViewProvider.ts`
+    <!--FILE:src/chatGptViewProvider.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/extension.ts`
+    <!--FILE:src/extension.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `src/types.ts`
+    <!--FILE:src/types.ts-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `tsconfig.json`
+    <!--FILE:tsconfig.json-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `vsc-extension-quickstart.md`
+    <!--FILE:vsc-extension-quickstart.md-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `webpack.config.js`
+    <!--FILE:webpack.config.js-->
+  selected: true
+  collapsed: false
+- role: user
+  content: |-
+    File reference: `yarn.lock`
+    <!--FILE:yarn.lock-->
+  selected: true
+  collapsed: false
+- role: user
+  content: this is working perfect, the only thing is that it is not saving the "move this file reference to the end before each send" state (it is not saving it into the export yml (as an optional to backward compability), also if it dosn't exists in the yml when I use the selection as chat (or append also) the default value should be disabled, but also updating it into the chat in memory. If it exists you should use it, display it and also put it into the memory.
+  selected: true
+  collapsed: false
+- role: assistant
+  content: |-
+    Responses message output item:
+    ```json
+    {
+      "id": "msg_0e3221a273119087006928d542ed2081928681b165586085ff",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Answer:\nI will persist the “move this file reference to the end” state by:\n- Including moveToEnd in the exported YAML (only when true for backward compatibility).\n- Reading moveToEnd from YAML in useSelectionAsChat and appendSelectionAsChat, defaulting to false when missing, and updating in-memory state accordingly.\n\nBrief:\n- pasteChat: include moveToEnd: true in YAML for messages that have it enabled (omit when false to keep backward compatibility).\n- useSelectionAsChat: when importing YAML, read moveToEnd if present; otherwise default to false, and store it in _messages so UI reflects it.\n- appendSelectionAsChat: same handling for moveToEnd as useSelectionAsChat.\n- UI already renders the move-ref checkbox based on moveToEnd via existing messages to webview; no UI changes required.\nApply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1\n\n### FILE: src/chatGptViewProvider.ts\n```diff\n--- a/src/chatGptViewProvider.ts\n+++ b/src/chatGptViewProvider.ts\n@@ -392,13 +392,13 @@\n     try {\n       // Get the original _messages object\n       // If you want to exclude any other properties from the YAML, you can map and remove them here\n-      const messagesForYaml = this._messages?.map(({ role, content, selected, collapsed }) => ({\n-        role,\n-        content,\n-        selected,\n-        collapsed: !!collapsed // ensure boolean in YAML\n-      }));\n+      const messagesForYaml = this._messages?.map((m) => {\n+        const { role, content, selected, collapsed } = m as any;\n+        const out: any = { role, content, selected, collapsed: !!collapsed };\n+        if ((m as any).moveToEnd) out.moveToEnd = true;\n+        return out;\n+      });\n \n       // Convert messages to a YAML string\n       const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });\n@@ -452,10 +452,11 @@\n       }\n \n       // Normalize messages and default collapsed=false if missing\n-      const normalized = parsedMessages.map((msg: any) => {\n-        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;\n-        return { ...msg, collapsed };\n-      });\n+      const normalized = parsedMessages.map((msg: any) => {\n+        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;\n+        const moveToEnd = ('moveToEnd' in msg) ? !!msg.moveToEnd : false;\n+        return { ...msg, collapsed, moveToEnd };\n+      });\n \n       // If valid, update the _messages array with new data\n       this._messages = normalized;\n@@ -503,14 +504,15 @@\n       }\n \n       // Normalize and validate messages; default selected=true if missing\n-      const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {\n-        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {\n-          throw new Error('Invalid message format. Each message must have role and content properties.');\n-        }\n-        const selected = ('selected' in msg) ? !!msg.selected : true;\n-        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;\n-        return { ...msg, selected, collapsed } as Message;\n-      });\n+      const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {\n+        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {\n+          throw new Error('Invalid message format. Each message must have role and content properties.');\n+        }\n+        const selected = ('selected' in msg) ? !!msg.selected : true;\n+        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;\n+        const moveToEnd = ('moveToEnd' in msg) ? !!msg.moveToEnd : false;\n+        return { ...msg, selected, collapsed, moveToEnd } as Message;\n+      });\n \n       // Append to the existing _messages\n       if (!this._messages) this._messages = [];\n```"
+        }
+      ],
+      "role": "assistant"
+    }
+    ```
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    <think>**Clarifying code adjustments**
+
+    I’m looking to refine the code in the `pasteChat()` function. I see that it handles messages and includes certain properties. I need to add `moveToEnd` to the destructured message, but I want to ensure it’s optional for backward compatibility. If it’s not true, maybe we shouldn't include it at all. It’s critical to only add it if it is true, so the code does not inadvertently exclude messages with an existing `false` value.
+    **Revising message handling**
+
+    I’m producing a code snippet to map messages for YAML. I’ll start by extracting properties like `role`, `content`, `selected`, and `collapsed`, and ensure `collapsed` is a boolean. If the message includes `moveToEnd`, I’ll add it as true.
+
+    Next, in `useSelectionAsChat()`, after loading YAML, there's a need to validate that each message has certain properties. Although there’s a question about the necessity of the `selected` property for backward compatibility, it seems wise to keep it required. Finally, I’ll ensure to default `moveToEnd` properly.
+    **Normalizing messages and updates**
+
+    In `appendSelectionAsChat()`, I'm normalizing each message by defaulting `selected` to true if it's missing and ensuring `moveToEnd` is also set to false by default. When posting chat messages, I've noticed that the UI already marks `moveToEnd` for messages that need it.
+
+    Now, in `toggleMoveRefToEnd`, I see it just updates the memory but doesn’t trigger anything else. If the user toggles, I want to ensure it syncs with exports since `pasteChat` only includes `moveToEnd` when it’s true. I'll also consider what happens when `moveToEnd` is false.
+    **Preparing UI and diff updates**
+
+    I’m looking at the UI's `moveRefState`, which defaults to undefined. I see that if `prev` is false or undefined, the checkbox will be unchecked, which is great. When `useSelectionAsChat` includes `moveToEnd` for messages that aren't references, the UI won't display the checkbox, and that seems fine to me.
+
+    Next, I need to modify three methods in `src/chatGptViewProvider.ts`: `pasteChat`, `useSelectionAsChat`, and `appendSelectionAsChat`. Since I don’t have the exact line counts yet, I must compute those positions accurately for the diff headers. I’ll focus on providing diff blocks with context lines to make the changes clear.
+    **Counting lines for accuracy**
+
+    I need to ensure that `start_old` and `len_old` are accurate because the platform requires exact counts. It's a bit painful, but I know sometimes we can include unified diff hunks with approximate values, even if the validator might reject that. The instructions clearly state the need for a self-check, demanding precise line counts.
+
+    Since manually counting lines on such a long file is tough, I’m considering breaking it into smaller sections with distinctive context. However, I realize I need to avoid shortcuts like “NO_CHANGES” — I have to compute proper line numbers. I’ll start counting lines in `src/chatGptViewProvider.ts` by copying the content and annotating the line numbers from the top.
+    **Modifying message properties and creating diffs**
+
+    I need to ensure each message includes the role and content properties. For the messages mapping, I'll include `moveToEnd` as an optional setting and set it to false by default if it’s not provided. I’ll change several lines to reflect these updates.
+
+    For the diff creation, I need to adjust for line shifts due to adding new variables, which means updating start and length values accurately. Counting lines will be critical here, as errors can cascade. Now, I should encapsulate my changes with adequate context before and after the lines being modified, following best practices for diff formats.
+    **Generating precise diffs**
+
+    I'm putting together the diffs for the necessary changes, making sure to count the lines accurately. For the first hunk involving lines 392-404, I need a total of 13 lines where 3 are context before, 6 are removed, and 4 are context after. For the second hunk from lines 454-458, I'll provide context lines from 452 to 454 and make adjustments accordingly.
+
+    Continuing, I'll verify the hunk related to lines 506-513, ensuring I track the starts and lengths as they shift. The aim is to produce a clean and concise diff block in the unified format. I'll also ensure that any indentation matches expectations, so the code functions perfectly after these modifications.
+    **Assembling the code diffs**
+
+    I'm preparing to copy the necessary code from the file, starting with line 392 where a `try {` statement is located. I need to ensure the indentation is consistent, noting that the file uses 4 spaces within method bodies. I'm listing out the lines being removed and the replacements clearly.
+
+    Next, I’ll confirm the old lines’ starting points and lengths for each hunk, making sure to preserve spacing and keep TypeScript compatibility. Finally, I’ll compile everything into the proper format for the diff block—ensuring all context lines are carefully included.</think>
+  selected: false
+  collapsed: true
+- role: assistant
+  content: |-
+    Answer:
+    I will persist the “move this file reference to the end” state by:
+    - Including moveToEnd in the exported YAML (only when true for backward compatibility).
+    - Reading moveToEnd from YAML in useSelectionAsChat and appendSelectionAsChat, defaulting to false when missing, and updating in-memory state accordingly.
+
+    Brief:
+    - pasteChat: include moveToEnd: true in YAML for messages that have it enabled (omit when false to keep backward compatibility).
+    - useSelectionAsChat: when importing YAML, read moveToEnd if present; otherwise default to false, and store it in _messages so UI reflects it.
+    - appendSelectionAsChat: same handling for moveToEnd as useSelectionAsChat.
+    - UI already renders the move-ref checkbox based on moveToEnd via existing messages to webview; no UI changes required.
+    Apply from project root via clipboard → macOS: pbpaste | patch -p1 ; Linux (X11): xclip -selection clipboard -o | patch -p1 ; Linux (Wayland): wl-paste | patch -p1 ; Windows (Git Bash): cat /dev/clipboard | patch -p1
+
+    ### FILE: src/chatGptViewProvider.ts
+    ```diff
+    --- a/src/chatGptViewProvider.ts
+    +++ b/src/chatGptViewProvider.ts
+    @@ -392,13 +392,13 @@
+         try {
+           // Get the original _messages object
+           // If you want to exclude any other properties from the YAML, you can map and remove them here
+    -      const messagesForYaml = this._messages?.map(({ role, content, selected, collapsed }) => ({
+    -        role,
+    -        content,
+    -        selected,
+    -        collapsed: !!collapsed // ensure boolean in YAML
+    -      }));
+    +      const messagesForYaml = this._messages?.map((m) => {
+    +        const { role, content, selected, collapsed } = m as any;
+    +        const out: any = { role, content, selected, collapsed: !!collapsed };
+    +        if ((m as any).moveToEnd) out.moveToEnd = true;
+    +        return out;
+    +      });
+     
+           // Convert messages to a YAML string
+           const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });
+    @@ -452,10 +452,11 @@
+           }
+     
+           // Normalize messages and default collapsed=false if missing
+    -      const normalized = parsedMessages.map((msg: any) => {
+    -        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+    -        return { ...msg, collapsed };
+    -      });
+    +      const normalized = parsedMessages.map((msg: any) => {
+    +        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+    +        const moveToEnd = ('moveToEnd' in msg) ? !!msg.moveToEnd : false;
+    +        return { ...msg, collapsed, moveToEnd };
+    +      });
+     
+           // If valid, update the _messages array with new data
+           this._messages = normalized;
+    @@ -503,14 +504,15 @@
+           }
+     
+           // Normalize and validate messages; default selected=true if missing
+    -      const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {
+    -        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {
+    -          throw new Error('Invalid message format. Each message must have role and content properties.');
+    -        }
+    -        const selected = ('selected' in msg) ? !!msg.selected : true;
+    -        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+    -        return { ...msg, selected, collapsed } as Message;
+    -      });
+    +      const normalizedMessages: Message[] = parsedMessages.map((msg: any) => {
+    +        if (typeof msg !== 'object' || !('role' in msg) || !('content' in msg)) {
+    +          throw new Error('Invalid message format. Each message must have role and content properties.');
+    +        }
+    +        const selected = ('selected' in msg) ? !!msg.selected : true;
+    +        const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
+    +        const moveToEnd = ('moveToEnd' in msg) ? !!msg.moveToEnd : false;
+    +        return { ...msg, selected, collapsed, moveToEnd } as Message;
+    +      });
+     
+           // Append to the existing _messages
+           if (!this._messages) this._messages = [];
+    ```
+  selected: true
+  collapsed: false

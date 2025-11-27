@@ -392,12 +392,12 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     try {
       // Get the original _messages object
       // If you want to exclude any other properties from the YAML, you can map and remove them here
-      const messagesForYaml = this._messages?.map(({ role, content, selected, collapsed }) => ({
-        role,
-        content,
-        selected,
-        collapsed: !!collapsed // ensure boolean in YAML
-      }));
+      const messagesForYaml = this._messages?.map((m) => {
+        const { role, content, selected, collapsed } = m as any;
+        const out: any = { role, content, selected, collapsed: !!collapsed };
+        if ((m as any).moveToEnd) out.moveToEnd = true;
+        return out;
+      });
 
       // Convert messages to a YAML string
       const messagesYaml = yaml.dump(messagesForYaml, { noRefs: true, lineWidth: -1 });
@@ -454,7 +454,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       // Normalize messages and default collapsed=false if missing
       const normalized = parsedMessages.map((msg: any) => {
         const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
-        return { ...msg, collapsed };
+        const moveToEnd = ('moveToEnd' in msg) ? !!msg.moveToEnd : false;
+        return { ...msg, collapsed, moveToEnd };
       });
 
       // If valid, update the _messages array with new data
@@ -509,7 +510,8 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         }
         const selected = ('selected' in msg) ? !!msg.selected : true;
         const collapsed = ('collapsed' in msg) ? !!msg.collapsed : false;
-        return { ...msg, selected, collapsed } as Message;
+        const moveToEnd = ('moveToEnd' in msg) ? !!msg.moveToEnd : false;
+        return { ...msg, selected, collapsed, moveToEnd } as Message;
       });
 
       // Append to the existing _messages
