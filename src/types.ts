@@ -55,16 +55,19 @@ export interface Prompt {
 export interface SystemMessage extends ChatCompletionSystemMessageParam {
   selected?: boolean;  // Additional property specific to Message
   collapsed?: boolean; // UI-only: whether to render collapsed by default
+  moveToEnd?: boolean; // UI-only: move file reference to end before each send (only meaningful for file reference-style content)
 }
 
 export interface UserMessage extends ChatCompletionUserMessageParam {
   selected?: boolean;  // Additional property specific to Message
   collapsed?: boolean; // UI-only: whether to render collapsed by default
+  moveToEnd?: boolean; // UI-only: move file reference to end before each send (only meaningful for file reference-style content)
 }
 
 export interface AssistantMessage extends ChatCompletionAssistantMessageParam {
   selected?: boolean;  // Additional property specific to Message
   collapsed?: boolean; // UI-only: whether to render collapsed by default
+  moveToEnd?: boolean; // UI-only: move file reference to end before each send (only meaningful for file reference-style content)
 }
 
 export type Message =

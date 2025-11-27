@@ -28,6 +28,8 @@
 
     // Remember per-message collapse state (keyed by message index)
     const collapseState = new Map(); // key: "messageIndex", value: boolean (true = collapsed)
+    // Remember per-message "move ref to end" toggle
+    const moveRefState = new Map(); // key: "messageIndex", value: boolean
     
     /**
      * Build a short preview from the message content's text
@@ -262,6 +264,7 @@
             case "resetCollapseState": {
                 // Clear remembered collapse/expand states (e.g., on chat reset)
                 collapseState.clear();
+                moveRefState.clear();
                 break;
             }
             case "setCollapsedForIndex": {
@@ -272,7 +275,13 @@
                 }
                 break;
             }
-
+            case "setMoveRefToEndForIndex": {
+                // Initialize the 'move reference to end' toggle for a message index
+                const idx = message.index;
+                const val = !!message.value;
+                moveRefState.set(String(idx), val);
+                break;
+            }
             case "streamStart": {
                 isStreaming = true;
                 streamBuffer = '';
@@ -567,7 +576,16 @@
                 color: inherit;
                 cursor: pointer;
             }
-    
+            .move-ref-toggle {
+                margin-left: .25rem;
+                width: 1.1rem;
+                height: 1.1rem;
+                vertical-align: middle;
+            }
+            .move-ref-label {
+                font-size: 0.75rem;
+                opacity: 0.85;
+            }
             .message-preview {
                 color: var(--vscode-descriptionForeground);
                 white-space: pre-wrap;
@@ -677,7 +695,28 @@
             btn.setAttribute('aria-expanded', 'true');
             btn.textContent = '−';
             headingEl.appendChild(btn);
-    
+
+            // "Move reference to end" checkbox only for reference messages
+            if (msgKey && contentDiv && /^File reference:/i.test((contentDiv.innerText || '').trim())) {
+                const moveWrap = document.createElement('span');
+                moveWrap.style.display = 'inline-flex';
+                moveWrap.style.alignItems = 'center';
+                moveWrap.style.gap = '.25rem';
+                moveWrap.style.marginLeft = '.25rem';
+                
+                const moveCb = document.createElement('input');
+                moveCb.type = 'checkbox';
+                moveCb.className = 'move-ref-toggle';
+                moveCb.title = 'Move this file reference to the end before each send';
+                const prev = moveRefState.get(msgKey);
+                if (prev) moveCb.checked = true;
+                moveCb.addEventListener('change', function () {
+                    moveRefState.set(msgKey, !!this.checked);
+                    vscode.postMessage({ type: 'toggleMoveRefToEnd', index: parseInt(msgKey, 10), checked: !!this.checked });
+                });
+                moveWrap.appendChild(moveCb);
+                headingEl.appendChild(moveWrap);
+            }    
             // Restore previous state or default to expanded
             let collapsed = msgKey ? !!collapseState.get(msgKey) : false;
             applyCollapsed(collapsed);

@@ -226,7 +226,18 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
             // No need to re-render; the webview already updated its UI.
             break;
           }
-        case "providerModelChanged":
+        case 'toggleMoveRefToEnd':
+          {
+            const index = Number(data.index);
+            const checked = !!data.checked;
+            if (Number.isInteger(index) && this._messages && index >= 0 && index < this._messages.length) {
+              (this._messages[index] as any).moveToEnd = checked;
+            } else {
+              console.error('toggleMoveRefToEnd: Index is out of bounds or _messages undefined.');
+            }
+            break;
+          }
+          case "providerModelChanged":
           {
             const providerIndex = data.providerIndex;
             const modelIndex = data.modelIndex;
@@ -729,6 +740,15 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    // Inform the webview about "move reference to end" toggles so it can render checked states
+    if (this._messages && this._messages.length > 0) {
+      this._messages.forEach((m, idx) => {
+        if ((m as any).moveToEnd) {
+          this._view?.webview.postMessage({ type: 'setMoveRefToEndForIndex', index: idx, value: true });
+        }
+      });
+    }
+
     if (this._totalNumberOfTokens !== undefined) {
       this._totalNumberOfTokens += promtNumberOfTokens + completionTokens;
 
@@ -766,6 +786,54 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       return `**${relPath}**\n\`\`\`${ext}\n${fileContent}\n\`\`\``;
     });
     return replaced;
+  }
+
+  // Reorder references in visible state: move refs marked moveToEnd to just before
+  // the latest user query and leave a small note in their original positions.
+  // Returns true if any references were moved.
+  private reorderMoveRefsInStateBeforeLastMessage(): boolean {
+    if (!this._messages || this._messages.length < 2) return false;
+    const lastIdx = this._messages.length - 1;
+    const lastMsg = this._messages[lastIdx];
+    // Only if the last message is a user query we just added
+    if ((lastMsg as any)?.role !== 'user') return false;
+    const core = this._messages.slice(0, lastIdx);
+    const pinned: Message[] = [];
+    const coreWithPlaceholders: Message[] = [];
+    for (const m of core) {
+      const move = (m as any).moveToEnd === true;
+      let refPath: string | null = null;
+      const c: any = (m as any).content;
+      if (move && typeof c === 'string') {
+        refPath = this.extractReferencePathFromString(c);
+      }
+      if (move && refPath) {
+        pinned.push(m);
+        coreWithPlaceholders.push({
+          role: 'user',
+          content: `Note: reference to ${refPath} was here, moved to the end for this query.`,
+          selected: true,
+          collapsed: true
+        } as any);
+      } else {
+        coreWithPlaceholders.push(m);
+      }
+    }
+    if (!pinned.length) return false;
+    this._messages = [...coreWithPlaceholders, ...pinned, lastMsg];
+    const chat_progress = this._updateChatMessages(0, 0);
+    this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
+    return true;
+  }
+
+  // Extract a referenced path from our lightweight reference format
+  private extractReferencePathFromString(input: string): string | null {
+    if (typeof input !== 'string' || !input) return null;
+    const m1 = input.match(/<!--\s*FILE:([^>]+?)\s*-->/);
+    if (m1 && m1[1]) return String(m1[1]).trim();
+    const m2 = input.match(/File reference:\s*`([^`]+)`/);
+    if (m2 && m2[1]) return String(m2[1]).trim();
+    return null;
   }
 
   // Read a file from any workspace folder by relative path.
@@ -984,6 +1052,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
     let chat_response = '';
     let searchPrompt = "";
+    let movedInState = false;
     if (prompt != undefined) {
       searchPrompt = await this._generate_search_prompt(prompt);
     }
@@ -993,6 +1062,10 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
 
     if (searchPrompt != "") {
       this._messages?.push({ role: "user", content: searchPrompt, selected: true })
+      // Move marked references to just before the new query in state and UI
+      try {
+        movedInState = this.reorderMoveRefsInStateBeforeLastMessage();
+      } catch (_) { movedInState = false; }
     }
 
     if (!this._openai) {
@@ -1034,9 +1107,46 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           //} else {
           // Add the message as a new entry, omitting the 'selected' key
           const { selected, collapsed, ...messageWithoutFlags } = message as any; // Omit UI-only flags
-          messagesToSend.push(messageWithoutFlags);
+          // Explicitly preserve moveToEnd so reordering can work on the send payload
+          const moveToEnd = (message as any).moveToEnd === true;
+          messagesToSend.push(
+            moveToEnd ? ({ ...messageWithoutFlags, moveToEnd: true } as any) : messageWithoutFlags
+          );
           //}
         }
+      }
+
+      if (!movedInState) {
+      // Reorder: move marked file references to just before the new user query; leave a note in original place.
+      try {
+        if (messagesToSend.length >= 1) {
+          const lastIdx = messagesToSend.length - 1;
+          const lastMsg = messagesToSend[lastIdx];
+          const core = messagesToSend.slice(0, lastIdx);
+          const pinned: Message[] = [];
+          const coreWithPlaceholders: Message[] = [];
+          for (const m of core) {
+            const move = (m as any).moveToEnd === true;
+            let refPath: string | null = null;
+            const c: any = (m as any).content;
+            if (move && typeof c === 'string') {
+              refPath = this.extractReferencePathFromString(c);
+            }
+            if (move && refPath) {
+              pinned.push(m);
+              coreWithPlaceholders.push({
+                role: 'user',
+                content: `Note: reference to ${refPath} was here, moved to the end for this query.`,
+              } as any);
+            } else {
+              coreWithPlaceholders.push(m);
+            }
+          }
+          if (pinned.length) {
+            messagesToSend = [...coreWithPlaceholders, ...pinned, lastMsg];
+          }
+        }
+      } catch (_) { /* no-op */ }
       }
 
       // Expand any file reference markers to current file contents
