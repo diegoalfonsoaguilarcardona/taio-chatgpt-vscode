@@ -811,7 +811,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         pinned.push(m);
         coreWithPlaceholders.push({
           role: 'user',
-          content: `Note: reference to ${refPath} was here, moved to the end for this query.`,
+          content: `Note: reference to ${refPath} was here.`,
           selected: true,
           collapsed: true
         } as any);
@@ -1136,7 +1136,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
               pinned.push(m);
               coreWithPlaceholders.push({
                 role: 'user',
-                content: `Note: reference to ${refPath} was here, moved to the end for this query.`,
+                content: `Note: reference to ${refPath} was here.`,
               } as any);
             } else {
               coreWithPlaceholders.push(m);
