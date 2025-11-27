@@ -199,19 +199,8 @@
                 response = message.value;
                 // If we're still streaming, decide whether to force-cancel or defer
                 if (isStreaming) {
-                    // If this looks like a final render (not the initial '...'),
-                    // cancel streaming state and render immediately to unblock the UI.
-                    if (typeof message.value === 'string' && message.value !== '...') {
-                        isStreaming = false;
-                        pendingDelta = '';
-                        streamBuffer = '';
-                        renderScheduled = false;
-                        // Clear watchdog
-                        if (streamWatchdog) { clearInterval(streamWatchdog); streamWatchdog = null; }
-                        setResponse();
-                    } else {
-                        pendingFinalResponse = true;
-                    }
+                    // Do not cancel streaming mid-flight; defer final render until streamEnd
+                    pendingFinalResponse = true;
                 } else {
                     setResponse();
                 }
