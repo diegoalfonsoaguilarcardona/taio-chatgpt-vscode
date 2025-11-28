@@ -800,15 +800,29 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
     // Only if the last message is a user query we just added
     if ((lastMsg as any)?.role !== 'user') return false;
     const core = this._messages.slice(0, lastIdx);
+    // First pass: determine which indices would be moved
+    const pinnedIdxs: number[] = [];
+    for (let i = 0; i < core.length; i++) {
+      const m = core[i];
+      const move = (m as any).moveToEnd === true;
+      const c: any = (m as any).content;
+      const refPath = move && typeof c === 'string' ? this.extractReferencePathFromString(c) : null;
+      if (move && refPath) pinnedIdxs.push(i);
+    }
+    if (pinnedIdxs.length === 0) return false;
+    // If already a contiguous tail at the end of core, nothing to move
+    const k = pinnedIdxs.length;
+    const isContiguousTail = pinnedIdxs.every((idx, j) => idx === core.length - k + j);
+    if (isContiguousTail) return false;
+
+    // Second pass: actually rebuild with placeholders and move pinned to end
     const pinned: Message[] = [];
     const coreWithPlaceholders: Message[] = [];
-    for (const m of core) {
+    for (let i = 0; i < core.length; i++) {
+      const m = core[i];
       const move = (m as any).moveToEnd === true;
-      let refPath: string | null = null;
       const c: any = (m as any).content;
-      if (move && typeof c === 'string') {
-        refPath = this.extractReferencePathFromString(c);
-      }
+      const refPath = move && typeof c === 'string' ? this.extractReferencePathFromString(c) : null;
       if (move && refPath) {
         pinned.push(m);
         coreWithPlaceholders.push({
@@ -821,7 +835,6 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
         coreWithPlaceholders.push(m);
       }
     }
-    if (!pinned.length) return false;
     this._messages = [...coreWithPlaceholders, ...pinned, lastMsg];
     const chat_progress = this._updateChatMessages(0, 0);
     this._view?.webview.postMessage({ type: 'addResponse', value: chat_progress });
@@ -1125,27 +1138,38 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
           const lastIdx = messagesToSend.length - 1;
           const lastMsg = messagesToSend[lastIdx];
           const core = messagesToSend.slice(0, lastIdx);
-          const pinned: Message[] = [];
-          const coreWithPlaceholders: Message[] = [];
-          for (const m of core) {
-            const move = (m as any).moveToEnd === true;
-            let refPath: string | null = null;
-            const c: any = (m as any).content;
-            if (move && typeof c === 'string') {
-              refPath = this.extractReferencePathFromString(c);
-            }
-            if (move && refPath) {
-              pinned.push(m);
-              coreWithPlaceholders.push({
-                role: 'user',
-                content: `Note: reference to ${refPath} was here.`,
-              } as any);
-            } else {
-              coreWithPlaceholders.push(m);
-            }
+          // Determine which indices would be moved
+          const pinnedIdxs: number[] = [];
+          for (let i = 0; i < core.length; i++) {
+            const m: any = core[i];
+            const move = m?.moveToEnd === true;
+            const c = m?.content;
+            const refPath = move && typeof c === 'string' ? this.extractReferencePathFromString(c) : null;
+            if (move && refPath) pinnedIdxs.push(i);
           }
-          if (pinned.length) {
-            messagesToSend = [...coreWithPlaceholders, ...pinned, lastMsg];
+          if (pinnedIdxs.length) {
+            const k = pinnedIdxs.length;
+            const isContiguousTail = pinnedIdxs.every((idx, j) => idx === core.length - k + j);
+            if (!isContiguousTail) {
+              const pinned: Message[] = [];
+              const coreWithPlaceholders: Message[] = [];
+              for (let i = 0; i < core.length; i++) {
+                const m: any = core[i];
+                const move = m?.moveToEnd === true;
+                const c = m?.content;
+                const refPath = move && typeof c === 'string' ? this.extractReferencePathFromString(c) : null;
+                if (move && refPath) {
+                  pinned.push(m);
+                  coreWithPlaceholders.push({
+                    role: 'user',
+                    content: `Note: reference to ${refPath} was here.`,
+                  } as any);
+                } else {
+                  coreWithPlaceholders.push(m);
+                }
+              }
+              messagesToSend = [...coreWithPlaceholders, ...pinned, lastMsg];
+            }
           }
         }
       } catch (_) { /* no-op */ }
