@@ -8,7 +8,7 @@ import { AuthInfo, Settings, Message, Provider, Prompt, UserMessage, SystemMessa
 import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText } from 'openai/resources/chat/completions';
 
 export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'chatgpt.chatView';
+  public static readonly viewType = 'devmate.chatView';
   private _view?: vscode.WebviewView;
 
   private _conversation?: any;
@@ -117,7 +117,7 @@ export class ChatGPTViewProvider implements vscode.WebviewViewProvider {
       switch (data.type) {
         case 'ready':
           {
-            const config = vscode.workspace.getConfiguration('chatgpt');
+            const config = vscode.workspace.getConfiguration('devmate');
             let providers: Provider[] = config.get('providers') || [];
             let prompts: Prompt[] = config.get('prompts') || [];
             this.set_providers(providers);

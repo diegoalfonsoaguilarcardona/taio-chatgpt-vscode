@@ -10,7 +10,7 @@ import { TextDecoder } from 'util';
 const BASE_URL = 'https://api.openai.com/v1';
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('activating extension "chatgpt"');
+	console.log('activating extension "devmate"');
     // ---------- Helpers: type detection and parsing ----------
     const IMG_SIG = {
         png: { mime: 'image/png', sig: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },
@@ -161,7 +161,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
 	// Get the settings from the extension's configuration
-	const config = vscode.workspace.getConfiguration('chatgpt');
+	const config = vscode.workspace.getConfiguration('devmate');
 
 	// Create a new ChatGPTViewProvider instance and register it with the extension's context
 	const provider = new ChatGPTViewProvider(context.extensionUri);
@@ -238,7 +238,7 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	context.subscriptions.push(
-	  vscode.commands.registerCommand('chatgpt.addFileToChat', async (uri: vscode.Uri) => {
+	  vscode.commands.registerCommand('devmate.addFileToChat', async (uri: vscode.Uri) => {
 		if (!uri || !uri.fsPath) {
 		  vscode.window.showErrorMessage('No file selected!');
 		  return;
@@ -264,7 +264,7 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
     context.subscriptions.push(
-      vscode.commands.registerCommand('chatgpt.addFileReferenceToChat', async (uri: vscode.Uri) => {
+      vscode.commands.registerCommand('devmate.addFileReferenceToChat', async (uri: vscode.Uri) => {
         if (!uri || !uri.fsPath) {
           vscode.window.showErrorMessage('No file selected!');
           return;
@@ -303,34 +303,34 @@ export function activate(context: vscode.ExtensionContext) {
     );	
 
 	const commandHandler = (command: string) => {
-		const config = vscode.workspace.getConfiguration('chatgpt');
+		const config = vscode.workspace.getConfiguration('devmate');
 		const prompt = config.get(command) as string;
 		provider.search(prompt);
 	};
 
 	// Register the commands that can be called from the extension's package.json
 	context.subscriptions.push(
-		vscode.commands.registerCommand('chatgpt.ask', () =>
+		vscode.commands.registerCommand('devmate.ask', () =>
 			vscode.window.showInputBox({ prompt: 'What do you want to do?' })
 				.then((value) => provider.search(value))
 		),
-		vscode.commands.registerCommand('chatgpt.explain', () => commandHandler('promptPrefix.explain')),
-		vscode.commands.registerCommand('chatgpt.refactor', () => commandHandler('promptPrefix.refactor')),
-		vscode.commands.registerCommand('chatgpt.optimize', () => commandHandler('promptPrefix.optimize')),
-		vscode.commands.registerCommand('chatgpt.findProblems', () => commandHandler('promptPrefix.findProblems')),
-		vscode.commands.registerCommand('chatgpt.documentation', () => commandHandler('promptPrefix.documentation')),
-		vscode.commands.registerCommand('chatgpt.resetConversation', () => provider.resetConversation()),
-		vscode.commands.registerCommand('chatgpt.pasteChat', () => provider.pasteChat()),
-        vscode.commands.registerCommand('chatgpt.useSelectionAsChat', () => provider.useSelectionAsChat()),
-        vscode.commands.registerCommand('chatgpt.appendSelectionMarkdownAsChat', () => provider.appendSelectionMarkdownAsChat()),
-        vscode.commands.registerCommand('chatgpt.appendSelectionAsChat', () => provider.appendSelectionAsChat())
+        vscode.commands.registerCommand('devmate.explain', () => commandHandler('promptPrefix.explain')),
+        vscode.commands.registerCommand('devmate.refactor', () => commandHandler('promptPrefix.refactor')),
+        vscode.commands.registerCommand('devmate.optimize', () => commandHandler('promptPrefix.optimize')),
+        vscode.commands.registerCommand('devmate.findProblems', () => commandHandler('promptPrefix.findProblems')),
+        vscode.commands.registerCommand('devmate.documentation', () => commandHandler('promptPrefix.documentation')),
+        vscode.commands.registerCommand('devmate.resetConversation', () => provider.resetConversation()),
+        vscode.commands.registerCommand('devmate.pasteChat', () => provider.pasteChat()),
+        vscode.commands.registerCommand('devmate.useSelectionAsChat', () => provider.useSelectionAsChat()),
+        vscode.commands.registerCommand('devmate.appendSelectionMarkdownAsChat', () => provider.appendSelectionMarkdownAsChat()),
+        vscode.commands.registerCommand('devmate.appendSelectionAsChat', () => provider.appendSelectionAsChat())
 	);
 
 
 	// Change the extension's session token or settings when configuration is changed
 	vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
-		if (event.affectsConfiguration('chatgpt.providers')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+        if (event.affectsConfiguration('devmate.providers')) {
+            const config = vscode.workspace.getConfiguration('devmate');
 			let providers: Provider[] = config.get('providers') || [];
 
 			if (providers && providers.length > 0) {
@@ -371,8 +371,8 @@ export function activate(context: vscode.ExtensionContext) {
 				
 				provider.set_providers(providers);//Update the selectors
 			}
-		} else if (event.affectsConfiguration('chatgpt.prompts')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+    } else if (event.affectsConfiguration('devmate.prompts')) {
+        const config = vscode.workspace.getConfiguration('devmate');
 			let prompts: Prompt[] = config.get('prompts') || [];
 
 			if (prompts && prompts.length > 0) {
@@ -380,27 +380,27 @@ export function activate(context: vscode.ExtensionContext) {
 				provider.set_prompt(firstPrompt);
 			}
 			provider.set_prompts(prompts);
-		} else if (event.affectsConfiguration('chatgpt.selectedInsideCodeblock')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+    } else if (event.affectsConfiguration('devmate.selectedInsideCodeblock')) {
+        const config = vscode.workspace.getConfiguration('devmate');
 			provider.setSettings({ selectedInsideCodeblock: config.get('selectedInsideCodeblock') || false });
-		} else if (event.affectsConfiguration('chatgpt.codeblockWithLanguageId')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+    } else if (event.affectsConfiguration('devmate.codeblockWithLanguageId')) {
+        const config = vscode.workspace.getConfiguration('devmate');
 			provider.setSettings({ codeblockWithLanguageId: config.get('codeblockWithLanguageId') || false });
-		} else if (event.affectsConfiguration('chatgpt.pasteOnClick')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+    } else if (event.affectsConfiguration('devmate.pasteOnClick')) {
+        const config = vscode.workspace.getConfiguration('devmate');
 			provider.setSettings({ pasteOnClick: config.get('pasteOnClick') || false });
-		} else if (event.affectsConfiguration('chatgpt.keepConversation')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+    } else if (event.affectsConfiguration('devmate.keepConversation')) {
+        const config = vscode.workspace.getConfiguration('devmate');
 			provider.setSettings({ keepConversation: config.get('keepConversation') || false });
-		} else if (event.affectsConfiguration('chatgpt.timeoutLength')) {
-			const config = vscode.workspace.getConfiguration('chatgpt');
+    } else if (event.affectsConfiguration('devmate.timeoutLength')) {
+        const config = vscode.workspace.getConfiguration('devmate');
 			provider.setSettings({ timeoutLength: config.get('timeoutLength') || 60 });
 		}
 	});
 
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand('chatgpt.addImageToChat', async (uri: vscode.Uri) => {
+		vscode.commands.registerCommand('devmate.addImageToChat', async (uri: vscode.Uri) => {
 		  if (uri && uri.fsPath) {
 			const filePath = uri.fsPath;
 			const fileName = path.basename(filePath);
@@ -416,7 +416,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Add multiple references/images from selected "tree" text
     context.subscriptions.push(
-        vscode.commands.registerCommand('chatgpt.addSelectedPathsAsReferences', async () => {
+        vscode.commands.registerCommand('devmate.addSelectedPathsAsReferences', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 vscode.window.showErrorMessage('No active editor.');
@@ -465,7 +465,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (skippedDir) skippedParts.push(`${skippedDir} directories`);
             if (skippedBinary) skippedParts.push(`${skippedBinary} binary`);
             const msg = `Added ${summaryParts.join(' + ')} file(s)` + (skippedParts.length ? `; skipped ${skippedParts.join(', ')}` : '');
-            vscode.window.setStatusBarMessage(`[ChatGPT] ${msg}`, 4000);
+            vscode.window.setStatusBarMessage(`[DevMate AI Chat] ${msg}`, 4000);
         })
     );
 }
